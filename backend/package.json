@@ -1,7 +1,7 @@
 {
-  "name": "proyectogps2025",
+  "name": "proyectowesrugby",
   "version": "1.0.0",
-  "description": "Proyecto GPS",
+  "description": "Proyecto WesRugby",
   "type": "module",
   "main": "index.js",
   "scripts": {
@@ -26,8 +26,6 @@
     "express-session": "^1.18.0",
     "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",
-    "mongodb": "^6.17.0",
-    "mongoose": "^8.16.0",
     "node-cron": "^3.0.3",
     "node-fetch": "^3.3.2",
     "nodemailer": "^6.9.9",

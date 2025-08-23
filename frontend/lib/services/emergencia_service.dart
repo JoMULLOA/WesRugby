@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
 import '../models/contacto_emergencia.dart';
@@ -188,32 +187,12 @@ class EmergenciaService {
     await prefs.setBool(_tutorialKey, true);
   }
 
-  // Obtener ubicación actual
-  Future<Position?> obtenerUbicacionActual() async {
+  // Obtener ubicación actual (deshabilitada)
+  Future<Map<String, double>?> obtenerUbicacionActual() async {
     try {
-      // Verificar permisos de ubicación
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        throw Exception('Los servicios de ubicación están deshabilitados');
-      }
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          throw Exception('Permisos de ubicación denegados');
-        }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        throw Exception('Permisos de ubicación denegados permanentemente');
-      }
-
-      // Obtener ubicación actual
-      return await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 10),
-      );
+      // Funcionalidad de ubicación deshabilitada
+      debugPrint('Funcionalidad de ubicación deshabilitada');
+      return null;
     } catch (e) {
       debugPrint('Error al obtener ubicación: $e');
       return null;
@@ -250,7 +229,7 @@ class EmergenciaService {
       String ubicacionTexto = '';
       
       if (posicion != null) {
-        ubicacionTexto = 'Mi ubicación actual: https://maps.google.com/?q=${posicion.latitude},${posicion.longitude}';
+        ubicacionTexto = 'Mi ubicación actual: https://maps.google.com/?q=${posicion['latitude']},${posicion['longitude']}';
       } else {
         ubicacionTexto = 'No se pudo obtener la ubicación actual';
       }
@@ -435,8 +414,8 @@ Mensaje enviado automáticamente desde BioRuta - App de viajes compartidos.
     }
   }
 
-  // Enviar ubicación inicial con WhatsApp Live Location
-  Future<void> _enviarUbicacionInicial(String nombreUsuario, Position posicion, List<ContactoEmergencia> contactos, {Map<String, dynamic>? infoAdicional}) async {
+  // Enviar ubicación inicial con WhatsApp Live Location (deshabilitada)
+  Future<void> _enviarUbicacionInicial(String nombreUsuario, Map<String, double>? posicion, List<ContactoEmergencia> contactos, {Map<String, dynamic>? infoAdicional}) async {
     // Construir información del viaje si está disponible
     String infoViajeTexto = '';
     debugPrint('🔍 [TRACKING] Verificando infoAdicional: $infoAdicional');
@@ -462,11 +441,10 @@ Mensaje enviado automáticamente desde BioRuta - App de viajes compartidos.
 
 $nombreUsuario ha activado el sistema de emergencia SOS.
 
-📍 UBICACIÓN EN TIEMPO REAL:
+📍 UBICACIÓN:
+${posicion != null ? 'https://maps.google.com/?q=${posicion['latitude']},${posicion['longitude']}' : 'Ubicación no disponible'}$infoViajeTexto
 
-Ubicación actual: https://maps.google.com/?q=${posicion.latitude},${posicion.longitude}$infoViajeTexto
-
-⚠️ IMPORTANTE: Este es un mensaje de emergencia rapido enviado por $nombreUsuario. Por favor contacta inmediatamente a $nombreUsuario.
+⚠️ IMPORTANTE: Este es un mensaje de emergencia enviado por $nombreUsuario. Por favor contacta inmediatamente a $nombreUsuario.
 
 Mensaje enviado desde BioRuta - App de viajes compartidos.
     ''';
@@ -533,7 +511,7 @@ Mensaje enviado desde BioRuta - App de viajes compartidos.
 $nombreUsuario - Actualización automática
 Tiempo transcurrido: ${horasTranscurridas}h ${minutosTranscurridos}m
 
-Nueva ubicación: https://maps.google.com/?q=${posicion.latitude},${posicion.longitude}
+${posicion['latitude'] != null && posicion['longitude'] != null ? 'Nueva ubicación: https://maps.google.com/?q=${posicion['latitude']},${posicion['longitude']}' : 'Ubicación no disponible'}
 
 La ubicación se seguirá compartiendo automáticamente hasta completar 8 horas.
 

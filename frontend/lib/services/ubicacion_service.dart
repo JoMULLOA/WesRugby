@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:geolocator/geolocator.dart';
 
 class UbicacionService {
   static Future<bool> verificarServiciosUbicacion() async {
-    return await Geolocator.isLocationServiceEnabled();
+    // Funcionalidad de ubicación deshabilitada
+    return false;
   }
 
   static Future<PermissionStatus> solicitarPermisos() async {

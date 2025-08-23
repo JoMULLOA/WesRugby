@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import '../services/viaje_service.dart';
-import '../mis_viajes/detalle_viaje_conductor_screen.dart';
 
 class NavigationService {
   static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -49,33 +47,13 @@ class NavigationService {
     }
   }
 
-  /// Navegar al detalle del viaje específico
+  /// Navegar al detalle del viaje específico (Funcionalidad deshabilitada)
   static Future<void> navigateToTripDetail(String viajeId) async {
     final navigator = navigatorKey.currentState;
     if (navigator != null) {
-      print('🔄 Navegando al detalle del viaje: $viajeId');
-      
-      try {
-        // Obtener todos los viajes del usuario para encontrar el específico
-        final misViajes = await ViajeService.obtenerMisViajes();
-        
-        // Buscar el viaje específico por ID
-        final viaje = misViajes.firstWhere(
-          (v) => v.id == viajeId,
-          orElse: () => throw Exception('Viaje no encontrado'),
-        );
-        
-        // Navegar al detalle del viaje con el objeto completo
-        await navigator.push(
-          MaterialPageRoute(
-            builder: (context) => DetalleViajeConductorScreen(viaje: viaje),
-          ),
-        );
-      } catch (e) {
-        print('❌ Error obteniendo detalle del viaje: $e');
-        // Fallback: navegar a la pantalla de solicitudes/notificaciones
-        await navigateToRequests();
-      }
+      print('⚠️ Navegación al detalle del viaje deshabilitada - funcionalidad eliminada');
+      // Fallback: navegar a la pantalla de solicitudes/notificaciones
+      await navigateToRequests();
     } else {
       print('❌ Navigator no disponible para navegar al detalle del viaje');
     }

@@ -1,13 +1,19 @@
 import { AppDataSource } from "../config/configDb.js";
 import PeticionSupervision from "../entity/peticionSupervision.entity.js";
 import User from "../entity/user.entity.js";
-import ChatPersonal from "../entity/chatPersonal.entity.js";
-import { emitToUser } from "../socket.js";
 import { In } from "typeorm";
 
 const peticionSupervisionRepository = AppDataSource.getRepository(PeticionSupervision);
 const userRepository = AppDataSource.getRepository(User);
-const chatPersonalRepository = AppDataSource.getRepository(ChatPersonal);
+
+// Función helper para emitir eventos
+function emitToUser(rutUsuario, event, data) {
+  import("../socket.js").then(({ emitToUser }) => {
+    emitToUser(rutUsuario, event, data);
+  }).catch(error => {
+    console.error("Error al emitir evento:", error);
+  });
+}
 
 /**
  * Crear una nueva petición de supervisión
@@ -41,7 +47,7 @@ export async function crearPeticionSupervision(rutUsuario, motivo, mensaje, prio
         throw new Error("Ya tienes una petición de supervisión pendiente. Por favor espera a que sea respondida antes de crear una nueva.");
       } else if (peticionExistente.estado === "aceptada") {
         const nombreAdmin = peticionExistente.administrador?.nombreCompleto || "un administrador";
-        throw new Error(`Ya tienes un chat activo con ${nombreAdmin}. Ve a tu chat para continuar la conversación.`);
+        throw new Error(`Ya tienes una petición activa con ${nombreAdmin}. Contacta al administrador para continuar el soporte.`);
       }
     }
 
@@ -155,11 +161,6 @@ export async function responderPeticionSupervision(idPeticion, rutAdministrador,
       where: { id: idPeticion },
       relations: ["usuario", "administrador"],
     });
-
-    // Si la petición fue aceptada, crear/asegurar que existe el chat personal
-    if (accion === "aceptar") {
-      await crearOAsegurarChatPersonal(peticion.rutUsuario, rutAdministrador);
-    }
 
     // Notificar al usuario sobre la respuesta
     await notificarUsuarioRespuesta(peticionActualizada);
@@ -308,7 +309,7 @@ async function notificarAdministradores(peticion) {
         await crearNotificacionService({
           tipo: 'nueva_peticion_soporte',
           titulo: 'Nueva solicitud de soporte',
-          mensaje: `${peticion.nombreUsuario} ha enviado una solicitud de chat de soporte`,
+          mensaje: `${peticion.nombreUsuario} ha enviado una solicitud de soporte`,
           rutReceptor: admin.rut,
           rutEmisor: peticion.rutUsuario,
           datos: {
@@ -385,19 +386,10 @@ async function notificarUsuarioRespuesta(peticion) {
       estado: peticion.estado,
       respuesta: peticion.respuestaAdmin,
       administrador: peticion.administrador?.nombreCompleto,
-      rutAdministrador: peticion.rutAdministrador, // Agregar RUT del administrador
+      rutAdministrador: peticion.rutAdministrador,
       fecha: peticion.fechaRespuesta,
       mensaje: `Tu petición de supervisión ha sido ${peticion.estado}`,
     };
-
-    // Si la petición fue aceptada, incluir información para abrir el chat
-    if (peticion.estado === "aceptada") {
-      notificacionData.abrirChat = true;
-      notificacionData.chatConAdministrador = {
-        rutAdministrador: peticion.rutAdministrador,
-        nombreAdministrador: peticion.administrador?.nombreCompleto || "Administrador",
-      };
-    }
 
     emitToUser(peticion.rutUsuario, "respuesta_peticion_supervision", notificacionData);
 
@@ -405,54 +397,6 @@ async function notificarUsuarioRespuesta(peticion) {
 
   } catch (error) {
     console.error("Error al notificar usuario:", error.message);
-  }
-}
-
-/**
- * Crear o asegurar que existe un chat personal entre usuario y administrador
- * @param {string} rutUsuario - RUT del usuario
- * @param {string} rutAdministrador - RUT del administrador
- * @returns {Promise<Object>} Chat personal creado o existente
- */
-async function crearOAsegurarChatPersonal(rutUsuario, rutAdministrador) {
-  try {
-    // Crear identificador único (menor RUT primero)
-    const rutMenor = rutUsuario < rutAdministrador ? rutUsuario : rutAdministrador;
-    const rutMayor = rutUsuario < rutAdministrador ? rutAdministrador : rutUsuario;
-    const identificadorChat = `${rutMenor}-${rutMayor}`;
-
-    // Buscar chat existente
-    let chatPersonal = await chatPersonalRepository.findOne({
-      where: { identificadorChat },
-      relations: ["usuario1", "usuario2"]
-    });
-
-    if (!chatPersonal) {
-      // Crear nuevo chat personal
-      chatPersonal = chatPersonalRepository.create({
-        identificadorChat,
-        rutUsuario1: rutMenor,
-        rutUsuario2: rutMayor,
-        chatCompleto: [],
-        ultimoMensaje: null,
-        fechaUltimoMensaje: null,
-        totalMensajes: 0,
-        fechaCreacion: new Date(),
-        fechaUltimaActualizacion: new Date(),
-        eliminado: false
-      });
-
-      await chatPersonalRepository.save(chatPersonal);
-      console.log(`✅ Chat personal creado entre ${rutUsuario} y ${rutAdministrador}`);
-    } else {
-      console.log(`✅ Chat personal ya existe entre ${rutUsuario} y ${rutAdministrador}`);
-    }
-
-    return chatPersonal;
-
-  } catch (error) {
-    console.error("Error al crear/asegurar chat personal:", error.message);
-    throw error;
   }
 }
 

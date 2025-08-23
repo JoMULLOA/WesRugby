@@ -19,29 +19,21 @@ class CustomNavbar extends StatelessWidget {
   
   @override
   Widget build(BuildContext context) {
-    // Lista base de items sin SOS
+    // Lista simplificada de items - solo mantener Inicio y Perfil
     List<BottomNavigationBarItem> items = const [
-      BottomNavigationBarItem(icon: Icon(Icons.directions_car), label: 'Viajes'),
-      BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Buscar'),
-      BottomNavigationBarItem(icon: Icon(Icons.add), label: 'Publicar'),
-      BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'Chat'),
-      BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Ranking'),
+      BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Inicio'),
       BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
     ];
 
-    // Si showSOS es true, insertar el botón SOS en el medio (después de Publicar)
+    // Si showSOS es true, insertar el botón SOS entre Inicio y Perfil
     if (showSOS) {
       items = [
-        const BottomNavigationBarItem(icon: Icon(Icons.directions_car), label: 'Viajes'),
-        const BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Buscar'),
-        const BottomNavigationBarItem(icon: Icon(Icons.add), label: 'Publicar'),
+        const BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Inicio'),
         BottomNavigationBarItem(
           icon: _buildSOSButton(),
           label: 'SOS',
           activeIcon: _buildSOSButton(isActive: true),
         ),
-        const BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'Chat'),
-        const BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Ranking'),
         const BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
       ];
     }

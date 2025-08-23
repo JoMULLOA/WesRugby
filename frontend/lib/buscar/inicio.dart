@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import '../widgets/navbar_con_sos_dinamico.dart';
-import '../models/direccion_sugerida.dart';
-import '../mapa/mapa_seleccion.dart';
 import 'resultados_busqueda.dart';
 
 class InicioScreen extends StatefulWidget {
@@ -12,8 +10,7 @@ class InicioScreen extends StatefulWidget {
 }
 
 class _InicioScreenState extends State<InicioScreen> {
-  int _selectedIndex = -1; // No hay selección por defecto, ya que no es pantalla principal
-    // Variables para almacenar los datos del viaje
+  // Variables para almacenar los datos del viaje
   String? direccionOrigen;
   String? direccionDestino;
   double? origenLat;
@@ -78,42 +75,22 @@ class _InicioScreenState extends State<InicioScreen> {
   }
 
   Future<void> _abrirMapaParaSeleccion(bool esOrigen) async {
-    // Si es destino y ya tenemos origen, pasar esa información
-    DireccionSugerida? origenSeleccionado;
-    if (!esOrigen && direccionOrigen != null && origenLat != null && origenLng != null) {
-      origenSeleccionado = DireccionSugerida(
-        displayName: direccionOrigen!,
-        lat: origenLat!,
-        lon: origenLng!,
-        esOrigen: true,
-      );
-    }
-    
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => MapaSeleccionPage(
-          tituloSeleccion: esOrigen ? "Seleccionar Origen" : "Seleccionar Destino",
-          esOrigen: esOrigen,
-          origenSeleccionado: origenSeleccionado,
-        ),
+    // Mostrar diálogo de información ya que la funcionalidad de mapas fue eliminada
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Funcionalidad no disponible'),
+        content: Text('La selección por mapa ha sido deshabilitada. Use la búsqueda por texto.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Entendido'),
+          ),
+        ],
       ),
-    );    if (result != null && result is DireccionSugerida) {
-      setState(() {
-        if (esOrigen) {
-          direccionOrigen = result.displayName;
-          origenLat = result.lat;
-          origenLng = result.lon;
-          _origenController.text = result.displayName;
-        } else {
-          direccionDestino = result.displayName;
-          destinoLat = result.lat;
-          destinoLng = result.lon;
-          _destinoController.text = result.displayName;
-        }
-      });
-    }
+    );
   }
+
   void _limpiarFormulario() {
     setState(() {
       direccionOrigen = null;
@@ -167,14 +144,14 @@ class _InicioScreenState extends State<InicioScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => ResultadosBusquedaScreen(
-          origenLat: origenLat!,
-          origenLng: origenLng!,
-          destinoLat: destinoLat!,
-          destinoLng: destinoLng!,
-          fechaViaje: fechaFormateada,
+          origen: direccionOrigen!,
+          destino: direccionDestino!,
+          fecha: fechaSeleccionada,
           pasajeros: pasajeros,
-          origenTexto: direccionOrigen!,
-          destinoTexto: direccionDestino!,
+          origenLat: origenLat,
+          origenLng: origenLng,
+          destinoLat: destinoLat,
+          destinoLng: destinoLng,
         ),
       ),
     );
@@ -536,34 +513,14 @@ class _InicioScreenState extends State<InicioScreen> {
         ),
       ),
       bottomNavigationBar: NavbarConSOSDinamico(
-        currentIndex: _selectedIndex,
-        onTap: (index) {
-          // Evitar navegación innecesaria si ya estamos en la pantalla actual
-          if (index == _selectedIndex) return;
-          
-          setState(() {
-            _selectedIndex = index;
-          });
-          
-          // Navegación según el índice seleccionado
+        currentIndex: 0, // Siempre será 0 para la pantalla de inicio
+        onTap: (index) {          
+          // Navegación simplificada - solo Inicio (0) y Perfil (1)
           switch (index) {
             case 0:
-              Navigator.pushReplacementNamed(context, '/mis-viajes');
+              // Ya estamos en inicio, no hacer nada
               break;
             case 1:
-              Navigator.pushReplacementNamed(context, '/mapa');
-              break;
-            case 2:
-              // Publicar viaje
-              Navigator.pushReplacementNamed(context, '/publicar');
-              break;
-            case 3:
-              Navigator.pushReplacementNamed(context, '/chat');
-              break;
-            case 4:
-              Navigator.pushReplacementNamed(context, '/ranking');
-              break;
-            case 5:
               Navigator.pushReplacementNamed(context, '/perfil');
               break;
           }

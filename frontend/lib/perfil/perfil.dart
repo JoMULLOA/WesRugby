@@ -3,11 +3,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../widgets/navbar_con_sos_dinamico.dart';
-import '../chat/Chatsoporte.dart';
 import './amistad_menu.dart';
 import '../config/confGlobal.dart';
 import 'editar_perfil.dart';
-import 'mis_vehiculos.dart';
 import 'saldo_tarjetas_screen.dart';
 import '../utils/token_manager.dart';
 import '../auth/login.dart';
@@ -19,19 +17,14 @@ class Perfil extends StatefulWidget {
 }
 
 class Perfil_ extends State<Perfil> {
-  int _selectedIndex = 5;
-
   // Variables para almacenar datos del usuario
   String _userEmail = 'Cargando...';
   String _userName = 'Cargando...';
   String _userRut = 'Cargando...';
   String _userAge = 'Cargando...';
   String _userCareer = 'Cargando...';
-  String _userDescription = 'Cargando...';
   String _userGender = 'Cargando...'; // Nueva variable para género
   String _userRole = 'Cargando...'; // Nueva variable para rol
-  //El de valoracion
-  String _userclasificacion = 'Cargando...';
   bool _isLoading = true;
 
   @override
@@ -108,30 +101,14 @@ class Perfil_ extends State<Perfil> {
             }
           }
           
-          // Usar clasificación directa de la base de datos (ya es bayesiana)
-          String clasificacionFinal = 'Sin clasificación';
-          if (userData['clasificacion'] != null) {
-            try {
-              final clasificacionOriginal = double.parse(userData['clasificacion'].toString());
-              // Ya no aplicar bayesiano aquí porque se aplica al momento de calificar
-              clasificacionFinal = clasificacionOriginal.toStringAsFixed(1);
-              print('Clasificación de BD (ya bayesiana): $clasificacionOriginal');
-            } catch (e) {
-              print('Error parseando clasificación: $e');
-              clasificacionFinal = 'Sin clasificación';
-            }
-          }
-          
           setState(() {
             _userEmail = userData['email'] ?? 'Sin email';
             _userName = userData['nombreCompleto'] ?? 'Nombre no especificado';
             _userRut = userData['rut'] ?? 'RUT no especificado';
             _userAge = userAge;
             _userCareer = userData['carrera'] ?? 'Carrera no especificada';
-            _userDescription = userData['descripcion'] ?? 'Sin descripción';
             _userGender = userData['genero'] ?? 'no_especificado'; // Cargar género
             _userRole = userData['rol'] ?? 'estudiante'; // Cargar rol
-            _userclasificacion = clasificacionFinal;
             _isLoading = false;
           });
         } else {
@@ -161,83 +138,6 @@ class Perfil_ extends State<Perfil> {
     }
   }
 
-  // Método para calcular la calificación bayesiana
-  Future<double?> _calcularCalificacionBayesiana(double promedioUsuario, int cantidadValoraciones) async {
-    try {
-      // Primero obtener el promedio global dinámico
-      double promedioGlobal = await _obtenerPromedioGlobal();
-      
-      const int minimoValoraciones = 2; // Mínimo de valoraciones para considerar confiable
-      
-      // Obtener headers de autenticación
-      final headers = await TokenManager.getAuthHeaders();
-      if (headers == null) {
-        print('❌ No hay headers de autenticación para calcular calificación');
-        return null;
-      }
-      
-      final response = await http.post(
-        Uri.parse('${confGlobal.baseUrl}/user/calcularCalificacion'),
-        headers: headers,
-        body: json.encode({
-          'promedioUsuario': promedioUsuario,
-          'cantidadValoraciones': cantidadValoraciones,
-          'promedioGlobal': promedioGlobal,
-          'minimoValoraciones': minimoValoraciones,
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data != null && data['success'] == true) {
-          return data['data']['calificacionAjustada']?.toDouble();
-        }
-      }
-      
-      print('Error en cálculo bayesiano: ${response.statusCode}');
-      print('Response body: ${response.body}');
-      return null;
-    } catch (error) {
-      print('Error al calcular calificación bayesiana: $error');
-      return null;
-    }
-  }
-
-  // Nuevo método para obtener el promedio global desde el backend
-  Future<double> _obtenerPromedioGlobal() async {
-    try {
-      // Obtener headers de autenticación
-      final headers = await TokenManager.getAuthHeaders();
-      if (headers == null) {
-        print('❌ No hay headers de autenticación para obtener promedio global');
-        return 3.0; // Valor por defecto
-      }
-      
-      final response = await http.get(
-        Uri.parse('${confGlobal.baseUrl}/user/promedioGlobal'),
-        headers: headers,
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data != null && data['success'] == true) {
-          double promedioGlobal = data['data']['promedioGlobal']?.toDouble() ?? 3.0;
-          print('Promedio global obtenido: $promedioGlobal');
-          return promedioGlobal;
-        }
-      }
-      
-      print('Error obteniendo promedio global: ${response.statusCode}');
-      print('Response body: ${response.body}');
-      // En caso de error, retornar valor por defecto
-      return 3.0;
-    } catch (error) {
-      print('Error al obtener promedio global: $error');
-      // En caso de error, retornar valor por defecto
-      return 3.0;
-    }
-  }
-
   // Función para navegar a la página de editar perfil
   void _navigateToEditProfile(BuildContext context) {
     Navigator.push(
@@ -247,13 +147,6 @@ class Perfil_ extends State<Perfil> {
   }
 
   // Función para navegar a mis vehículos
-  void _navigateToVehiculos(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const MisVehiculosPage()),
-    );
-  }
-
   // Función para navegar a saldo y tarjetas
   void _navigateToSaldoTarjetas(BuildContext context) {
     Navigator.push(
@@ -655,48 +548,6 @@ class Perfil_ extends State<Perfil> {
                               ],
                             ),
                           ),
-                        SizedBox(height: 12),
-                        Container(
-                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: Colors.white.withOpacity(0.3),
-                              width: 1,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.star, color: Color(0xFFFFD700), size: 18), // Estrella dorada
-                              SizedBox(width: 8),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    'Calificación',
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.9), 
-                                      fontSize: 12, 
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  Text(
-                                    '$_userclasificacion/5',
-                                    style: TextStyle(
-                                      color: Colors.white, 
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
                           ], // Cierra Row de clasificación
                         ), // Cierra Column del contenido del Stack
                       ], // Cierra children del Stack
@@ -704,37 +555,6 @@ class Perfil_ extends State<Perfil> {
                   ), // Cierra Container
 
                   SizedBox(height: 20),
-
-                  // Sobre Mi
-                  Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 6)],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Sobre Mi',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: primario,
-                          ),
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          _userDescription,
-                          style: TextStyle(color: secundario, height: 1.5),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  SizedBox(height: 16),
 
                   // Carrera
                   Container(
@@ -767,93 +587,30 @@ class Perfil_ extends State<Perfil> {
 
                   SizedBox(height: 16),
 
-                  // Sección de Mis Vehículos
-                  Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 6)],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Mis Vehículos',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: primario,
-                              ),
-                            ),
-                            Icon(Icons.directions_car, color: secundario),
-                          ],
-                        ),
-                        SizedBox(height: 12),
-                        ElevatedButton.icon(
-                          onPressed: () => _navigateToVehiculos(context),
-                          icon: Icon(Icons.car_rental, size: 20),
-                          label: Text('Gestionar Vehículos'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: secundario,
-                            foregroundColor: Colors.white,
-                            padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            elevation: 2,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 ],
               ),
             ),
           ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ChatSoporte(),
-            ),
+          // Chat de soporte deshabilitado
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Chat de soporte no disponible')),
           );
         },
         backgroundColor: primario,
         child: Icon(Icons.support_agent, color: Colors.white),
-        tooltip: 'Gestionar Amistades',
+        tooltip: 'Soporte (Deshabilitado)',
       ),
       bottomNavigationBar: NavbarConSOSDinamico(
-        currentIndex: _selectedIndex,
+        currentIndex: 1, // Siempre será 1 para la pantalla de perfil
         onTap: (index) {
-          if (index == _selectedIndex) return;
-
-          setState(() {
-            _selectedIndex = index;
-          });
-
+          // Navegación simplificada - solo Inicio (0) y Perfil (1)
           switch (index) {
             case 0:
-              Navigator.pushReplacementNamed(context, '/mis-viajes');
+              Navigator.pushReplacementNamed(context, '/inicio');
               break;
             case 1:
-              Navigator.pushReplacementNamed(context, '/mapa');
-              break;
-            case 2:
-              Navigator.pushReplacementNamed(context, '/publicar');
-              break;
-            case 3:
-              Navigator.pushReplacementNamed(context, '/chat');
-              break;
-            case 4:
-              Navigator.pushReplacementNamed(context, '/ranking');
-              break;
-            case 5:
               // Ya estamos en perfil, no hacer nada
               break;
           }

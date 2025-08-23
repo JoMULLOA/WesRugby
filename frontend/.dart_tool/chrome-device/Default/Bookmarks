@@ -1,0 +1,51 @@
+{
+   "checksum": "4d779a6591a502197e0dba4df97d3b79",
+   "roots": {
+      "bookmark_bar": {
+         "children": [ {
+            "date_added": "13393820040807934",
+            "date_last_used": "0",
+            "guid": "c64318bf-a2e9-4088-bba8-3baab46edd1f",
+            "id": "6",
+            "name": "BioRuta",
+            "show_icon": false,
+            "source": "sync",
+            "type": "url",
+            "url": "http://localhost:62415/",
+            "visit_count": 1
+         } ],
+         "date_added": "13400407538625657",
+         "date_last_used": "0",
+         "date_modified": "13393820040807934",
+         "guid": "0bc5d13f-2cba-5d74-951f-3f233fe6c908",
+         "id": "1",
+         "name": "Barra de favoritos",
+         "source": "unknown",
+         "type": "folder"
+      },
+      "other": {
+         "children": [  ],
+         "date_added": "13400407538625657",
+         "date_last_used": "0",
+         "date_modified": "0",
+         "guid": "82b081ec-3dd3-529c-8475-ab6c344590dd",
+         "id": "2",
+         "name": "Otros favoritos",
+         "source": "unknown",
+         "type": "folder"
+      },
+      "synced": {
+         "children": [  ],
+         "date_added": "13400407538625657",
+         "date_last_used": "0",
+         "date_modified": "0",
+         "guid": "4cf2e351-0e85-532b-bb37-df045d8f8d0f",
+         "id": "3",
+         "name": "Favoritos móviles",
+         "source": "unknown",
+         "type": "folder"
+      }
+   },
+   "sync_metadata": "CkEKHgiIgQISCGASzdWYAQAAKg4QABgBIAAoBjAAOABAABIAKhhRZjYvcXdJY1hBVzdSOTNTV1BIYWlRPT1IA6AGDBKsAQgGEqcBChxCb1daSEcxMnlGeFBXTWkveERna0ViNHI0dDg9EiRjNjQzMThiZi1hMmU5LTQwODgtYmJhOC0zYmFhYjQ2ZWRkMWYYACAAKAAwubyx6fQyOJy+sen0MkCcvrHp9DJKHFZCeDVwRGl6MXdMU05yZ2hnUkloc3ZJWGh3QT1aHiIcNU9SY2lFcEVnQzFoR1J0MVZ6Zi9TNlEvbk1RPWUHn73bwj4CYAUSjgEIARKJAQoceXhKLzZmdmtlY3I3a3A1RVF6QjR0V0xwZGJFPRIkMTE5YmMyOGItYjhhMy01NTAyLWIyNGQtN2UxM2U4MmEyMzliGAAgACgAMKDGm7uEMjiaypu7hDJAmsqbu4QyShxhUkNXTGdoRjliNUlucUtJRHZ1Si9qdlFrRmM9WgBlAAAAAMI+AmAAEo4BCAISiQEKHFljU1RvbnZFU1B3cUNzNEwyY3JWaHY2OEw5OD0SJGQ5NTljZmViLTEzMGUtNWMxNC04Nzk2LTQ3NzQwZmRiODJlMRgAIAAoADChxpu7hDI4tMqbu4QyQLTKm7uEMkocb1BWa2h3QlJiVjY1S0NXUjIrSU9OSFdvT3U4PVoAZQAAAADCPgJgABKOAQgDEokBChxuamdEdTg4ZUNydlhwODZwRDdmSEdjcUZwODg9EiQ0MjM0ZjEzOS1kZDViLTUzOGUtOGIyNy1kZDQzZmU2OGE4MDcYACAAKAAwpsabu4QyOOfKm7uEMkDnypu7hDJKHHl6TkIwMWNuNTRBN2NSVTB1VCsvUGdtVHRVbz1aAGUAAAAAwj4CYAAwADgA",
+   "version": 1
+}

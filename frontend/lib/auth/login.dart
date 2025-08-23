@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:jwt_decoder/jwt_decoder.dart'; // Importa el decodificador JWT
 import 'verificacion.dart';
-import '../mis_viajes/mis_viajes_screen.dart'; // Importar MisViajesScreen
+import '../buscar/inicio.dart'; // Importar InicioScreen
 import './recuperacion.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -67,11 +67,11 @@ class _LoginPageState extends State<LoginPage> {
       final isValidInBackend = await _verifyTokenWithBackend(token);
       
       if (isValidInBackend) {
-        print('✅ Token válido en backend, redirigiendo a mis viajes');
+        print('✅ Token válido en backend, redirigiendo a inicio');
         if (mounted) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (_) => const MisViajesScreen()),
+            MaterialPageRoute(builder: (_) => const InicioScreen()),
           );
         }
       } else {
@@ -230,7 +230,7 @@ class _LoginPageState extends State<LoginPage> {
               } else {
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (_) => const MisViajesScreen()),
+                  MaterialPageRoute(builder: (_) => const InicioScreen()),
                 );
               }
             } else {

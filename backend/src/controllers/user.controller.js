@@ -230,7 +230,11 @@ export async function obtenerPromedioGlobal(req, res) {
 
 export async function deleteUser(req, res) {
   try {
-    const { rut, email } = req.query;
+    // Obtener rut del parámetro de la URL o del query
+    const rutFromParams = req.params.rut;
+    const { rut: rutFromQuery, email } = req.query;
+    
+    const rut = rutFromParams || rutFromQuery;
 
     const { error } = userQueryValidation.validate({ rut, email });
 
@@ -436,6 +440,43 @@ export async function calificarUsuario(req, res) {
 
   } catch (error) {
     console.error("Error al calificar usuario:", error);
+    handleErrorServer(res, 500, "Error interno del servidor");
+  }
+}
+
+// Nueva función para cambiar rol de usuario
+export async function changeUserRole(req, res) {
+  try {
+    const { rut, nuevoRol } = req.body;
+
+    if (!rut || !nuevoRol) {
+      return handleErrorClient(res, 400, "RUT y nuevo rol son requeridos");
+    }
+
+    if (!['estudiante', 'administrador'].includes(nuevoRol)) {
+      return handleErrorClient(res, 400, "Rol inválido. Debe ser 'estudiante' o 'administrador'");
+    }
+
+    // Buscar el usuario por RUT
+    const usuario = await userRepository.findOne({ where: { rut } });
+
+    if (!usuario) {
+      return handleErrorClient(res, 404, "Usuario no encontrado");
+    }
+
+    // Actualizar el rol
+    usuario.rol = nuevoRol;
+    await userRepository.save(usuario);
+
+    handleSuccess(res, 200, "Rol de usuario actualizado exitosamente", {
+      rut: usuario.rut,
+      nombreCompleto: usuario.nombreCompleto,
+      email: usuario.email,
+      rol: usuario.rol
+    });
+
+  } catch (error) {
+    console.error("Error al cambiar rol de usuario:", error);
     handleErrorServer(res, 500, "Error interno del servidor");
   }
 }

@@ -1,10 +1,8 @@
 "use strict";
 import User from "../entity/user.entity.js";
 import Vehiculo from "../entity/vehiculo.entity.js";
-import Viaje from "../entity/viaje.entity.js";
 import Amistad from "../entity/amistad.entity.js";
 import Reporte from "../entity/reporte.entity.js";
-import TarjetaSandbox from "../entity/tarjetaSandbox.entity.js";
 import { AppDataSource } from "./configDb.js";
 import { encryptPassword } from "../helpers/bcrypt.helper.js";
 
@@ -88,74 +86,6 @@ async function createInitialData() {
       });
       await userRepository.save(user3);
       console.log("* => Usuario 3 creado exitosamente (Saldo inicial: $100,000)");
-
-      // =============== CREAR 97 USUARIOS ADICIONALES ===============
-      console.log("🔄 Creando 97 usuarios adicionales...");
-      
-      const carreras = [
-        "Ingeniería Civil en Informática", "Ingeniería Comercial", "Medicina", 
-        "Psicología", "Derecho", "Arquitectura", "Ingeniería Civil Industrial",
-        "Enfermería", "Pedagogía en Educación Básica", "Contador Auditor",
-        "Trabajo Social", "Kinesiología", "Periodismo", "Diseño Gráfico",
-        "Ingeniería en Construcción", "Veterinaria", "Química y Farmacia",
-        "Fonoaudiología", "Ingeniería Civil", "Pedagogía en Inglés",
-        "Nutrición y Dietética", "Ingeniería Ambiental", "Biotecnología",
-        "Odontología", "Terapia Ocupacional", "Ingeniería Forestal",
-        "Pedagogía en Matemáticas", "Administración Pública", "Sociología",
-        "Ingeniería en Alimentos"
-      ];
-
-      const generos = ["masculino", "femenino"];
-      const clasificaciones = [1, 2, 3];
-      
-      const usuarios = [];
-      
-      for (let i = 4; i <= 100; i++) {
-        // Generar RUT aleatorio válido
-        const rutNum = Math.floor(Math.random() * (29999999 - 10000000) + 10000000);
-        const dv = calcularDV(rutNum);
-        const rut = `${rutNum.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}-${dv}`;
-        
-        // Generar fecha de nacimiento aleatoria (18-30 años)
-        const añoActual = 2025;
-        const añoNacimiento = añoActual - Math.floor(Math.random() * (30 - 18 + 1) + 18);
-        const mes = Math.floor(Math.random() * 12) + 1;
-        const dia = Math.floor(Math.random() * 28) + 1;
-        const fechaNacimiento = `${añoNacimiento}-${mes.toString().padStart(2, '0')}-${dia.toString().padStart(2, '0')}`;
-        
-        // Selecciones aleatorias
-        const carrera = carreras[Math.floor(Math.random() * carreras.length)];
-        const genero = generos[Math.floor(Math.random() * generos.length)];
-        const clasificacion = clasificaciones[Math.floor(Math.random() * clasificaciones.length)];
-        const puntuacion = Math.floor(Math.random() * 5) + 1; // 1-5
-        
-        const usuario = userRepository.create({
-          rut: rut,
-          nombreCompleto: `Usuario${i}`,
-          email: `usuario${i}@alumnos.ubiobio.cl`,
-          password: await encryptPassword("user1234"),
-          genero: genero,
-          fechaNacimiento: fechaNacimiento,
-          rol: "estudiante",
-          carrera: carrera,
-          puntuacion: puntuacion,
-          clasificacion: clasificacion,
-          saldo: 100000,
-          tarjetas: []
-        });
-        
-        usuarios.push(usuario);
-        
-        // Guardar en lotes de 10 para mejor rendimiento
-        if (usuarios.length === 10 || i === 100) {
-          await userRepository.save(usuarios);
-          console.log(`   ✅ Usuarios ${i - usuarios.length + 1} al ${i} creados`);
-          usuarios.length = 0; // Limpiar array
-        }
-      }
-      
-      console.log("✅ 97 usuarios adicionales creados exitosamente");
-      console.log("📊 Total de usuarios: 100 estudiantes + 1 administrador");
 
       // Crear un usuario administrador
       const adminUser = userRepository.create({
@@ -291,64 +221,8 @@ async function createInitialData() {
     // Crear tarjetas de sandbox para pruebas de pagos
     await createSandboxCards();
 
-    // Crear índices geoespaciales para MongoDB
-    await createMongoIndexes();
-
   } catch (error) {
     console.error("❌ Error al crear datos iniciales:", error);
-  }
-}
-
-async function createMongoIndexes() {
-  try {
-    // Verificar si los índices ya existen
-    const collection = Viaje.collection;
-    const indexes = await collection.listIndexes().toArray();
-    
-    // Verificar y crear el índice de origen
-    const hasGeoIndexOrigen = indexes.some(index => 
-      Object.keys(index.key).includes('origen.ubicacion') && 
-      Object.values(index.key).includes('2dsphere')
-    );
-
-    if (!hasGeoIndexOrigen) {
-      await collection.createIndex(
-        { "origen.ubicacion": "2dsphere" },
-        { name: "origen_ubicacion_2dsphere", background: true }
-      );
-      console.log("* => Índice geoespacial de origen creado");
-    } else {
-      console.log("* => Índice geoespacial de origen ya existe");
-    }
-
-    // Verificar y crear el índice de destino (necesario para publicar viajes)
-    const hasGeoIndexDestino = indexes.some(index => 
-      Object.keys(index.key).includes('destino.ubicacion') && 
-      Object.values(index.key).includes('2dsphere')
-    );
-
-    if (!hasGeoIndexDestino) {
-      await collection.createIndex(
-        { "destino.ubicacion": "2dsphere" },
-        { name: "destino_ubicacion_2dsphere", background: true }
-      );
-      console.log("* => Índice geoespacial de destino creado");
-    } else {
-      console.log("* => Índice geoespacial de destino ya existe");
-    }
-
-    // Crear otros índices importantes
-    await collection.createIndex({ fecha_ida: 1 });
-    await collection.createIndex({ estado: 1 });
-    await collection.createIndex({ usuario_rut: 1 });
-    await collection.createIndex({ vehiculo_patente: 1 });
-
-    console.log("* => Índices de MongoDB creados exitosamente");
-
-    // Configurar reportes de prueba (opcional)
-    await createInitialReports();
-  } catch (error) {
-    console.error("❌ Error al crear índices de MongoDB:", error);
   }
 }
 

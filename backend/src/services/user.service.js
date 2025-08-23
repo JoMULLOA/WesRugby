@@ -245,16 +245,12 @@ export async function deleteUserService(query) {
     const SolicitudAmistad = await import("../entity/solicitudAmistad.entity.js");
     const Notificacion = await import("../entity/notificacion.entity.js");
     const Vehiculo = await import("../entity/vehiculo.entity.js");
-    const ChatPersonal = await import("../entity/chatPersonal.entity.js");
-    const Mensaje = await import("../entity/mensaje.entity.js");
 
     // Obtener los repositorios
     const amistadRepository = AppDataSource.getRepository(Amistad.default);
     const solicitudRepository = AppDataSource.getRepository(SolicitudAmistad.default);
     const notificacionRepository = AppDataSource.getRepository(Notificacion.default);
     const vehiculoRepository = AppDataSource.getRepository(Vehiculo.default);
-    const chatPersonalRepository = AppDataSource.getRepository(ChatPersonal.default);
-    const mensajeRepository = AppDataSource.getRepository(Mensaje.default);
 
     console.log(`🗑️ Eliminando relaciones del usuario: ${userFound.rut}`);
 
@@ -315,52 +311,7 @@ export async function deleteUserService(query) {
       // Los vehículos deberían eliminarse automáticamente por CASCADE
     }
 
-    // 5. Eliminar chats personales donde el usuario participe
-    const chats = await chatPersonalRepository.find({
-      where: [
-        { rutUsuario1: userFound.rut },
-        { rutUsuario2: userFound.rut }
-      ]
-    });
-
-    if (chats.length > 0) {
-      await chatPersonalRepository.remove(chats);
-      console.log(`✅ Eliminados ${chats.length} chats personales`);
-    }
-
-    // 6. Eliminar mensajes del usuario
-    const mensajes = await mensajeRepository.find({
-      where: { rutEmisor: userFound.rut }
-    });
-
-    if (mensajes.length > 0) {
-      await mensajeRepository.remove(mensajes);
-      console.log(`✅ Eliminados ${mensajes.length} mensajes`);
-    }
-
-    // 7. Eliminar viajes de MongoDB (importar modelo de viaje de Mongoose)
-    try {
-      const mongoose = await import("mongoose");
-      if (mongoose.default.connection.readyState === 1) {
-        // Eliminar viajes donde el usuario sea el conductor
-        const resultViajes = await mongoose.default.connection.db.collection('viajes').deleteMany({
-          usuario_rut: userFound.rut
-        });
-        console.log(`✅ Eliminados ${resultViajes.deletedCount} viajes de MongoDB`);
-
-        // Eliminar el usuario de la lista de pasajeros en otros viajes
-        const resultPasajeros = await mongoose.default.connection.db.collection('viajes').updateMany(
-          { "pasajeros.rut": userFound.rut },
-          { $pull: { pasajeros: { rut: userFound.rut } } }
-        );
-        console.log(`✅ Usuario removido de ${resultPasajeros.modifiedCount} viajes como pasajero`);
-      }
-    } catch (mongoError) {
-      console.warn("⚠️ Error eliminando datos de MongoDB:", mongoError.message);
-      // No fallar la eliminación completa por errores de MongoDB
-    }
-
-    // 8. Finalmente, eliminar el usuario
+    // 5. Finalmente, eliminar el usuario
     await userRepository.remove(userFound);
     console.log(`✅ Usuario ${userFound.rut} eliminado exitosamente`);
 

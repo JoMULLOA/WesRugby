@@ -1,4 +1,3 @@
-import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class LocationService {
@@ -21,60 +20,18 @@ class LocationService {
         return false;
       }
       
-      if (permission.isGranted) {
-        // Verificar también con geolocator
-        LocationPermission geoPermission = await Geolocator.checkPermission();
-        
-        if (geoPermission == LocationPermission.denied) {
-          geoPermission = await Geolocator.requestPermission();
-        }
-        
-        return geoPermission == LocationPermission.whileInUse || 
-               geoPermission == LocationPermission.always;
-      }
-      
-      return false;
+      return permission.isGranted;
     } catch (e) {
       print('❌ Error verificando permisos de ubicación: $e');
       return false;
     }
   }
   
-  /// Obtener la ubicación actual del usuario
+  /// Obtener la ubicación actual del usuario (deshabilitada)
   static Future<Map<String, dynamic>?> getCurrentLocation() async {
-    try {
-      // Verificar permisos primero
-      bool hasPermission = await checkAndRequestLocationPermission();
-      if (!hasPermission) {
-        print('❌ Sin permisos de ubicación');
-        return null;
-      }
-      
-      // Verificar si el servicio de ubicación está habilitado
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        print('❌ Servicio de ubicación deshabilitado');
-        return null;
-      }
-      
-      // Obtener la posición actual
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-      
-      print('✅ Ubicación obtenida: ${position.latitude}, ${position.longitude}');
-      
-      return {
-        'latitude': position.latitude,
-        'longitude': position.longitude,
-        'accuracy': position.accuracy,
-        'timestamp': position.timestamp.millisecondsSinceEpoch,
-      };
-      
-    } catch (e) {
-      print('❌ Error obteniendo ubicación: $e');
-      return null;
-    }
+    // Funcionalidad de ubicación deshabilitada
+    print('ℹ️ Funcionalidad de ubicación deshabilitada');
+    return null;
   }
   
   /// Formatear coordenadas para mostrar al usuario
@@ -87,12 +44,13 @@ class LocationService {
     return 'https://www.google.com/maps?q=$latitude,$longitude';
   }
   
-  /// Calcular distancia entre dos puntos
+  /// Calcular distancia entre dos puntos (deshabilitada)
   static double calculateDistance(
     double lat1, double lon1, 
     double lat2, double lon2
   ) {
-    return Geolocator.distanceBetween(lat1, lon1, lat2, lon2);
+    // Funcionalidad de cálculo de distancia deshabilitada
+    return 0.0;
   }
   
   /// Formatear distancia para mostrar al usuario

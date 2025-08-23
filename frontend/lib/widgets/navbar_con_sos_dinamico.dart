@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../navbar_widget.dart';
-import '../services/viaje_service.dart';
 import '../services/emergencia_service.dart';
 
 class NavbarConSOSDinamico extends StatefulWidget {
@@ -49,8 +48,8 @@ class _NavbarConSOSDinamicoState extends State<NavbarConSOSDinamico> {
     try {
       debugPrint('🔄 Verificando viajes activos para navbar...');
       
-      // Usar solo la lógica principal (ya no necesitamos el método de debug)
-      final tieneViajes = await ViajeService.tieneViajesActivos();
+      // Funcionalidad de viajes deshabilitada - siempre false
+      final tieneViajes = false;
       
       debugPrint('📊 Resultado tieneViajesActivos: $tieneViajes');
       debugPrint('🎯 Estado actual mostrarSOS: $_mostrarSOS');
@@ -74,67 +73,48 @@ class _NavbarConSOSDinamicoState extends State<NavbarConSOSDinamico> {
   }
 
   int _ajustarIndice(int index) {
-    // Si SOS está visible y el índice es mayor o igual a 3 (SOS), 
-    // ajustar el índice para la navegación
-    if (_mostrarSOS && index >= 3) {
-      // Si toca SOS (índice 3), navegar a pantalla SOS
-      if (index == 3) {
+    // Con la nueva navbar simplificada:
+    // Sin SOS: 0=Inicio, 1=Perfil
+    // Con SOS: 0=Inicio, 1=SOS, 2=Perfil
+    if (!_mostrarSOS) {
+      return index;
+    } else {
+      if (index == 1) {
         _navegarASOS();
         return widget.currentIndex; // No cambiar de pantalla
       }
-      // Si toca Chat, Ranking o Perfil, decrementar índice
-      return index - 1;
+      // Si toca Perfil (índice 2), ajustar a índice 1
+      if (index == 2) {
+        return 1;
+      }
+      return index;
     }
-    return index;
   }
 
   void _navegarASOS() async {
-    // Obtener información del viaje activo para enviar en el SOS
+    // Funcionalidad de viajes deshabilitada - ir directo a SOS
     Map<String, dynamic>? infoViaje;
-    try {
-      debugPrint('🔍 Verificando viajes para navegación a SOS...');
-      final tieneViajes = await ViajeService.tieneViajesActivos();
-      debugPrint('📊 Tiene viajes activos: $tieneViajes');
-      
-      if (tieneViajes) {
-        // Obtener detalles del viaje activo
-        debugPrint('🔄 Obteniendo detalles del viaje activo...');
-        infoViaje = await ViajeService.obtenerDetallesViajeActivo();
-        debugPrint('📋 Info viaje obtenida: $infoViaje');
-      } else {
-        debugPrint('⚠️ No hay viajes activos para obtener detalles');
-      }
-    } catch (e) {
-      debugPrint('💥 Error al obtener info del viaje para navegación SOS: $e');
-    }
-    
-    debugPrint('🚀 Navegando a SOS con info: $infoViaje');
+    debugPrint('🚀 Navegando a SOS sin info de viaje');
     Navigator.pushNamed(context, '/sos', arguments: {
       'infoViaje': infoViaje,
     });
   }
 
   void _manejarSOS() async {
-    // Obtener información del viaje activo para enviar en el SOS
+    // Funcionalidad de viajes deshabilitada
     Map<String, dynamic>? infoViaje;
     try {
       debugPrint('🔍 Verificando viajes para SOS...');
-      final tieneViajes = await ViajeService.tieneViajesActivos();
+      final tieneViajes = false; // Viajes deshabilitados
       debugPrint('📊 Tiene viajes activos: $tieneViajes');
-      
-      if (tieneViajes) {
-        // Obtener detalles del viaje activo
-        debugPrint('🔄 Obteniendo detalles del viaje activo...');
-        infoViaje = await ViajeService.obtenerDetallesViajeActivo();
-        debugPrint('📋 Info viaje obtenida: $infoViaje');
-      } else {
-        debugPrint('⚠️ No hay viajes activos para obtener detalles');
-      }
+      debugPrint('⚠️ No hay viajes activos para obtener detalles');
     } catch (e) {
       debugPrint('💥 Error al obtener info del viaje para SOS: $e');
     }
     
-    debugPrint('� Activando emergencia desde navbar dinámico...');
+    // Funcionalidad de viajes deshabilitada
+    infoViaje = null;
+    debugPrint('🚨 Activando emergencia desde navbar dinámico...');
     // Activar emergencia directamente desde aquí con la información del viaje
     await EmergenciaService.mostrarDialogoEmergenciaGlobal(
       context, 
@@ -161,7 +141,7 @@ class _NavbarConSOSDinamicoState extends State<NavbarConSOSDinamico> {
     int currentIndexAjustado = widget.currentIndex;
     
     // Si SOS está visible, ajustar el índice actual para la visualización
-    if (_mostrarSOS && widget.currentIndex >= 3) {
+    if (_mostrarSOS && widget.currentIndex >= 1) {
       currentIndexAjustado = widget.currentIndex + 1;
     }
 
@@ -169,7 +149,7 @@ class _NavbarConSOSDinamicoState extends State<NavbarConSOSDinamico> {
       currentIndex: currentIndexAjustado,
       onTap: (index) {
         final indiceAjustado = _ajustarIndice(index);
-        if (index == 3 && _mostrarSOS) {
+        if (index == 1 && _mostrarSOS) {
           // Es el botón SOS, no llamar onTap del padre
           return;
         }

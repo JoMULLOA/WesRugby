@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:flutter_osm_plugin/flutter_osm_plugin.dart';
 import '../models/direccion_sugerida.dart';
 
 class BusquedaService {
@@ -57,12 +56,12 @@ class BusquedaService {
   }
 
   // Identificar región por coordenadas
-  static Future<String> identificarRegion(GeoPoint posicion) async {
+  static Future<String> identificarRegion(Map<String, double> posicion) async {
     try {
       final url = Uri.parse(
         'https://nominatim.openstreetmap.org/reverse?'
-        'lat=${posicion.latitude}&'
-        'lon=${posicion.longitude}&'
+        'lat=${posicion['latitude']}&'
+        'lon=${posicion['longitude']}&'
         'format=json&'
         'addressdetails=1&'
         'zoom=10'
@@ -90,7 +89,7 @@ class BusquedaService {
   }
 
   // Buscar coordenadas de una dirección
-  static Future<GeoPoint?> buscarCoordenadas(String direccion) async {
+  static Future<Map<String, double>?> buscarCoordenadas(String direccion) async {
     final url = Uri.parse(
         'https://nominatim.openstreetmap.org/search?q=${Uri.encodeComponent(direccion)}&format=json&limit=1&countrycodes=cl');
 
@@ -101,14 +100,14 @@ class BusquedaService {
       if (data.isNotEmpty) {
         final lat = double.parse(data[0]['lat']);
         final lon = double.parse(data[0]['lon']);
-        return GeoPoint(latitude: lat, longitude: lon);
+        return {'latitude': lat, 'longitude': lon};
       }
     }
     return null;
   }
 
   // Calcular solo tiempo estimado (no distancias) para destinos
-  static void calcularDistancias(List<DireccionSugerida> sugerencias, GeoPoint ubicacionUsuario) {
+  static void calcularDistancias(List<DireccionSugerida> sugerencias, Map<String, double> ubicacionUsuario) {
     if (sugerencias.isEmpty) return;
     
     for (var sugerencia in sugerencias) {
@@ -119,8 +118,8 @@ class BusquedaService {
       if (sugerencia.esOrigen == false) {
         // Es destino: calcular tiempo estimado del viaje
         double distanciaCarretera = _calcularDistanciaConFactor(
-          ubicacionUsuario.latitude,
-          ubicacionUsuario.longitude,
+          ubicacionUsuario['latitude']!,
+          ubicacionUsuario['longitude']!,
           sugerencia.lat,
           sugerencia.lon,
         );
@@ -136,7 +135,7 @@ class BusquedaService {
   // Calcular solo tiempo estimado para destino con origen específico
   static void calcularDistanciasConOrigen(
     List<DireccionSugerida> sugerencias, 
-    GeoPoint ubicacionUsuario,
+    Map<String, double> ubicacionUsuario,
     DireccionSugerida? origenSeleccionado
   ) {
     if (sugerencias.isEmpty) return;

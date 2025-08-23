@@ -8,21 +8,16 @@ import express, { json, urlencoded } from "express";
 import cron from "node-cron";
 import http from "http";
 import 'dotenv/config';
-import mongoose from "mongoose";
 import userRoutes from "./routes/user.routes.js";
-import chatRoutes from "./routes/chat.routes.js";
-import viajeRoutes from "./routes/viaje.routes.js";
 import indexRoutes from "./routes/index.routes.js";
 import pingRoutes from "./routes/ping.routes.js";
 import estadisticasRoutes from "./routes/estadisticas.routes.js";
 import reporteRoutes from "./routes/reporte.routes.js";
-import { connectMongoDB } from "./config/mongooseClient.js";
-import { initSocket, getSocketInstance } from "./socket.js"; 
+import { initializeSocket, getSocketInstance } from "./socket.js"; 
 import { cookieKey, HOST, PORT } from "./config/configEnv.js";
 import { connectDB } from "./config/configDb.js";
 import { createInitialData } from "./config/initialSetup.js";
 import { passportJwtSetup } from "./auth/passport.auth.js";
-import ViajeMonitoringService from "./services/viaje.monitoring.service.js";
 
 
 
@@ -68,14 +63,12 @@ async function setupServer() {
     // Registro de rutas
     app.use("/api", indexRoutes);
     app.use("/api/users", userRoutes); // Rutas de usuarios, que incluye /api/users/garzones
-    app.use("/api/chat", chatRoutes); // Rutas de chat
-    app.use("/api/viajes", viajeRoutes); // Rutas de viajes
-    app.use("/api", pingRoutes);  // Rutas de MongoDB
+    app.use("/api", pingRoutes);  // Rutas básicas
     app.use("/api/estadisticas", estadisticasRoutes); // Rutas de estadísticas
     app.use("/api/reportes", reporteRoutes); // Rutas de reportes
 
     const server = http.createServer(app);
-    initSocket(server); // Inicializa Socket.IO con el servidor
+    initializeSocket(server); // Inicializa Socket.IO con el servidor
     
     // Hacer que la instancia de Socket.io esté disponible en los controladores
     app.set('io', getSocketInstance());
@@ -85,9 +78,6 @@ async function setupServer() {
       console.log(`✅ Servidor corriendo en ${HOST}:${PORT}/api`);
       console.log(`🌐 Accesible desde emulador Android en 10.0.2.2:${PORT}/api`);
       console.log(`🔌 Socket.IO disponible en ${HOST}:${PORT}/socket.io/`);
-      
-      // Iniciar el monitoreo automático de viajes
-      ViajeMonitoringService.start();
     });
   } catch (error) {
     console.error("Error en index.js -> setupServer():", error);
@@ -97,7 +87,6 @@ async function setupServer() {
 async function setupAPI() {
   try {
     await connectDB();            // Postgres 
-    await connectMongoDB();      // Mongo Atlas
     
     // Configurar Passport después de que la base de datos esté conectada
     passportJwtSetup();

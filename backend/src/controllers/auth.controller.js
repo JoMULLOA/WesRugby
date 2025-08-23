@@ -13,10 +13,17 @@ import {
 export async function login(req, res) {
   try {
     const { body } = req;
+    
+    // Debug: Imprimir lo que llega en el body
+    console.log("🔧 DEBUG - Body del login:", JSON.stringify(body, null, 2));
+    console.log("🔧 DEBUG - Tipo de body:", typeof body);
+    console.log("🔧 DEBUG - Claves del body:", Object.keys(body));
 
     const { error } = authValidation.validate(body);
 
     if (error) {
+      console.log("🔧 DEBUG - Error de validación:", error.message);
+      console.log("🔧 DEBUG - Detalles del error:", error.details);
       return handleErrorClient(res, 400, "Error de validación", error.message);
     }
     const [accessToken, errorToken] = await loginService(body);

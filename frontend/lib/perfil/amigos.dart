@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../services/amistad_service.dart';
-import '../chat/pagina_individual.dart';
 
 class AmigosScreen extends StatefulWidget {
   @override
@@ -146,20 +145,13 @@ class _AmigosScreenState extends State<AmigosScreen> {
       ),
     );
 
-    // Navegar al chat individual
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => PaginaIndividualWebSocket(
-          nombre: amigo['nombreCompleto'] ?? 'Usuario',
-          rutAmigo: amigo['rut'] ?? '',
-          rutUsuarioAutenticado: _rutUsuarioAutenticado, // Ahora es opcional
-        ),
+    // Chat deshabilitado - mostrar mensaje
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Chat no disponible - funcionalidad eliminada'),
+        backgroundColor: Colors.orange,
       ),
     );
-
-    // Después del chat individual, navegar a la pestaña Chat principal
-    Navigator.pushReplacementNamed(context, '/chat');
   }
 
   @override

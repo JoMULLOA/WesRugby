@@ -2,26 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'services/websocket_notification_service.dart';
 import 'auth/login.dart';
-import 'mapa/mapa.dart';
-import 'viajes/mapa_viajes_screen.dart';
-import 'mis_viajes/mis_viajes_screen.dart';
 import 'buscar/inicio.dart';
-import 'publicar/publicar.dart';
-import 'chat/chat.dart';
 import 'perfil/perfil.dart';
 import 'perfil/notificaciones.dart';
 import 'perfil/amistad_menu.dart';
-import 'services/viaje_estado_service.dart';
 import 'services/navigation_service.dart';
-import 'Ranking/ranking.dart';
 import 'sos/sos_screen.dart';
-import 'admin/admin_dashboard.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Inicializar servicio de estado de viaje
-  ViajeEstadoService.instance.initialize();
   
   try {
     // Inicializar sistema de notificaciones WebSocket
@@ -88,30 +77,10 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       initialRoute: '/login', // Ruta inicial
-      onGenerateRoute: (settings) {
-        // Manejar rutas con argumentos personalizados
-        switch (settings.name) {
-          case '/admin':
-            final args = settings.arguments as Map<String, dynamic>?;
-            final initialTab = args?['initialTab'] as int?;
-            return MaterialPageRoute(
-              builder: (context) => AdminDashboard(initialTab: initialTab),
-            );
-          default:
-            return null; // Usar rutas predefinidas
-        }
-      },
       routes: {
-        '/': (context) => const MisViajesScreen(), // Ruta principal ahora es mis viajes
+        '/': (context) => const InicioScreen(), // Ruta principal
         '/login': (context) => const LoginPage(),
         '/inicio': (context) => const InicioScreen(),
-        '/buscar': (context) => const InicioScreen(),
-        '/mapa': (context) => const MapPage(),
-        '/viajes': (context) => const MapaViajesScreen(),
-        '/mis-viajes': (context) => const MisViajesScreen(),
-        '/publicar': (context) => const PublicarPage(),
-        '/chat': (context) => Chat(),
-        '/ranking': (context) => ranking(),
         '/sos': (context) => const SOSScreen(),
         '/perfil': (context) => Perfil(),
         '/amistades': (context) => AmistadMenuScreen(),
