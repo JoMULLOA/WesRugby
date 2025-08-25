@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:jwt_decoder/jwt_decoder.dart'; // Importa el decodificador JWT
-import 'verificacion.dart';
 import '../buscar/inicio.dart'; // Importar InicioScreen
 import './recuperacion.dart';
 import 'package:http/http.dart' as http;
@@ -91,7 +90,7 @@ class _LoginPageState extends State<LoginPage> {
   Future<bool> _verifyTokenWithBackend(String token) async {
     try {
       final response = await http.get(
-        Uri.parse("${confGlobal.baseUrl}/users/detail/"),
+        Uri.parse("${confGlobal.baseUrl}/user/detail/"),
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer $token",
@@ -105,180 +104,121 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  // Solo limpiar tokens expirados sin redireccionar
+  // Limpiar solo tokens expirados (sin redirección automática)
   Future<void> _cleanExpiredTokenOnly() async {
     try {
       final token = await _storage.read(key: 'jwt_token');
       
       if (token != null && JwtDecoder.isExpired(token)) {
-        print('⏰ Token JWT expirado, limpiando...');
+        print('⏰ Token JWT expirado, limpiando datos...');
         await TokenManager.clearAuthData();
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Tu sesión anterior ha expirado.'),
-              backgroundColor: Colors.orange,
-              duration: Duration(seconds: 2),
-            ),
-          );
+          TokenManager.showSessionExpiredMessage(context);
         }
       }
     } catch (e) {
-      print('❌ Error verificando token: $e');
-      await TokenManager.clearAuthData();
+      print('❌ Error limpiando token expirado: $e');
     }
   }
 
-  // Método para guardar el email del usuario (usando SharedPreferences)
-  Future<void> _saveUserEmail(String email) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('user_email', email);
-    print('✅ Email guardado en SharedPreferences: $email');
-  }
-
-  // Método para guardar el token de autenticación (clave cambiada a 'jwt_token')
-  Future<void> _saveAuthToken(String token) async {
-    await _storage.write(key: 'jwt_token', value: token); // Clave consistente con chat.dart
-    print('✅ Token JWT guardado correctamente en SecureStorage');
-  }
-
-  // Método para guardar el RUT del usuario (usando FlutterSecureStorage)
-  Future<void> _saveUserRut(String rut) async {
-    await _storage.write(key: 'user_rut', value: rut);
-    print('✅ RUT de usuario guardado correctamente en SecureStorage: $rut');
-  }
-
-  // Método para guardar el rol del usuario (usando FlutterSecureStorage)
-  Future<void> _saveUserRole(String role) async {
-    await _storage.write(key: 'user_role', value: role);
-    print('✅ Rol de usuario guardado correctamente en SecureStorage: $role');
-  }
-
   Future<void> login() async {
-    final email = _emailController.text.trim().toLowerCase();
-    final password = _passwordController.text.trim();
-
-    if (email.isEmpty || password.isEmpty) {
+    // Validaciones
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Completa todos los campos")),
+        const SnackBar(content: Text("Todos los campos son obligatorios")),
       );
       return;
     }
 
-    setState(() => cargando = true);
+    setState(() {
+      cargando = true;
+    });
 
     try {
       final response = await http.post(
-        Uri.parse("${confGlobal.baseUrl}/auth/login"),
+        Uri.parse("${confGlobal.baseUrl}/auth/login/"),
         headers: {"Content-Type": "application/json"},
-        body: jsonEncode({"email": email, "password": password}),
+        body: json.encode({
+          "email": _emailController.text.trim(),
+          "password": _passwordController.text,
+        }),
       );
 
-      setState(() => cargando = false);
+      print('📡 Status: ${response.statusCode}');
+      print('📨 Response body: ${response.body}');
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> data = jsonDecode(response.body);
-        print('🔑 Respuesta del login: $data');
+        final data = json.decode(response.body);
+        
+        // Extraer datos de la respuesta - estructura correcta del backend
+        final token = data["data"]["token"];
+        
+        // Decodificar el token para obtener información del usuario
+        Map<String, dynamic> decodedToken = JwtDecoder.decode(token);
+        final userEmail = decodedToken['email'];
+        final userRole = decodedToken['rol'] ?? 'usuario'; // valor por defecto
+        final userId = decodedToken['id'].toString();
+        
+        // Guardar token y datos de usuario
+        await _storage.write(key: 'jwt_token', value: token);
+        await _storage.write(key: 'user_id', value: userId);
+        await _storage.write(key: 'user_email', value: userEmail);
+        await _storage.write(key: 'user_role', value: userRole);
+        
+        // Guardar en SharedPreferences para compatibilidad
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('isLogged', true);
+        await prefs.setString('email', userEmail);
+        await prefs.setString('userId', userId);
+        await prefs.setString('userRole', userRole);
 
-        final String? token = data['data']?['token'];
+        // Inicializar servicios WebSocket después del login exitoso
+        await _initializeWebSocketServices();
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("✅ Login exitoso"),
+              backgroundColor: Color(0xFF057233), // Leaf Green
+              duration: Duration(seconds: 2),
+            ),
+          );
 
-        if (token != null) {
-          // --- NUEVA LÓGICA: Decodificar el token para obtener el RUT ---
-          try {
-            Map<String, dynamic> decodedToken = JwtDecoder.decode(token);
-            final String? userRut = decodedToken['rut']; // Asumiendo que el RUT está en el payload del JWT
-            final String? userRole = decodedToken['rol']; // Extraer el rol del usuario
-
-            if (userRut != null) {
-              await _saveAuthToken(token); // Guardar el token
-              await _saveUserRut(userRut); // Guardar el RUT decodificado
-              await _saveUserEmail(email); // Guardar el email (si lo sigues necesitando en SharedPreferences)
-              
-              // Guardar el rol del usuario
-              if (userRole != null) {
-                await _saveUserRole(userRole);
-                print('✅ Rol de usuario guardado: $userRole');
-              }
-
-              print('✅ Login exitoso. Token, RUT ($userRut) y rol ($userRole) guardados.');
-
-              // Inicializar conexión WebSocket después del login exitoso
-              try {
-                final socketService = SocketService.instance;
-                await socketService.connect();
-                print('🔌 Socket inicializado después del login');
-              } catch (e) {
-                print('⚠️ Error al conectar socket después del login: $e');
-                // No fallar el login por error de socket
-              }
-
-              // Inicializar notificaciones WebSocket después del login exitoso
-              try {
-                await WebSocketNotificationService.connectToSocket(userRut);
-                print('🔔 Notificaciones WebSocket conectadas para $userRut');
-              } catch (e) {
-                print('⚠️ Error al conectar notificaciones WebSocket: $e');
-                // No fallar el login por error de notificaciones
-              }
-
-              // Navegar según el rol del usuario
-              if (userRole == 'administrador') {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AdminDashboard()),
-                );
-              } else {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const InicioScreen()),
-                );
-              }
-            } else {
-              print('⚠️ RUT no encontrado en el payload del token JWT.');
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("❌ Error de login: RUT no encontrado en el token.")),
-              );
-            }
-          } catch (e) {
-            print('❌ Error al decodificar el token JWT: $e');
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text("❌ Error de login: Token JWT inválido. $e")),
+          // Navegación según el rol del usuario
+          if (userRole == "admin" || userRole == "administrador") {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const AdminDashboard()),
+            );
+          } else {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const InicioScreen()),
             );
           }
-        } else {
-          print('⚠️ No se encontró token en la respuesta del login. Estructura de data: ${data['data']}');
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("❌ Error en la respuesta del servidor: Token no encontrado.")),
-          );
         }
       } else {
-        final Map<String, dynamic> data = jsonDecode(response.body);
-        
-        // Mejorar el manejo de errores para mostrar mensajes específicos de validación
+        // Manejo de errores mejorado
+        final data = json.decode(response.body);
         String errorMessage = "Error desconocido";
         
-        // 1. PRIMERO verificar si hay detalles específicos de validación (aquí está el mensaje real)
-        if (data.containsKey("details") && data["details"] != null) {
-          errorMessage = data["details"].toString();
-        }
-        // 2. Verificar si hay un mensaje directo
-        else if (data.containsKey("message") && data["message"] != null) {
+        // 1. Verificar si hay un mensaje directo
+        if (data.containsKey("message") && data["message"] != null) {
           errorMessage = data["message"];
         }
-        // 3. Verificar si hay un error general 
-        else if (data.containsKey("error") && data["error"] != null) {
-          var errorData = data["error"];
-          
-          // Si el error es un objeto con mensaje específico
-          if (errorData is Map && errorData.containsKey("message")) {
-            errorMessage = errorData["message"];
+        // 2. Verificar si hay errores de validación
+        else if (data.containsKey("errors") && data["errors"] != null) {
+          final errors = data["errors"];
+          if (errors is List && errors.isNotEmpty) {
+            errorMessage = errors.first["msg"] ?? errors.first.toString();
+          } else if (errors is Map) {
+            errorMessage = errors.values.first.toString();
           }
-          // Si el error es un string directo
-          else if (errorData is String) {
-            errorMessage = errorData;
-          }
-          // Si el error tiene dataInfo (estructura del backend)
-          else if (errorData is Map && errorData.containsKey("dataInfo")) {
+        }
+        // 3. Verificar si hay dataInfo (campos específicos)
+        else if (data.containsKey("dataInfo")) {
+          final errorData = data["dataInfo"];
+          if (errorData is Map && errorData.containsKey("dataInfo")) {
             String field = errorData["dataInfo"] ?? "";
             String msg = errorData["message"] ?? "";
             errorMessage = field.isEmpty ? msg : "$field: $msg";
@@ -299,22 +239,49 @@ class _LoginPageState extends State<LoginPage> {
           SnackBar(
             content: Text("❌ $errorMessage"),
             duration: const Duration(seconds: 4),
-            backgroundColor: Colors.red,
+            backgroundColor: const Color(0xFFB02A2E), // Crimson Alert
           ),
         );
       }
     } catch (e) {
-      setState(() => cargando = false);
-      print('❌ Error de red o parseo durante el login: $e');
+      print('❌ Excepción durante el login: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("❌ Error de conexión: $e")),
+        SnackBar(
+          content: Text("❌ Error de conexión: $e"),
+          backgroundColor: const Color(0xFFB02A2E), // Crimson Alert
+        ),
       );
+    } finally {
+      if (mounted) {
+        setState(() {
+          cargando = false;
+        });
+      }
+    }
+  }
+
+  // Inicializar servicios WebSocket después del login exitoso
+  Future<void> _initializeWebSocketServices() async {
+    try {
+      final token = await _storage.read(key: 'jwt_token');
+      final userId = await _storage.read(key: 'user_id');
+      
+      if (token != null && userId != null) {
+        // Inicializar SocketService para chat
+        await SocketService.instance.connect();
+        
+        // Inicializar WebSocketNotificationService para notificaciones
+        await WebSocketNotificationService.connectToSocket(userId);
+        
+        print('🔌 Servicios WebSocket inicializados correctamente');
+      }
+    } catch (e) {
+      print('❌ Error inicializando servicios WebSocket: $e');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // ... (Tu método build() permanece sin cambios) ...
     return Scaffold(
       body: Stack(
         fit: StackFit.expand,
@@ -324,101 +291,149 @@ class _LoginPageState extends State<LoginPage> {
             fit: BoxFit.cover,
           ),
           Container(
-            color: const Color.fromARGB(128, 0, 0, 0)
+            color: const Color.fromARGB(128, 0, 0, 0), // Overlay oscuro
           ),
           Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Image.asset(
-                    'assets/icon/logosf.png',
-                    height: 240,
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    "Iniciar sesión",
-                    style: TextStyle(color: Colors.white70, fontSize: 20),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _emailController,
-                    decoration: const InputDecoration(
-                      labelText: "Correo electrónico",
-                      labelStyle: TextStyle(color: Colors.white70),
-                      enabledBorder: UnderlineInputBorder(
-                        borderSide: BorderSide(color: Colors.white70),
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 450),
+              margin: const EdgeInsets.all(8),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(8),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Image.asset(
+                      'assets/icon/logosf.png',
+                      height: 240,
+                    ),
+                    const Text(
+                      "Wessex Rugby",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _passwordController,
-                    obscureText: !verClave,
-                    decoration: InputDecoration(
-                      labelText: "Contraseña",
-                      labelStyle: const TextStyle(color: Colors.white70),
-                      enabledBorder: const UnderlineInputBorder(
-                        borderSide: BorderSide(color: Colors.white70),
-                      ),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          verClave ? Icons.visibility : Icons.visibility_off,
-                          color: Colors.white70,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            verClave = !verClave;
-                          });
-                        },
+                    const SizedBox(height: 8),
+                    const Text(
+                      "Sistema de Gestión Web",
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 18,
                       ),
                     ),
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                  const SizedBox(height: 32),
-                  ElevatedButton(
-                    onPressed: cargando ? null : login,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color.fromARGB(150, 81, 52, 23),
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size(double.infinity, 48),
-                    ),
-                    child: cargando
-                        ? const CircularProgressIndicator(color: Colors.white70)
-                        : const Text("Siguiente"),
-                  ),
-                  const SizedBox(height: 32),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const VerificarCorreoPage(),
+                    const SizedBox(height: 32),
+                      
+                    // Campo Email
+                    TextField(
+                      controller: _emailController,
+                      decoration: InputDecoration(
+                        labelText: "Correo electrónico",
+                        labelStyle: const TextStyle(color: Color(0xFF100B0D)), // Dark Grape
+                        prefixIcon: const Icon(Icons.email, color: Color(0xFF090976)), // Deep Royal Blue
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                      );
-                    },
-                    child: const Text(
-                      "Crear cuenta",
-                      style: TextStyle(color: Colors.white70),
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const RecuperarContrasenaPage(),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFFB02A2E), width: 2), // Crimson Alert
                         ),
-                      );
-                    },
-                    child: const Text(
-                      "¿Olvidaste tu contraseña?",
-                      style: TextStyle(color: Colors.white70),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFFD2DEDC)), // Maximum Gray Mint
+                        ),
+                        filled: true,
+                        fillColor: const Color(0xFFF0EAEB), // Misty Rose Gray
+                      ),
+                      style: const TextStyle(color: Color(0xFF100B0D)), // Dark Grape
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 20),
+                    
+                    // Campo Password
+                    TextField(
+                      controller: _passwordController,
+                      obscureText: !verClave,
+                      decoration: InputDecoration(
+                        labelText: "Contraseña",
+                        labelStyle: const TextStyle(color: Color(0xFF100B0D)), // Dark Grape
+                        prefixIcon: const Icon(Icons.lock, color: Color(0xFF090976)), // Deep Royal Blue
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            verClave ? Icons.visibility : Icons.visibility_off,
+                            color: const Color(0xFF090976), // Deep Royal Blue
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              verClave = !verClave;
+                            });
+                          },
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFFB02A2E), width: 2), // Crimson Alert
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFFD2DEDC)), // Maximum Gray Mint
+                        ),
+                        filled: true,
+                        fillColor: const Color(0xFFF0EAEB), // Misty Rose Gray
+                      ),
+                      style: const TextStyle(color: Color(0xFF100B0D)), // Dark Grape
+                    ),
+                    const SizedBox(height: 32),
+                    
+                    // Botón Login
+                    ElevatedButton(
+                      onPressed: cargando ? null : login,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFB02A2E), // Crimson Alert
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(double.infinity, 50),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 2,
+                      ),
+                      child: cargando
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text(
+                              "Iniciar Sesión",
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                            ),
+                    ),
+                    const SizedBox(height: 20),
+                    
+                    // Link recuperar contraseña
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const RecuperarContrasenaPage(),
+                          ),
+                        );
+                      },
+                      child: const Text(
+                        "¿Olvidaste tu contraseña?",
+                        style: TextStyle(
+                          color: Color(0xFF090976), // Deep Royal Blue para enlaces
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

@@ -61,7 +61,8 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       navigatorKey: NavigationService.navigatorKey,
-      title: 'BioRuta',
+      title: 'WesRugby - Sistema de Gestión Web',
+      debugShowCheckedModeBanner: false, // Quitar banner de debug
       localizationsDelegates: [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
@@ -73,8 +74,68 @@ class MyApp extends StatelessWidget {
       ],
       locale: const Locale('es', 'ES'),
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF2E7D32)),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFFB02A2E), // Crimson Alert como color principal
+          brightness: Brightness.light,
+          primary: const Color(0xFFB02A2E), // Crimson Alert
+          secondary: const Color(0xFF090976), // Deep Royal Blue
+          surface: const Color(0xFFF0EAEB), // Misty Rose Gray
+          background: const Color(0xFFF0EAEB), // Misty Rose Gray
+          onPrimary: Colors.white,
+          onSecondary: Colors.white,
+          onSurface: const Color(0xFF100B0D), // Dark Grape para textos
+          onBackground: const Color(0xFF100B0D), // Dark Grape para textos
+        ),
+        scaffoldBackgroundColor: const Color(0xFFF0EAEB), // Misty Rose Gray
         useMaterial3: true,
+        // Configuración para web
+        visualDensity: VisualDensity.adaptivePlatformDensity,
+        fontFamily: 'Roboto', // Fuente más web-friendly
+        appBarTheme: const AppBarTheme(
+          elevation: 2,
+          centerTitle: true,
+          backgroundColor: Color(0xFF041540), // Midnight Navy
+          foregroundColor: Colors.white,
+        ),
+        cardTheme: const CardThemeData(
+          elevation: 2,
+          color: Color(0xFFD2DEDC), // Maximum Gray Mint para tarjetas
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(12)),
+          ),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFFB02A2E), // Crimson Alert
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        ),
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(
+            foregroundColor: const Color(0xFF090976), // Deep Royal Blue para enlaces
+          ),
+        ),
+        inputDecorationTheme: const InputDecorationTheme(
+          filled: true,
+          fillColor: Color(0xFFF0EAEB), // Misty Rose Gray para fondos de formulario
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.all(Radius.circular(8)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Color(0xFFD2DEDC)), // Maximum Gray Mint
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Color(0xFFB02A2E)), // Crimson Alert
+          ),
+        ),
+        // Botón flotante para acciones afirmativas
+        floatingActionButtonTheme: const FloatingActionButtonThemeData(
+          backgroundColor: Color(0xFF057233), // Leaf Green para acciones afirmativas
+          foregroundColor: Colors.white,
+        ),
       ),
       initialRoute: '/login', // Ruta inicial
       routes: {

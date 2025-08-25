@@ -150,6 +150,205 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
     }
   }
 
+  Future<void> _createUser(Map<String, String> userData) async {
+    try {
+      final headers = await TokenManager.getAuthHeaders();
+      if (headers == null) {
+        throw Exception('No hay token de autenticación');
+      }
+
+      final response = await http.post(
+        Uri.parse('${confGlobal.baseUrl}/auth/register'),
+        headers: headers,
+        body: json.encode(userData),
+      );
+
+      if (response.statusCode == 201) {
+        final data = json.decode(response.body);
+        if (data['success'] == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Usuario creado exitosamente')),
+          );
+          _loadUsers(); // Recargar la lista
+        } else {
+          throw Exception(data['message'] ?? 'Error desconocido');
+        }
+      } else {
+        final errorData = json.decode(response.body);
+        throw Exception(errorData['message'] ?? 'Error ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error creando usuario: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error creando usuario: $e')),
+      );
+    }
+  }
+
+  void _showCreateUserDialog() {
+    final formKey = GlobalKey<FormState>();
+    final rutController = TextEditingController();
+    final nombreController = TextEditingController();
+    final emailController = TextEditingController();
+    final passwordController = TextEditingController();
+    final carreraController = TextEditingController();
+    String selectedGenero = 'masculino';
+    String selectedRol = 'estudiante';
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text(
+                'Crear Nuevo Usuario',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              content: Container(
+                width: 500, // Ancho fijo para web
+                constraints: const BoxConstraints(maxHeight: 600),
+                child: SingleChildScrollView(
+                  child: Form(
+                    key: formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                      TextFormField(
+                        controller: rutController,
+                        decoration: const InputDecoration(
+                          labelText: 'RUT',
+                          hintText: 'Ej: 12.345.678-9',
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'El RUT es obligatorio';
+                          }
+                          return null;
+                        },
+                      ),
+                      TextFormField(
+                        controller: nombreController,
+                        decoration: const InputDecoration(
+                          labelText: 'Nombre Completo',
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'El nombre es obligatorio';
+                          }
+                          return null;
+                        },
+                      ),
+                      TextFormField(
+                        controller: emailController,
+                        decoration: const InputDecoration(
+                          labelText: 'Email',
+                          hintText: 'usuario@ejemplo.cl',
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'El email es obligatorio';
+                          }
+                          if (!value.contains('@')) {
+                            return 'Email inválido';
+                          }
+                          return null;
+                        },
+                      ),
+                      TextFormField(
+                        controller: passwordController,
+                        decoration: const InputDecoration(
+                          labelText: 'Contraseña',
+                        ),
+                        obscureText: true,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'La contraseña es obligatoria';
+                          }
+                          if (value.length < 6) {
+                            return 'La contraseña debe tener al menos 6 caracteres';
+                          }
+                          return null;
+                        },
+                      ),
+                      TextFormField(
+                        controller: carreraController,
+                        decoration: const InputDecoration(
+                          labelText: 'Carrera',
+                          hintText: 'Ej: Ingeniería Civil en Informática',
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'La carrera es obligatoria';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        value: selectedGenero,
+                        decoration: const InputDecoration(labelText: 'Género'),
+                        items: const [
+                          DropdownMenuItem(value: 'masculino', child: Text('Masculino')),
+                          DropdownMenuItem(value: 'femenino', child: Text('Femenino')),
+                          DropdownMenuItem(value: 'prefiero_no_decir', child: Text('Prefiero no decir')),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            selectedGenero = value!;
+                          });
+                        },
+                      ),
+                      DropdownButtonFormField<String>(
+                        value: selectedRol,
+                        decoration: const InputDecoration(labelText: 'Rol'),
+                        items: const [
+                          DropdownMenuItem(value: 'estudiante', child: Text('Estudiante')),
+                          DropdownMenuItem(value: 'administrador', child: Text('Administrador')),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            selectedRol = value!;
+                          });
+                        },
+                      ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancelar'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    if (formKey.currentState!.validate()) {
+                      final userData = {
+                        'rut': rutController.text.trim(),
+                        'nombreCompleto': nombreController.text.trim(),
+                        'email': emailController.text.trim(),
+                        'password': passwordController.text.trim(),
+                        'carrera': carreraController.text.trim(),
+                        'genero': selectedGenero,
+                        'rol': selectedRol,
+                        'fechaNacimiento': '2000-01-01', // Fecha por defecto
+                      };
+                      Navigator.pop(context);
+                      _createUser(userData);
+                    }
+                  },
+                  child: const Text('Crear Usuario'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   void _showUserActions(Map<String, dynamic> user) {
     showModalBottomSheet(
       context: context,
@@ -228,9 +427,23 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
                 'Gestión de Usuarios',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-              IconButton(
-                icon: const Icon(Icons.refresh),
-                onPressed: _loadUsers,
+              Row(
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: _showCreateUserDialog,
+                    icon: const Icon(Icons.person_add, size: 18),
+                    label: const Text('Crear Usuario'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF057233), // Leaf Green para acción afirmativa
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.refresh),
+                    onPressed: _loadUsers,
+                  ),
+                ],
               ),
             ],
           ),
@@ -307,32 +520,52 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Panel de Administración'),
-        backgroundColor: const Color(0xFF6B3B2D),
+        title: const Text('Wessex Rugby - Panel de Administración'),
+        backgroundColor: const Color(0xFF041540), // Midnight Navy
         foregroundColor: Colors.white,
+        centerTitle: true,
+        elevation: 2,
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: _logout,
+            tooltip: 'Cerrar Sesión',
           ),
         ],
         bottom: TabBar(
           controller: _tabController,
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white70,
-          indicatorColor: Colors.white,
+          indicatorColor: const Color(0xFFB02A2E), // Crimson Alert para indicador
+          indicatorWeight: 3,
           tabs: const [
-            Tab(icon: Icon(Icons.group), text: 'Usuarios'),
-            Tab(icon: Icon(Icons.person), text: 'Perfil'),
+            Tab(
+              icon: Icon(Icons.group),
+              text: 'Gestión de Usuarios',
+            ),
+            Tab(
+              icon: Icon(Icons.person),
+              text: 'Mi Perfil',
+            ),
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildUsersTab(),
-          _buildProfileTab(),
-        ],
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        color: const Color(0xFFF0EAEB), // Misty Rose Gray para fondo
+        child: Center(
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 1200), // Ancho máximo para web
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildUsersTab(),
+                _buildProfileTab(),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

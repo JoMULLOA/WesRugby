@@ -84,13 +84,13 @@ export const registerValidation = Joi.object({
     })
     .custom(domainEmailValidator, "Validación dominio email"),
   rol: Joi.string()
-    .valid("estudiante")
+    .valid("estudiante", "administrador")
     .required()
     .messages({
       "string.empty": "El rol no puede estar vacío.",
       "any.required": "El rol es obligatorio.",
       "string.base": "El rol debe ser de tipo texto.",
-      "any.only": "El rol debe ser 'estudiante'.",
+      "any.only": "El rol debe ser 'estudiante' o 'administrador'.",
     }),
   password: Joi.string()
     .min(8)

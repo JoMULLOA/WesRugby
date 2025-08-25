@@ -24,3 +24,11 @@
 2025-08-23 07:36:54.870: [INFO] BookmarkModelLoaded, ids_reassigned: 0
 2025-08-23 07:36:54.870: [INFO] OnDoneLoading sync enabled: 1
 2025-08-23 07:36:57.497: [INFO] Sync initialization duration: 2474ms
+2025-08-25 04:39:43.470: [INFO] VisibilityChanged: 0
+2025-08-25 04:39:43.536: [INFO] BookmarkModelLoaded, ids_reassigned: 0
+2025-08-25 04:39:43.536: [INFO] OnDoneLoading sync enabled: 1
+2025-08-25 04:39:46.082: [INFO] Sync initialization duration: 2318ms
+2025-08-25 04:54:52.100: [INFO] VisibilityChanged: 0
+2025-08-25 04:54:52.173: [INFO] BookmarkModelLoaded, ids_reassigned: 0
+2025-08-25 04:54:52.173: [INFO] OnDoneLoading sync enabled: 1
+2025-08-25 04:54:54.143: [INFO] Sync initialization duration: 1732ms
