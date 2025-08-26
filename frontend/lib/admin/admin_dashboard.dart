@@ -20,16 +20,44 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
   late TabController _tabController;
   List<dynamic> _users = [];
   bool _isLoading = false;
+  String _currentUserRole = ""; // Rol del usuario actual
 
   @override
   void initState() {
     super.initState();
+    _initializeRoleAndTabs();
+    _loadUsers();
+  }
+
+  // Inicializar el rol del usuario y configurar tabs según permisos
+  Future<void> _initializeRoleAndTabs() async {
+    final prefs = await SharedPreferences.getInstance();
+    _currentUserRole = prefs.getString('userRole') ?? 'apoderado';
+    
+    // Configurar número de tabs según el rol
+    int tabLength = _getTabLength(_currentUserRole);
+    
     _tabController = TabController(
-      length: 2, // Solo 2 tabs: Usuarios y Perfil
+      length: tabLength,
       vsync: this,
       initialIndex: widget.initialTab ?? 0,
     );
-    _loadUsers();
+    
+    setState(() {});
+  }
+
+  // Determinar cantidad de tabs según el rol
+  int _getTabLength(String role) {
+    switch (role) {
+      case "directiva":
+        return 4; // Usuarios, Finanzas, Deportes, Perfil
+      case "tesorera":
+        return 3; // Usuarios (limitado), Finanzas, Perfil
+      case "entrenador":
+        return 3; // Usuarios (limitado), Deportes, Perfil
+      default:
+        return 2; // Solo Usuarios y Perfil (muy limitado)
+    }
   }
 
   @override
@@ -193,7 +221,7 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
     final passwordController = TextEditingController();
     final carreraController = TextEditingController();
     String selectedGenero = 'masculino';
-    String selectedRol = 'estudiante';
+    String selectedRol = 'apoderado';
 
     showDialog(
       context: context,
@@ -303,8 +331,10 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
                         value: selectedRol,
                         decoration: const InputDecoration(labelText: 'Rol'),
                         items: const [
-                          DropdownMenuItem(value: 'estudiante', child: Text('Estudiante')),
-                          DropdownMenuItem(value: 'administrador', child: Text('Administrador')),
+                          DropdownMenuItem(value: 'directiva', child: Text('Directiva')),
+                          DropdownMenuItem(value: 'tesorera', child: Text('Tesorera')),
+                          DropdownMenuItem(value: 'entrenador', child: Text('Entrenador')),
+                          DropdownMenuItem(value: 'apoderado', child: Text('Apoderado')),
                         ],
                         onChanged: (value) {
                           setState(() {
@@ -566,6 +596,194 @@ class _AdminDashboardState extends State<AdminDashboard> with TickerProviderStat
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  // Generar tabs según el rol del usuario
+  List<Tab> _getTabs() {
+    List<Tab> tabs = [];
+    
+    switch (_currentUserRole) {
+      case "directiva":
+        tabs = const [
+          Tab(icon: Icon(Icons.group), text: 'Usuarios'),
+          Tab(icon: Icon(Icons.attach_money), text: 'Finanzas'),
+          Tab(icon: Icon(Icons.sports_rugby), text: 'Deportes'),
+          Tab(icon: Icon(Icons.person), text: 'Mi Perfil'),
+        ];
+        break;
+        
+      case "tesorera":
+        tabs = const [
+          Tab(icon: Icon(Icons.group_outlined), text: 'Usuarios'),
+          Tab(icon: Icon(Icons.attach_money), text: 'Finanzas'),
+          Tab(icon: Icon(Icons.person), text: 'Mi Perfil'),
+        ];
+        break;
+        
+      case "entrenador":
+        tabs = const [
+          Tab(icon: Icon(Icons.group_outlined), text: 'Usuarios'),
+          Tab(icon: Icon(Icons.sports_rugby), text: 'Deportes'),
+          Tab(icon: Icon(Icons.person), text: 'Mi Perfil'),
+        ];
+        break;
+        
+      default: // apoderado o roles no definidos
+        tabs = const [
+          Tab(icon: Icon(Icons.visibility), text: 'Vista'),
+          Tab(icon: Icon(Icons.person), text: 'Mi Perfil'),
+        ];
+    }
+    
+    return tabs;
+  }
+
+  // Generar vistas según el rol del usuario
+  List<Widget> _getTabViews() {
+    List<Widget> views = [];
+    
+    switch (_currentUserRole) {
+      case "directiva":
+        views = [
+          _buildUsersTab(), // Gestión completa de usuarios
+          _buildFinancesTab(), // Módulo financiero completo
+          _buildSportsTab(), // Módulo deportivo completo
+          _buildProfileTab(), // Perfil del usuario
+        ];
+        break;
+        
+      case "tesorera":
+        views = [
+          _buildUsersTabLimited(), // Vista limitada de usuarios
+          _buildFinancesTab(), // Módulo financiero completo
+          _buildProfileTab(), // Perfil del usuario
+        ];
+        break;
+        
+      case "entrenador":
+        views = [
+          _buildUsersTabLimited(), // Vista limitada de usuarios
+          _buildSportsTab(), // Módulo deportivo completo
+          _buildProfileTab(), // Perfil del usuario
+        ];
+        break;
+        
+      default: // apoderado
+        views = [
+          _buildViewOnlyTab(), // Solo vista de información
+          _buildProfileTab(), // Perfil del usuario
+        ];
+    }
+    
+    return views;
+  }
+
+  // Placeholder para el módulo financiero
+  Widget _buildFinancesTab() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.attach_money,
+            size: 64,
+            color: Color(0xFFB02A2E),
+          ),
+          SizedBox(height: 16),
+          Text(
+            'Módulo Financiero',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Gestión de pagos y comprobantes\n(En desarrollo)',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 16, color: Colors.grey),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Placeholder para el módulo deportivo
+  Widget _buildSportsTab() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.sports_rugby,
+            size: 64,
+            color: Color(0xFFB02A2E),
+          ),
+          SizedBox(height: 16),
+          Text(
+            'Módulo Deportivo',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Gestión de asistencias, eventos y calendario\n(En desarrollo)',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 16, color: Colors.grey),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Vista limitada de usuarios para entrenadores y tesoreras
+  Widget _buildUsersTabLimited() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.group_outlined,
+            size: 64,
+            color: Color(0xFFB02A2E),
+          ),
+          SizedBox(height: 16),
+          Text(
+            'Vista de Usuarios',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Vista limitada de usuarios según su rol\n(En desarrollo)',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 16, color: Colors.grey),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Vista de solo lectura para apoderados
+  Widget _buildViewOnlyTab() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.visibility,
+            size: 64,
+            color: Color(0xFFB02A2E),
+          ),
+          SizedBox(height: 16),
+          Text(
+            'Vista de Información',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Información personalizada para apoderados\n(En desarrollo)',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 16, color: Colors.grey),
+          ),
+        ],
       ),
     );
   }

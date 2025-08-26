@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:jwt_decoder/jwt_decoder.dart'; // Importa el decodificador JWT
-import '../buscar/inicio.dart'; // Importar InicioScreen
+import 'package:jwt_decoder/jwt_decoder.dart';
 import './recuperacion.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../config/confGlobal.dart';
-import '../utils/token_manager.dart';
-import '../services/socket_service.dart'; // Importar SocketService
-import '../services/websocket_notification_service.dart'; // Importar WebSocket Notifications
-import '../admin/admin_dashboard.dart'; // Importar AdminDashboard
+import '../config/colors.dart';
+import '../services/tokenManager.dart';
+import '../admin/directiva_dashboard.dart';
+import '../admin/tesorera_dashboard.dart';
+import '../admin/entrenador_dashboard.dart';
+import '../admin/apoderado_dashboard.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -56,7 +57,10 @@ class _LoginPageState extends State<LoginPage> {
         print('⏰ Token JWT expirado (verificación cliente)');
         await TokenManager.clearAuthData();
         if (mounted) {
-          TokenManager.showSessionExpiredMessage(context);
+          // TokenManager.showSessionExpiredMessage(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Sesión expirada. Por favor inicia sesión nuevamente.')),
+          );
         }
         return;
       }
@@ -66,18 +70,21 @@ class _LoginPageState extends State<LoginPage> {
       final isValidInBackend = await _verifyTokenWithBackend(token);
       
       if (isValidInBackend) {
-        print('✅ Token válido en backend, redirigiendo a inicio');
+        print('✅ Token válido en backend, redirigiendo a dashboard');
         if (mounted) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (_) => const InicioScreen()),
+            MaterialPageRoute(builder: (_) => const DirectivaDashboard()),
           );
         }
       } else {
         print('❌ Token rechazado por el backend');
         await TokenManager.clearAuthData();
         if (mounted) {
-          TokenManager.showSessionExpiredMessage(context);
+          // TokenManager.showSessionExpiredMessage(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Sesión expirada. Por favor inicia sesión nuevamente.')),
+          );
         }
       }
     } catch (e) {
@@ -113,7 +120,10 @@ class _LoginPageState extends State<LoginPage> {
         print('⏰ Token JWT expirado, limpiando datos...');
         await TokenManager.clearAuthData();
         if (mounted) {
-          TokenManager.showSessionExpiredMessage(context);
+          // TokenManager.showSessionExpiredMessage(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Sesión expirada. Por favor inicia sesión nuevamente.')),
+          );
         }
       }
     } catch (e) {
@@ -184,17 +194,55 @@ class _LoginPageState extends State<LoginPage> {
             ),
           );
 
-          // Navegación según el rol del usuario
-          if (userRole == "admin" || userRole == "administrador") {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const AdminDashboard()),
-            );
-          } else {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const InicioScreen()),
-            );
+          // Navegación según el rol del usuario Wessex Rugby
+          switch (userRole) {
+            case "directiva":
+              // Directiva: Acceso completo a panel administrativo
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const DirectivaDashboard()),
+              );
+              break;
+            
+            case "tesorera":
+              // Tesorera: Panel financiero y administrativo limitado
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const TesoreraDashboard()),
+              );
+              break;
+            
+            case "entrenador":
+              // Entrenador: Panel de gestión deportiva
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const EntrenadorDashboard()),
+              );
+              break;
+            
+            case "apoderado":
+              // Apoderado: Vista limitada del usuario regular
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const ApoderadoDashboard()),
+              );
+              break;
+            
+            // Compatibilidad con roles antiguos
+            case "admin":
+            case "administrador":
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const DirectivaDashboard()),
+              );
+              break;
+            
+            default:
+              // Por defecto, enviar a dashboard de directiva
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const DirectivaDashboard()),
+              );
           }
         }
       } else {
@@ -268,10 +316,10 @@ class _LoginPageState extends State<LoginPage> {
       
       if (token != null && userId != null) {
         // Inicializar SocketService para chat
-        await SocketService.instance.connect();
+        // await SocketService.instance.connect();
         
         // Inicializar WebSocketNotificationService para notificaciones
-        await WebSocketNotificationService.connectToSocket(userId);
+        // await WebSocketNotificationService.connectToSocket(userId);
         
         print('🔌 Servicios WebSocket inicializados correctamente');
       }
@@ -282,157 +330,275 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    final isTablet = screenSize.width > 600;
+    final isDesktop = screenSize.width > 1200;
+    
     return Scaffold(
       body: Stack(
         fit: StackFit.expand,
         children: [
+          // Background image
           Image.asset(
             'assets/icon/background.png',
             fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [WessexColors.midnightNavy, WessexColors.deepRoyalBlue],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+              );
+            },
           ),
+          // Dark overlay
           Container(
-            color: const Color.fromARGB(128, 0, 0, 0), // Overlay oscuro
+            color: WessexColors.darkGrape.withOpacity(0.3),
           ),
-          Center(
-            child: Container(
-              constraints: const BoxConstraints(maxWidth: 450),
-              margin: const EdgeInsets.all(8),
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(8),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Image.asset(
-                      'assets/icon/logosf.png',
-                      height: 240,
-                    ),
-                    const Text(
-                      "Wessex Rugby",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      "Sistema de Gestión Web",
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 18,
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                      
-                    // Campo Email
-                    TextField(
-                      controller: _emailController,
-                      decoration: InputDecoration(
-                        labelText: "Correo electrónico",
-                        labelStyle: const TextStyle(color: Color(0xFF100B0D)), // Dark Grape
-                        prefixIcon: const Icon(Icons.email, color: Color(0xFF090976)), // Deep Royal Blue
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFFB02A2E), width: 2), // Crimson Alert
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFFD2DEDC)), // Maximum Gray Mint
-                        ),
-                        filled: true,
-                        fillColor: const Color(0xFFF0EAEB), // Misty Rose Gray
-                      ),
-                      style: const TextStyle(color: Color(0xFF100B0D)), // Dark Grape
-                    ),
-                    const SizedBox(height: 20),
-                    
-                    // Campo Password
-                    TextField(
-                      controller: _passwordController,
-                      obscureText: !verClave,
-                      decoration: InputDecoration(
-                        labelText: "Contraseña",
-                        labelStyle: const TextStyle(color: Color(0xFF100B0D)), // Dark Grape
-                        prefixIcon: const Icon(Icons.lock, color: Color(0xFF090976)), // Deep Royal Blue
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            verClave ? Icons.visibility : Icons.visibility_off,
-                            color: const Color(0xFF090976), // Deep Royal Blue
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              verClave = !verClave;
-                            });
-                          },
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFFB02A2E), width: 2), // Crimson Alert
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFFD2DEDC)), // Maximum Gray Mint
-                        ),
-                        filled: true,
-                        fillColor: const Color(0xFFF0EAEB), // Misty Rose Gray
-                      ),
-                      style: const TextStyle(color: Color(0xFF100B0D)), // Dark Grape
-                    ),
-                    const SizedBox(height: 32),
-                    
-                    // Botón Login
-                    ElevatedButton(
-                      onPressed: cargando ? null : login,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFB02A2E), // Crimson Alert
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size(double.infinity, 50),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 2,
-                      ),
-                      child: cargando
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : const Text(
-                              "Iniciar Sesión",
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          // Login content
+          SafeArea(
+            child: Center(
+              child: Container(
+                constraints: BoxConstraints(
+                  maxWidth: isDesktop ? 500 : (isTablet ? 450 : double.infinity),
+                ),
+                margin: EdgeInsets.symmetric(
+                  horizontal: isDesktop ? 40 : (isTablet ? 32 : 20),
+                  vertical: 20,
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Logo
+                      Image.asset(
+                        'assets/icon/logosf.png',
+                        height: isDesktop ? 200 : (isTablet ? 180 : 160),
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            height: isDesktop ? 120 : (isTablet ? 100 : 80),
+                            width: isDesktop ? 120 : (isTablet ? 100 : 80),
+                            decoration: BoxDecoration(
+                              color: WessexColors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: WessexColors.darkGrape.withOpacity(0.3),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 5),
+                                ),
+                              ],
                             ),
-                    ),
-                    const SizedBox(height: 20),
-                    
-                    // Link recuperar contraseña
-                    TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const RecuperarContrasenaPage(),
-                          ),
-                        );
-                      },
-                      child: const Text(
-                        "¿Olvidaste tu contraseña?",
+                            child: Icon(
+                              Icons.sports_rugby,
+                              size: isDesktop ? 60 : (isTablet ? 50 : 40),
+                              color: WessexColors.deepRoyalBlue,
+                            ),
+                          );
+                        },
+                      ),
+                      SizedBox(height: isDesktop ? 24 : 20),
+                      
+                      // Title
+                      Text(
+                        "Wessex Rugby Club",
                         style: TextStyle(
-                          color: Color(0xFF090976), // Deep Royal Blue para enlaces
-                          fontWeight: FontWeight.w500,
+                          color: WessexColors.white,
+                          fontSize: isDesktop ? 32 : (isTablet ? 28 : 24),
+                          fontWeight: FontWeight.bold,
+                          shadows: [
+                            Shadow(
+                              color: WessexColors.darkGrape.withOpacity(0.5),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: 8),
+                      
+                      Text(
+                        "Sistema de Gestión",
+                        style: TextStyle(
+                          color: WessexColors.white.withOpacity(0.9),
+                          fontSize: isDesktop ? 18 : (isTablet ? 16 : 14),
+                          fontWeight: FontWeight.w400,
+                          shadows: [
+                            Shadow(
+                              color: WessexColors.darkGrape.withOpacity(0.5),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: isDesktop ? 40 : (isTablet ? 32 : 28)),
+                      
+                      // Login form
+                      Container(
+                        padding: EdgeInsets.all(isDesktop ? 32 : (isTablet ? 28 : 24)),
+                        decoration: BoxDecoration(
+                          color: WessexColors.white.withOpacity(0.95),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: WessexColors.darkGrape.withOpacity(0.2),
+                              blurRadius: 20,
+                              offset: const Offset(0, 10),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            // Email field
+                            TextFormField(
+                              controller: _emailController,
+                              keyboardType: TextInputType.emailAddress,
+                              decoration: InputDecoration(
+                                labelText: "Correo electrónico",
+                                labelStyle: TextStyle(color: WessexColors.darkGrape),
+                                prefixIcon: Icon(Icons.email, color: WessexColors.deepRoyalBlue),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: WessexColors.maximumGrayMint),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: WessexColors.deepRoyalBlue, width: 2),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: WessexColors.maximumGrayMint),
+                                ),
+                                filled: true,
+                                fillColor: WessexColors.mistyRoseGray,
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: isDesktop ? 16 : 14,
+                                ),
+                              ),
+                              style: TextStyle(
+                                color: WessexColors.darkGrape,
+                                fontSize: isDesktop ? 16 : 14,
+                              ),
+                            ),
+                            SizedBox(height: 20),
+                            
+                            // Password field
+                            TextFormField(
+                              controller: _passwordController,
+                              obscureText: !verClave,
+                              decoration: InputDecoration(
+                                labelText: "Contraseña",
+                                labelStyle: TextStyle(color: WessexColors.darkGrape),
+                                prefixIcon: Icon(Icons.lock, color: WessexColors.deepRoyalBlue),
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    verClave ? Icons.visibility : Icons.visibility_off,
+                                    color: WessexColors.deepRoyalBlue,
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      verClave = !verClave;
+                                    });
+                                  },
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: WessexColors.maximumGrayMint),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: WessexColors.deepRoyalBlue, width: 2),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: WessexColors.maximumGrayMint),
+                                ),
+                                filled: true,
+                                fillColor: WessexColors.mistyRoseGray,
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: isDesktop ? 16 : 14,
+                                ),
+                              ),
+                              style: TextStyle(
+                                color: WessexColors.darkGrape,
+                                fontSize: isDesktop ? 16 : 14,
+                              ),
+                            ),
+                            SizedBox(height: isDesktop ? 32 : 24),
+                            
+                            // Login button
+                            SizedBox(
+                              width: double.infinity,
+                              height: isDesktop ? 56 : (isTablet ? 50 : 48),
+                              child: ElevatedButton(
+                                onPressed: cargando ? null : login,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: WessexColors.crimsonAlert,
+                                  foregroundColor: WessexColors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  elevation: 4,
+                                  disabledBackgroundColor: WessexColors.maximumGrayMint,
+                                ),
+                                child: cargando
+                                    ? SizedBox(
+                                        width: 24,
+                                        height: 24,
+                                        child: CircularProgressIndicator(
+                                          color: WessexColors.white,
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : Text(
+                                        "Iniciar Sesión",
+                                        style: TextStyle(
+                                          fontSize: isDesktop ? 16 : (isTablet ? 15 : 14),
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                              ),
+                            ),
+                            SizedBox(height: 16),
+                            
+                            // Forgot password link
+                            TextButton(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const RecuperarContrasenaPage(),
+                                  ),
+                                );
+                              },
+                              style: TextButton.styleFrom(
+                                foregroundColor: WessexColors.deepRoyalBlue,
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: isDesktop ? 12 : 8,
+                                ),
+                              ),
+                              child: Text(
+                                "¿Olvidaste tu contraseña?",
+                                style: TextStyle(
+                                  fontSize: isDesktop ? 14 : (isTablet ? 13 : 12),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

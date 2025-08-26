@@ -30,196 +30,123 @@ function calcularDV(rut) {
 //pero no se podra buscar como un amigo.
 async function createInitialData() {
   try {
-    // Crear Usuarios
+    // Crear Usuarios Base del Sistema Wessex Rugby
     const userRepository = AppDataSource.getRepository(User);
     const userCount = await userRepository.count();
-    let user1 = null;
-    let user2 = null;
-    let user3 = null;
 
     if (userCount === 0) {
       
-      user1 = userRepository.create({
-        rut: "22.333.111-4",
-        nombreCompleto: "Usuario1",
-        email: "usuario1@alumnos.ubiobio.cl",
-        password: await encryptPassword("admin1234"),
+      // Usuario 1: Directiva - Máximo nivel de acceso
+      const userDirectiva = userRepository.create({
+        rut: "12.345.678-9",
+        nombreCompleto: "Director Wessex Rugby",
+        email: "directiva@ubiobio.cl",
+        password: await encryptPassword("Directiva2024"),
         genero: "masculino",
-        fechaNacimiento: "2000-01-01",
-        rol: "estudiante",
+        fechaNacimiento: "1980-01-15",
+        carrera: "Administración Deportiva",
+        rol: "directiva",
         puntuacion: 5,
-        clasificacion : 2,
-        saldo: 100000,
-        tarjetas: []
+        cantidadValoraciones: 0,
+        contadorReportes: 0,
+        saldo: 0,
       });
-      await userRepository.save(user1);
-      console.log("* => Usuario 1 creado exitosamente (Saldo inicial: $100,000)");
 
-      user2 = userRepository.create({
-        rut: "11.222.333-5",
-        nombreCompleto: "Usuario2",
-        email: "usuario2@alumnos.ubiobio.cl",
-        password: await encryptPassword("user2345"),
+      // Usuario 2: Tesorera - Gestión financiera
+      const userTesorera = userRepository.create({
+        rut: "23.456.789-0",
+        nombreCompleto: "Tesorera Wessex Rugby",
+        email: "tesorera@ubiobio.cl",
+        password: await encryptPassword("Tesorera2024"),
         genero: "femenino",
-        fechaNacimiento: "2001-02-02",
-        rol: "estudiante",
-        puntuacion: 3,
-        clasificacion : 1,
-        saldo: 100000,
-        tarjetas: []
+        fechaNacimiento: "1985-03-22",
+        carrera: "Contabilidad",
+        rol: "tesorera",
+        puntuacion: 5,
+        cantidadValoraciones: 0,
+        contadorReportes: 0,
+        saldo: 0,
       });
-      await userRepository.save(user2);
-      console.log("* => Usuario 2 creado exitosamente (Saldo inicial: $100,000)");
 
-      user3 = userRepository.create({
-        rut: "23.444.555-6",
-        nombreCompleto: "Usuario3",
-        email: "usuario3@alumnos.ubiobio.cl",
-        password: await encryptPassword("user3456"),
+      // Usuario 3: Entrenador - Gestión deportiva
+      const userEntrenador = userRepository.create({
+        rut: "34.567.890-1",
+        nombreCompleto: "Entrenador Wessex Rugby",
+        email: "entrenador@ubiobio.cl",
+        password: await encryptPassword("Entrenador2024"),
         genero: "masculino",
-        fechaNacimiento: "2002-03-03",
-        rol: "estudiante",
-        puntuacion: 4,
-        clasificacion : 2,
-        saldo: 100000,
-        tarjetas: []
+        fechaNacimiento: "1982-07-10",
+        carrera: "Educación Física",
+        rol: "entrenador",
+        puntuacion: 5,
+        cantidadValoraciones: 0,
+        contadorReportes: 0,
+        saldo: 0,
       });
-      await userRepository.save(user3);
-      console.log("* => Usuario 3 creado exitosamente (Saldo inicial: $100,000)");
 
-      // Crear un usuario administrador
-      const adminUser = userRepository.create({
-        rut: "20.444.555-6",
-        nombreCompleto: "Administrador",
-        email: "admin@ubiobio.cl",
-        password: await encryptPassword("admin1234"),
-        genero: "prefiero_no_decir",
-        fechaNacimiento: "1990-01-01",
-        rol: "administrador",
+      // Usuario 4: Apoderado - Acceso limitado
+      const userApoderado = userRepository.create({
+        rut: "45.678.901-2",
+        nombreCompleto: "Apoderado Demo Wessex",
+        email: "apoderado@alumnos.ubiobio.cl",
+        password: await encryptPassword("Apoderado2024"),
+        genero: "femenino",
+        fechaNacimiento: "1975-11-05",
+        carrera: "Ingeniería Comercial",
+        rol: "apoderado",
+        puntuacion: 5,
+        cantidadValoraciones: 0,
+        contadorReportes: 0,
+        saldo: 0,
       });
-      await userRepository.save(adminUser);
-      console.log("* => Usuario administrador creado exitosamente");
+
+      await userRepository.save([userDirectiva, userTesorera, userEntrenador, userApoderado]);
+      
+      console.log("✅ Usuarios del sistema Wessex Rugby creados exitosamente:");
+      console.log("   - Directiva: directiva@ubiobio.cl / Directiva2024");
+      console.log("   - Tesorera: tesorera@ubiobio.cl / Tesorera2024");
+      console.log("   - Entrenador: entrenador@ubiobio.cl / Entrenador2024");
+      console.log("   - Apoderado: apoderado@alumnos.ubiobio.cl / Apoderado2024");
+
+      // Mantener referencia para creación de otros datos
+      const user1 = userDirectiva;
+      const user2 = userTesorera;
+      const user3 = userEntrenador;
 
     } else {
-      user1 = await userRepository.findOneBy({
-        email: "usuario1@alumnos.ubiobio.cl",
-      });
-      user2 = await userRepository.findOneBy({
-        email: "usuario2@alumnos.ubiobio.cl",
-      });
-      user3 = await userRepository.findOneBy({
-        email: "usuario3@alumnos.ubiobio.cl",
-      });
+      console.log("✅ Usuarios del sistema ya existen, cargando referencias...");
+      const user1 = await userRepository.findOneBy({ email: "directiva@ubiobio.cl" });
+      const user2 = await userRepository.findOneBy({ email: "tesorera@ubiobio.cl" });
+      const user3 = await userRepository.findOneBy({ email: "entrenador@ubiobio.cl" });
     }
 
-    // Crear Vehículos para TODOS los usuarios
+    // Crear Vehículos solo para usuarios con rol de directiva (ejemplo)
     const vehiculoRepository = AppDataSource.getRepository(Vehiculo);
     const vehiculoCount = await vehiculoRepository.count();
     
     if (vehiculoCount === 0) {
-      console.log("🚗 Creando vehículos para todos los usuarios...");
+      console.log("🚗 Creando vehículo de ejemplo para directiva...");
       
-      // Obtener todos los usuarios estudiantes (incluyendo user1, user2, user3)
-      const todosLosUsuarios = await userRepository.find({
-        where: { rol: "estudiante" }
-      });
+      const userDirectiva = await userRepository.findOneBy({ email: "directiva@ubiobio.cl" });
       
-      // Asegurar que user1, user2 y user3 estén incluidos si existen
-      const usuariosBase = [user1, user2, user3].filter(u => u !== null);
-      
-      // Combinar usuarios base con el resto, evitando duplicados
-      const usuariosParaVehiculos = [...usuariosBase];
-      for (const usuario of todosLosUsuarios) {
-        if (!usuariosParaVehiculos.find(u => u.rut === usuario.rut)) {
-          usuariosParaVehiculos.push(usuario);
-        }
-      }
-      
-      const marcas = ["Toyota", "Hyundai", "Ford", "Chevrolet", "Nissan", "Volkswagen", "Kia", "Mazda", "Honda", "Suzuki"];
-      const modelos = {
-        "Toyota": ["Corolla", "Yaris", "RAV4", "Camry", "Prius"],
-        "Hyundai": ["Accent", "Elantra", "Tucson", "i10", "i20"],
-        "Ford": ["Fiesta", "Focus", "Escape", "EcoSport", "Ka"],
-        "Chevrolet": ["Spark", "Sonic", "Cruze", "Tracker", "Onix"],
-        "Nissan": ["March", "Versa", "Sentra", "X-Trail", "Kicks"],
-        "Volkswagen": ["Gol", "Polo", "Jetta", "Tiguan", "T-Cross"],
-        "Kia": ["Rio", "Cerato", "Sportage", "Picanto", "Stonic"],
-        "Mazda": ["2", "3", "CX-3", "CX-5", "6"],
-        "Honda": ["City", "Civic", "CR-V", "HR-V", "Fit"],
-        "Suzuki": ["Swift", "Baleno", "Vitara", "Jimny", "Alto"]
-      };
-      
-      const colores = ["Blanco", "Negro", "Gris", "Plata", "Rojo", "Azul", "Verde", "Amarillo", "Naranja", "Morado"];
-      const tiposCombustible = ["bencina", "petroleo", "electrico", "hibrido"];
-      const años = [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024];
-      
-      const vehiculos = [];
-      
-      for (let i = 0; i < usuariosParaVehiculos.length; i++) {
-        const usuario = usuariosParaVehiculos[i];
-        const marca = marcas[i % marcas.length];
-        const modelo = modelos[marca][i % modelos[marca].length];
-        const color = colores[i % colores.length];
-        const año = años[i % años.length];
-        const tipoCombustible = tiposCombustible[i % tiposCombustible.length];
-        const nroAsientos = Math.floor(Math.random() * 3) + 4; // 4-6 asientos
-        
-        // Generar patente única (formato chileno: ABCD12 o AB1234)
-        const letras = String.fromCharCode(65 + (i % 26)) + String.fromCharCode(65 + ((i + 1) % 26));
-        const numeros = String(1000 + (i % 9000)).padStart(4, '0');
-        const patente = i % 2 === 0 ? `${letras}${letras.charAt(0)}${letras.charAt(1)}${numeros.slice(0, 2)}` : `${letras}${numeros}`;
-        
-        const vehiculo = vehiculoRepository.create({
-          patente: patente,
+      if (userDirectiva) {
+        const vehiculoDirectiva = vehiculoRepository.create({
+          patente: "WXRG12",
           tipo: "Auto",
-          marca: marca,
-          modelo: `${marca} ${modelo}`,
-          año: año,
-          color: color,
-          nro_asientos: nroAsientos,
-          tipoCombustible: tipoCombustible,
+          marca: "Toyota",
+          modelo: "Toyota RAV4",
+          año: 2023,
+          color: "Blanco",
+          nro_asientos: 5,
+          tipoCombustible: "hibrido",
           documentacion: "Permiso de circulación vigente y seguro obligatorio",
-          propietario: usuario,
+          propietario: userDirectiva,
         });
         
-        vehiculos.push(vehiculo);
-        
-        // Guardar en lotes de 20 para mejor rendimiento
-        if (vehiculos.length === 20 || i === usuariosParaVehiculos.length - 1) {
-          await vehiculoRepository.save(vehiculos);
-          console.log(`   🚙 Vehículos ${i - vehiculos.length + 2} al ${i + 1} creados`);
-          vehiculos.length = 0; // Limpiar array
-        }
+        await vehiculoRepository.save(vehiculoDirectiva);
+        console.log("✅ Vehículo de ejemplo creado para directiva");
       }
-      
-      console.log(`✅ Se crearon ${usuariosParaVehiculos.length} vehículos exitosamente (uno por usuario)`);
     }
-
-    // Crear amistades de prueba usando la entidad Amistad
-    const amistadRepository = AppDataSource.getRepository(Amistad);
-    const amistadCount = await amistadRepository.count();
-    
-    if (amistadCount === 0 && user1 && user2 && user3) {
-      // Crear amistad entre Usuario1 y Usuario2
-      const amistad1 = amistadRepository.create({
-        rutUsuario1: user1.rut,
-        rutUsuario2: user2.rut,
-        fechaAmistad: new Date(),
-        bloqueado: false,
-        usuario1: user1,
-        usuario2: user2
-      });
-      await amistadRepository.save(amistad1);
-      
-      console.log("* => Amistades de prueba creadas exitosamente");
-      console.log("  - Usuario1 es amigo de Usuario2");
-    }
-
-    // Crear reportes iniciales
-    await createInitialReports();
-
-    // Crear tarjetas de sandbox para pruebas de pagos
-    await createSandboxCards();
 
   } catch (error) {
     console.error("❌ Error al crear datos iniciales:", error);
