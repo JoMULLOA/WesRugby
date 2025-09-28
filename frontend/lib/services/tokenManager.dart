@@ -73,9 +73,7 @@ class TokenManager {
   static Future<String?> getFullName() async {
     final userInfo = await getUserInfo();
     if (userInfo != null) {
-      final nombres = userInfo['nombres'] ?? '';
-      final apellidos = userInfo['apellidos'] ?? '';
-      return '$nombres $apellidos'.trim();
+      return userInfo['nombreCompleto'] ?? 'Usuario';
     }
     return null;
   }

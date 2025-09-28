@@ -392,7 +392,7 @@ class _LoginPageState extends State<LoginPage> {
                               
                               // Footer
                               Text(
-                                '© 2024 Wessex Rugby Club',
+                                '© 2025 Wessex Rugby Club',
                                 style: TextStyle(
                                   color: WessexColors.darkGrape.withOpacity(0.6),
                                   fontSize: 12,

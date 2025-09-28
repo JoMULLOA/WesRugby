@@ -32,7 +32,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
     if (tokenData != null) {
       setState(() {
         userRole = tokenData['rol'];
-        userName = '${tokenData['nombres']} ${tokenData['apellidos']}';
+        userName = tokenData['nombreCompleto'] ?? 'Usuario';
         userEmail = tokenData['email'];
       });
     }
@@ -551,10 +551,10 @@ class _CustomDrawerState extends State<CustomDrawer> {
       context: context,
       applicationName: 'Wessex Rugby Club',
       applicationVersion: '1.0.0',
-      applicationLegalese: '© 2024 Wessex Rugby Club\nSistema de gestión integral',
+      applicationLegalese: '© 2025 Wessex Rugby Club\nSistema de gestión integral',
       children: [
         const SizedBox(height: 16),
-        const Text('Sistema de gestión para el club de rugby más importante de la región.'),
+        const Text('Sistema de gestión para el colegio bilingüe Wessex.'),
       ],
     );
   }

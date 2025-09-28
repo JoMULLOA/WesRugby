@@ -9,6 +9,8 @@ import {
   handleErrorServer,
   handleSuccess,
 } from "../handlers/responseHandlers.js";
+import jwt from "jsonwebtoken";
+import { ACCESS_TOKEN_SECRET } from "../config/configEnv.js";
 
 export async function login(req, res) {
   try {
@@ -30,12 +32,24 @@ export async function login(req, res) {
 
     if (errorToken) return handleErrorClient(res, 400, "Error iniciando sesión", errorToken);
 
+    // Decodificar el token para obtener la información del usuario
+    const decoded = jwt.verify(accessToken, ACCESS_TOKEN_SECRET);
+
     res.cookie("jwt", accessToken, {
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000,
     });
 
-    handleSuccess(res, 200, "Inicio de sesión exitoso", { token: accessToken });
+    // Devolver tanto el token como la información del usuario decodificada
+    handleSuccess(res, 200, "Inicio de sesión exitoso", { 
+      token: accessToken,
+      user: {
+        nombreCompleto: decoded.nombreCompleto,
+        email: decoded.email,
+        rut: decoded.rut,
+        rol: decoded.rol
+      }
+    });
   } catch (error) {
     handleErrorServer(res, 500, error.message);
   }
