@@ -51,22 +51,48 @@ class _LoginPageState extends State<LoginPage> {
 
       print('🔍 DEBUG Login - Status Code: ${response.statusCode}');
       print('🔍 DEBUG Login - Response Data: ${response.data}');
+      print('🔍 DEBUG Login - Data.data: ${response.data?['data']}');
+      print('🔍 DEBUG Login - Token existe: ${response.data?['data']?['token'] != null}');
+      print('🔍 DEBUG Login - Status es 200: ${response.statusCode == 200}');
+      
+      // Acceder correctamente a los datos anidados
+      final responseData = response.data?['data'];
+      final token = responseData?['token'];
+      final user = responseData?['user'];
+      
+      print('🔍 DEBUG Login - Token extraído: $token');
+      print('🔍 DEBUG Login - User extraído: $user');
+      print('🔍 DEBUG Login - Condición completa: ${response.statusCode == 200 && token != null}');
 
-      if (response.statusCode == 200 && response.data['token'] != null) {
+      if (response.statusCode == 200 && token != null) {
+        print('🟢 DEBUG - Entrando al bloque de login exitoso');
+        
         // Guardar token y información del usuario
-        await TokenManager.saveToken(response.data['token']);
-        await TokenManager.saveUserInfo(response.data['user']);
+        await TokenManager.saveToken(token);
+        await TokenManager.saveUserInfo(user);
+        print('🟢 DEBUG - Token y user info guardados');
 
         // Verificar información del usuario
-        final userInfo = response.data['user'];
-        print('🔍 DEBUG User Info: $userInfo');
+        print('🔍 DEBUG User Info completo: $user');
+        print('🔍 DEBUG User Info tipo: ${user.runtimeType}');
         
         // Navegar según el rol
-        final rol = userInfo['rol'];
+        final rol = user['rol'];
         print('🔍 DEBUG Rol detectado: $rol');
-        _navigateToRoleDashboard(rol);
+        print('🔍 DEBUG Rol tipo: ${rol.runtimeType}');
+        print('🔍 DEBUG Widget montado: $mounted');
+        
+        // Pequeña pausa para asegurar que el contexto esté listo
+        print('🟢 DEBUG - Programando navegación...');
+        Future.delayed(Duration(milliseconds: 100), () {
+          print('🟢 DEBUG - Ejecutando navegación para rol: $rol');
+          _navigateToRoleDashboard(rol);
+        });
       } else {
-        print('❌ DEBUG Login failed - Status: ${response.statusCode}, Token: ${response.data['token']}');
+        print('❌ DEBUG Login failed - Status: ${response.statusCode}');
+        print('❌ DEBUG - Token extraído: $token');
+        print('❌ DEBUG - Datos completos de respuesta: ${response.data}');
+        print('❌ DEBUG - Mensaje de respuesta: ${response.message}');
         _showError(response.message ?? 'Credenciales incorrectas');
       }
     } catch (e) {
@@ -80,41 +106,69 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _navigateToRoleDashboard(String rol) {
-    print('🚀 DEBUG Navegando al dashboard del rol: $rol');
-    Widget dashboard;
+    print('🚀 DEBUG Iniciando navegación para rol: $rol');
+    print('🚀 DEBUG Widget mounted: $mounted');
     
-    switch (rol) {
-      case 'directiva':
-        print('📊 Navegando a DirectivaDashboard');
-        dashboard = const DirectivaDashboard();
-        break;
-      case 'tesorera':
-        print('💰 Navegando a TesoreraDashboard');
-        dashboard = const TesoreraDashboard();
-        break;
-      case 'entrenador':
-        print('🏃 Navegando a EntrenadorDashboard');
-        dashboard = const EntrenadorDashboard();
-        break;
-      case 'apoderado':
-        print('👨‍👩‍👧‍👦 Navegando a ApoderadoDashboard');
-        dashboard = const ApoderadoDashboard();
-        break;
-      default:
-        print('❌ Rol no reconocido: $rol');
-        _showError('Rol no reconocido: $rol');
-        return;
+    if (!mounted) {
+      print('❌ Widget no está montado, cancelando navegación');
+      return;
     }
-
-    print('✅ Dashboard creado, realizando navegación...');
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) {
-        print('🔄 MaterialPageRoute builder ejecutado');
-        return dashboard;
-      }),
-    );
-    print('🎯 Navigator.pushReplacement completado');
+    
+    try {
+      print('🔄 Intentando navegar...');
+      
+      switch (rol) {
+        case 'directiva':
+          print('📊 Navegando a DirectivaDashboard...');
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) {
+              print('📊 Construyendo DirectivaDashboard');
+              return const DirectivaDashboard();
+            }),
+          );
+          break;
+        case 'tesorera':
+          print('💰 Navegando a TesoreraDashboard...');
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) {
+              print('💰 Construyendo TesoreraDashboard');
+              return const TesoreraDashboard();
+            }),
+          );
+          break;
+        case 'entrenador':
+          print('🏃 Navegando a EntrenadorDashboard...');
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) {
+              print('🏃 Construyendo EntrenadorDashboard');
+              return const EntrenadorDashboard();
+            }),
+          );
+          break;
+        case 'apoderado':
+          print('👨‍👩‍👧‍👦 Navegando a ApoderadoDashboard...');
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) {
+              print('👨‍👩‍👧‍👦 Construyendo ApoderadoDashboard');
+              return const ApoderadoDashboard();
+            }),
+          );
+          break;
+        default:
+          print('❌ Rol no reconocido: $rol');
+          _showError('Rol no reconocido: $rol');
+          return;
+      }
+      print('✅ Comando de navegación ejecutado para $rol');
+    } catch (e, stackTrace) {
+      print('❌ ERROR CRÍTICO en navegación: $e');
+      print('❌ Stack trace: $stackTrace');
+      _showError('Error crítico al navegar: $e');
+    }
   }
 
   void _showError(String message) {

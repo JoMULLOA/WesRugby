@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'auth/login.dart';
+import 'auth/simple_login.dart';
 import 'admin/directiva_dashboard.dart';
 import 'admin/tesorera_dashboard.dart';
 import 'admin/entrenador_dashboard.dart';
