@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../widgets/custom_drawer.dart';
 import '../widgets/wessex_widgets.dart';
 import '../config/colors.dart';
+import 'voucher_pago_screen.dart';
+import 'historial_vouchers_screen.dart';
 
 class ApoderadoDashboard extends StatelessWidget {
   const ApoderadoDashboard({super.key});
@@ -105,6 +107,54 @@ class ApoderadoDashboard extends StatelessWidget {
                         Icons.account_balance_wallet,
                         WessexColors.deepRoyalBlue,
                         () => _showComingSoon(context, 'Estado de Cuenta'),
+                        isDesktop: isDesktop,
+                        isTablet: isTablet,
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 20),
+                
+                // Sección: Gestión de Pagos
+                const WessexSectionTitle(
+                  title: 'Gestión de Pagos',
+                  subtitle: 'Vouchers y comprobantes de mensualidad',
+                  titleColor: WessexColors.white,
+                ),
+                const SizedBox(height: 20),
+                
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildActionCard(
+                        'Subir Voucher',
+                        'Adjuntar comprobante de pago',
+                        Icons.upload_file,
+                        WessexColors.crimsonAlert,
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const VoucherPagoScreen(),
+                          ),
+                        ),
+                        isDesktop: isDesktop,
+                        isTablet: isTablet,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildActionCard(
+                        'Historial',
+                        'Ver vouchers enviados',
+                        Icons.history,
+                        WessexColors.leafGreen,
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const HistorialVouchersScreen(),
+                          ),
+                        ),
                         isDesktop: isDesktop,
                         isTablet: isTablet,
                       ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../widgets/custom_drawer.dart';
 import '../widgets/wessex_widgets.dart';
 import '../config/colors.dart';
+import 'gestion_vouchers_screen.dart';
 
 class DirectivaDashboard extends StatelessWidget {
   const DirectivaDashboard({super.key});
@@ -105,6 +106,42 @@ class DirectivaDashboard extends StatelessWidget {
                         Icons.account_balance_wallet,
                         WessexColors.deepRoyalBlue,
                         () => _showComingSoon(context, 'Control Financiero'),
+                        isDesktop: isDesktop,
+                        isTablet: isTablet,
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 12),
+                
+                // Nueva fila para gestión de vouchers
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildActionCard(
+                        'Gestión de Vouchers',
+                        'Aprobar pagos de apoderados',
+                        Icons.receipt_long,
+                        WessexColors.crimsonAlert,
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const GestionVouchersScreen(),
+                          ),
+                        ),
+                        isDesktop: isDesktop,
+                        isTablet: isTablet,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildActionCard(
+                        'Reportes',
+                        'Generar reportes del club',
+                        Icons.assessment,
+                        WessexColors.leafGreen,
+                        () => _showComingSoon(context, 'Reportes'),
                         isDesktop: isDesktop,
                         isTablet: isTablet,
                       ),
