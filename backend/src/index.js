@@ -10,7 +10,6 @@ import http from "http";
 import 'dotenv/config';
 import userRoutes from "./routes/user.routes.js";
 import indexRoutes from "./routes/index.routes.js";
-import pingRoutes from "./routes/ping.routes.js";
 import estadisticasRoutes from "./routes/estadisticas.routes.js";
 import reporteRoutes from "./routes/reporte.routes.js";
 import { initializeSocket, getSocketInstance } from "./socket.js"; 
@@ -63,7 +62,6 @@ async function setupServer() {
     // Registro de rutas
     app.use("/api", indexRoutes);
     app.use("/api/users", userRoutes); // Rutas de usuarios, que incluye /api/users/garzones
-    app.use("/api", pingRoutes);  // Rutas básicas
     app.use("/api/estadisticas", estadisticasRoutes); // Rutas de estadísticas
     app.use("/api/reportes", reporteRoutes); // Rutas de reportes
 
