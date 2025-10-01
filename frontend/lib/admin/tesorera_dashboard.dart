@@ -1,344 +1,311 @@
 import 'package:flutter/material.dart';
 import '../widgets/custom_drawer.dart';
-import '../config/confGlobal.dart';
+import '../widgets/wessex_widgets.dart';
+import '../config/colors.dart';
 
-class TesoreraDashboard extends StatefulWidget {
+class TesoreraDashboard extends StatelessWidget {
   const TesoreraDashboard({super.key});
 
   @override
-  State<TesoreraDashboard> createState() => _TesoreraDashboardState();
-}
-
-class _TesoreraDashboardState extends State<TesoreraDashboard> {
-  @override
   Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    final isTablet = screenSize.width > 600;
+    final isDesktop = screenSize.width > 1200;
+    
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Panel Tesorera',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        backgroundColor: AppColors.verdePrincipal,
-        iconTheme: const IconThemeData(color: Colors.white),
-        elevation: 0,
+      extendBodyBehindAppBar: true,
+      appBar: const WessexAppBar(
+        title: 'Panel Tesorera - Wessex Rugby',
+        elevation: 2,
       ),
       drawer: const CustomDrawer(),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Bienvenida
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.indigo, Colors.indigo.shade300],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '¡Bienvenida Tesorera!',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    'Gestión financiera - Wessex Rugby Club',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 16,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            
-            const SizedBox(height: 24),
-            
-            // Resumen financiero
-            const Text(
-              'Resumen Financiero',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 16),
-            
-            GridView.count(
-              crossAxisCount: 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
+      body: WessexBackground(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.all(isDesktop ? 24 : (isTablet ? 20 : 16)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildFinancialCard(
-                  'Ingresos del Mes',
-                  '\$1.250.000',
-                  'Total recaudado',
-                  Icons.trending_up,
-                  Colors.green,
-                  isPositive: true,
-                ),
-                _buildFinancialCard(
-                  'Comprobantes',
-                  '23',
-                  'Pendientes validación',
-                  Icons.receipt_long,
-                  Colors.orange,
-                  isPositive: false,
-                ),
-                _buildFinancialCard(
-                  'Inventario',
-                  '\$350.000',
-                  'Valor total productos',
-                  Icons.inventory,
-                  Colors.blue,
-                  isPositive: true,
-                ),
-                _buildFinancialCard(
-                  'Stock Bajo',
-                  '5',
-                  'Productos por reponer',
-                  Icons.warning,
-                  Colors.red,
-                  isPositive: false,
-                ),
-              ],
-            ),
-            
-            const SizedBox(height: 24),
-            
-            // Módulos financieros
-            const Text(
-              'Gestión Financiera',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 16),
-            
-            GridView.count(
-              crossAxisCount: 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              childAspectRatio: 1.2,
-              children: [
-                _buildModuleCard(
-                  'Planes de Pago',
-                  'Gestionar mensualidades',
-                  Icons.payment,
-                  Colors.indigo,
-                  () => _navigateToModule('planes-pago'),
-                ),
-                _buildModuleCard(
-                  'Comprobantes',
-                  'Validar pagos',
-                  Icons.receipt,
-                  Colors.amber,
-                  () => _navigateToModule('comprobantes'),
-                ),
-                _buildModuleCard(
-                  'Productos',
-                  'Inventario y precios',
-                  Icons.store,
-                  Colors.pink,
-                  () => _navigateToModule('productos'),
-                ),
-                _buildModuleCard(
-                  'Ventas',
-                  'Registro de ventas',
-                  Icons.shopping_cart,
-                  Colors.cyan,
-                  () => _navigateToModule('ventas'),
-                ),
-                _buildModuleCard(
-                  'Estadísticas',
-                  'Reportes financieros',
-                  Icons.analytics,
-                  Colors.purple,
-                  () => _navigateToModule('estadisticas'),
-                ),
-                _buildModuleCard(
-                  'Informes',
-                  'Reportes contables',
-                  Icons.assessment,
-                  Colors.teal,
-                  () => _navigateToModule('informes'),
-                ),
-              ],
-            ),
-            
-            const SizedBox(height: 24),
-            
-            // Acciones rápidas
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.shade200),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Acciones Rápidas',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
+                // Header de bienvenida con diseño Wessex
+                WessexCard(
+                  margin: const EdgeInsets.only(bottom: 32),
+                  child: Row(
                     children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () => _navigateToModule('validar-comprobantes'),
-                          icon: const Icon(Icons.check_circle),
-                          label: const Text('Validar Comprobantes'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.success,
-                            foregroundColor: Colors.white,
+                      Container(
+                        padding: EdgeInsets.all(isDesktop ? 20 : (isTablet ? 16 : 12)),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [WessexColors.crimsonAlert, WessexColors.deepRoyalBlue],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Icon(
+                          Icons.account_balance_wallet,
+                          color: WessexColors.white,
+                          size: isDesktop ? 48 : (isTablet ? 40 : 32),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      SizedBox(width: isDesktop ? 24 : (isTablet ? 20 : 16)),
                       Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () => _navigateToModule('generar-reporte'),
-                          icon: const Icon(Icons.file_download),
-                          label: const Text('Generar Reporte'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.info,
-                            foregroundColor: Colors.white,
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '¡Bienvenido Tesorera!',
+                              style: TextStyle(
+                                color: WessexColors.darkGrape,
+                                fontSize: isDesktop ? 28 : (isTablet ? 24 : 22),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Panel de gestión financiera\nWessex Rugby Club',
+                              style: TextStyle(
+                                color: WessexColors.darkGrape.withOpacity(0.7),
+                                fontSize: isDesktop ? 16 : (isTablet ? 15 : 14),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
-                ],
-              ),
+                ),
+                
+                // Sección: Gestión Financiera
+                const WessexSectionTitle(
+                  title: 'Gestión Financiera',
+                  subtitle: 'Control de ingresos y gastos',
+                  titleColor: WessexColors.white,
+                ),
+                const SizedBox(height: 20),
+                
+                // Botones principales financieros
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildActionCard(
+                        'Registrar Pago',
+                        'Confirmar nuevo pago recibido',
+                        Icons.payment,
+                        WessexColors.leafGreen,
+                        () => _showComingSoon(context, 'Registrar Pago'),
+                        isDesktop: isDesktop,
+                        isTablet: isTablet,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildActionCard(
+                        'Generar Reporte',
+                        'Crear informe financiero',
+                        Icons.assessment,
+                        WessexColors.deepRoyalBlue,
+                        () => _showComingSoon(context, 'Generar Reporte'),
+                        isDesktop: isDesktop,
+                        isTablet: isTablet,
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 32),
+                
+                // Sección: Estadísticas Financieras
+                const WessexSectionTitle(
+                  title: 'Estadísticas Financieras',
+                  subtitle: 'Resumen del estado actual',
+                  titleColor: WessexColors.white,
+                ),
+                const SizedBox(height: 20),
+                
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildModuleCard(
+                        'Balance Total',
+                        '\$22,140 - Balance actual',
+                        Icons.account_balance,
+                        WessexColors.crimsonAlert,
+                        () => _showComingSoon(context, 'Balance Total'),
+                        isDesktop: isDesktop,
+                        isTablet: isTablet,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildModuleCard(
+                        'Pagos Pendientes',
+                        '\$12,800 - 5 pagos pendientes',
+                        Icons.pending,
+                        WessexColors.darkGrape,
+                        () => _showComingSoon(context, 'Pagos Pendientes'),
+                        isDesktop: isDesktop,
+                        isTablet: isTablet,
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 20),
+                
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildModuleCard(
+                        'Estado de Cuenta',
+                        'Ver balance detallado',
+                        Icons.account_balance_wallet,
+                        WessexColors.midnightNavy,
+                        () => _showComingSoon(context, 'Estado de Cuenta'),
+                        isDesktop: isDesktop,
+                        isTablet: isTablet,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildModuleCard(
+                        'Comprobantes',
+                        'Gestión de documentos',
+                        Icons.receipt,
+                        WessexColors.leafGreen,
+                        () => _showComingSoon(context, 'Comprobantes'),
+                        isDesktop: isDesktop,
+                        isTablet: isTablet,
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 32),
+                
+                // Transacciones recientes
+                _buildTransactionsCard(isDesktop, isTablet),
+                
+                const SizedBox(height: 24),
+              ],
             ),
-            
-            const SizedBox(height: 24),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildFinancialCard(String title, String value, String subtitle, IconData icon, Color color, {required bool isPositive}) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
+  Widget _buildActionCard(
+    String title,
+    String subtitle,
+    IconData icon,
+    Color color,
+    VoidCallback onPressed, {
+    required bool isDesktop,
+    required bool isTablet,
+  }) {
+    return WessexCard(
+      margin: const EdgeInsets.only(bottom: 0),
+      child: InkWell(
+        onTap: onPressed,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 6,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+        child: Padding(
+          padding: EdgeInsets.all(isDesktop ? 20 : (isTablet ? 16 : 14)),
+          child: Row(
             children: [
-              Icon(icon, color: color, size: 24),
-              const Spacer(),
+              Container(
+                padding: EdgeInsets.all(isDesktop ? 16 : (isTablet ? 14 : 12)),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  icon,
+                  color: color,
+                  size: isDesktop ? 28 : (isTablet ? 24 : 20),
+                ),
+              ),
+              SizedBox(width: isDesktop ? 20 : (isTablet ? 16 : 12)),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: isDesktop ? 18 : (isTablet ? 16 : 14),
+                        fontWeight: FontWeight.bold,
+                        color: WessexColors.darkGrape,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: isDesktop ? 14 : (isTablet ? 13 : 12),
+                        color: WessexColors.darkGrape.withOpacity(0.7),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               Icon(
-                isPositive ? Icons.trending_up : Icons.priority_high,
-                color: isPositive ? Colors.green : Colors.orange,
-                size: 16,
+                Icons.chevron_right,
+                color: WessexColors.darkGrape.withOpacity(0.3),
+                size: isDesktop ? 20 : (isTablet ? 18 : 16),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Colors.black87,
-            ),
-          ),
-          Text(
-            subtitle,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildModuleCard(String title, String description, IconData icon, Color color, VoidCallback onTap) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+  Widget _buildModuleCard(
+    String title,
+    String subtitle,
+    IconData icon,
+    Color color,
+    VoidCallback onPressed, {
+    required bool isDesktop,
+    required bool isTablet,
+  }) {
+    return WessexCard(
+      margin: const EdgeInsets.only(bottom: 0),
       child: InkWell(
-        onTap: onTap,
+        onTap: onPressed,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(isDesktop ? 20 : (isTablet ? 16 : 14)),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 32, color: color),
-              const SizedBox(height: 8),
+              Container(
+                padding: EdgeInsets.all(isDesktop ? 16 : (isTablet ? 14 : 12)),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  icon,
+                  color: color,
+                  size: isDesktop ? 32 : (isTablet ? 28 : 24),
+                ),
+              ),
+              SizedBox(height: isDesktop ? 16 : (isTablet ? 14 : 12)),
               Text(
                 title,
-                style: const TextStyle(
-                  fontSize: 16,
+                style: TextStyle(
+                  fontSize: isDesktop ? 18 : (isTablet ? 16 : 14),
                   fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+                  color: WessexColors.darkGrape,
                 ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 4),
               Text(
-                description,
+                subtitle,
                 style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
+                  fontSize: isDesktop ? 14 : (isTablet ? 13 : 12),
+                  color: WessexColors.darkGrape.withOpacity(0.7),
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -349,14 +316,117 @@ class _TesoreraDashboardState extends State<TesoreraDashboard> {
     );
   }
 
-  void _navigateToModule(String module) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Módulo $module - En desarrollo'),
-        backgroundColor: AppColors.verdePrincipal,
+  Widget _buildTransactionsCard(bool isDesktop, bool isTablet) {
+    return WessexCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.history,
+                color: WessexColors.deepRoyalBlue,
+                size: isDesktop ? 28 : (isTablet ? 24 : 20),
+              ),
+              SizedBox(width: isDesktop ? 16 : (isTablet ? 14 : 12)),
+              Text(
+                'Transacciones Recientes',
+                style: TextStyle(
+                  fontSize: isDesktop ? 20 : (isTablet ? 18 : 16),
+                  fontWeight: FontWeight.bold,
+                  color: WessexColors.darkGrape,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: isDesktop ? 20 : (isTablet ? 18 : 16)),
+          _buildTransactionItem('Cuota Mensual - Juan Pérez', '+\$280', Icons.add_circle, isDesktop, isTablet),
+          _buildTransactionItem('Pago Equipamiento', '-\$1,200', Icons.remove_circle, isDesktop, isTablet),
+          _buildTransactionItem('Cuota Mensual - María García', '+\$280', Icons.add_circle, isDesktop, isTablet),
+          SizedBox(height: isDesktop ? 20 : (isTablet ? 18 : 16)),
+          SizedBox(
+            width: double.infinity,
+            child: TextButton(
+              onPressed: () {},
+              style: TextButton.styleFrom(
+                foregroundColor: WessexColors.deepRoyalBlue,
+              ),
+              child: Text(
+                'Ver historial completo',
+                style: TextStyle(
+                  fontSize: isDesktop ? 16 : (isTablet ? 15 : 14),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
+  }
+
+  Widget _buildTransactionItem(String title, String amount, IconData icon, bool isDesktop, bool isTablet) {
+    final isPositive = amount.startsWith('+');
+    final color = isPositive ? WessexColors.leafGreen : WessexColors.crimsonAlert;
     
-    // TODO: Implementar navegación a módulos específicos
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: EdgeInsets.all(isDesktop ? 16 : (isTablet ? 14 : 12)),
+      decoration: BoxDecoration(
+        color: WessexColors.mistyRoseGray.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            color: color,
+            size: isDesktop ? 24 : (isTablet ? 22 : 20),
+          ),
+          SizedBox(width: isDesktop ? 16 : (isTablet ? 14 : 12)),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: isDesktop ? 16 : (isTablet ? 15 : 14),
+                    fontWeight: FontWeight.w600,
+                    color: WessexColors.darkGrape,
+                  ),
+                ),
+                Text(
+                  'Hoy 14:30',
+                  style: TextStyle(
+                    fontSize: isDesktop ? 14 : (isTablet ? 13 : 12),
+                    color: WessexColors.darkGrape.withOpacity(0.7),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            amount,
+            style: TextStyle(
+              fontSize: isDesktop ? 18 : (isTablet ? 16 : 14),
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showComingSoon(BuildContext context, String module) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$module - En desarrollo'),
+        backgroundColor: WessexColors.deepRoyalBlue,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    );
   }
 }
