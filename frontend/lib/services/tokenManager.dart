@@ -4,135 +4,116 @@ import 'dart:convert';
 class TokenManager {
   static const String _tokenKey = 'auth_token';
   static const String _userInfoKey = 'user_info';
+  static const String _isLoggedInKey = 'is_logged_in';
 
-  // Guardar token de autenticación
   static Future<void> saveToken(String token) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_tokenKey, token);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_tokenKey, token);
+      await prefs.setBool(_isLoggedInKey, true);
+      print('Token guardado exitosamente');
+    } catch (e) {
+      print('Error guardando token: $e');
+      throw Exception('Error guardando token: $e');
+    }
   }
 
-  // Obtener token de autenticación
   static Future<String?> getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_tokenKey);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString(_tokenKey);
+    } catch (e) {
+      print('Error obteniendo token: $e');
+      return null;
+    }
   }
 
-  // Guardar información del usuario
-  static Future<void> saveUserInfo(Map<String, dynamic> userInfo) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_userInfoKey, json.encode(userInfo));
-  }
-
-  // Obtener información del usuario
-  static Future<Map<String, dynamic>?> getUserInfo() async {
-    final prefs = await SharedPreferences.getInstance();
-    final userInfoString = prefs.getString(_userInfoKey);
-    if (userInfoString != null) {
-      try {
-        return json.decode(userInfoString) as Map<String, dynamic>;
-      } catch (e) {
-        print('Error decodificando información del usuario: $e');
-        return null;
+  static Future<void> saveUserInfo(dynamic userInfo) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      Map<String, dynamic> userMap;
+      
+      if (userInfo is Map<String, dynamic>) {
+        userMap = userInfo;
+      } else if (userInfo is Map) {
+        userMap = Map<String, dynamic>.from(userInfo);
+      } else {
+        throw Exception('userInfo debe ser un Map');
       }
+      
+      if (userMap['id'] != null) {
+        userMap['id'] = userMap['id'].toString();
+      }
+      if (userMap['rol'] != null) {
+        userMap['rol'] = userMap['rol'].toString();
+      }
+      if (userMap['nombre'] != null) {
+        userMap['nombre'] = userMap['nombre'].toString();
+      }
+      if (userMap['email'] != null) {
+        userMap['email'] = userMap['email'].toString();
+      }
+      
+      final userInfoString = jsonEncode(userMap);
+      await prefs.setString(_userInfoKey, userInfoString);
+      print('Información de usuario guardada exitosamente');
+    } catch (e) {
+      print('Error guardando información de usuario: $e');
+      throw Exception('Error guardando información de usuario: $e');
     }
-    return null;
   }
 
-  // Verificar si hay una sesión activa
+  static Future<Map<String, dynamic>?> getUserInfo() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userInfoString = prefs.getString(_userInfoKey);
+      
+      if (userInfoString != null) {
+        final userInfo = jsonDecode(userInfoString) as Map<String, dynamic>;
+        return userInfo;
+      }
+      
+      return null;
+    } catch (e) {
+      print('Error obteniendo información de usuario: $e');
+      return null;
+    }
+  }
+
   static Future<bool> isLoggedIn() async {
-    final token = await getToken();
-    final userInfo = await getUserInfo();
-    return token != null && token.isNotEmpty && userInfo != null;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final isLoggedIn = prefs.getBool(_isLoggedInKey) ?? false;
+      final token = prefs.getString(_tokenKey);
+      
+      return isLoggedIn && token != null && token.isNotEmpty;
+    } catch (e) {
+      print('Error verificando estado de login: $e');
+      return false;
+    }
   }
 
-  // Limpiar token y datos del usuario (logout)
-  static Future<void> clearToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_tokenKey);
-    await prefs.remove(_userInfoKey);
-  }
-
-  // Método para compatibilidad con código existente
-  static Future<void> clearAuthData() async {
-    await clearToken();
-  }
-
-  // Obtener rol del usuario
   static Future<String?> getUserRole() async {
-    final userInfo = await getUserInfo();
-    return userInfo?['rol'];
-  }
-
-  // Obtener ID del usuario
-  static Future<String?> getUserId() async {
-    final userInfo = await getUserInfo();
-    return userInfo?['id']?.toString();
-  }
-
-  // Obtener nombre completo del usuario
-  static Future<String?> getFullName() async {
-    final userInfo = await getUserInfo();
-    if (userInfo != null) {
-      return userInfo['nombreCompleto'] ?? 'Usuario';
+    try {
+      final userInfo = await getUserInfo();
+      return userInfo?['rol']?.toString();
+    } catch (e) {
+      print('Error obteniendo rol de usuario: $e');
+      return null;
     }
-    return null;
   }
 
-  // Obtener email del usuario
-  static Future<String?> getEmail() async {
-    final userInfo = await getUserInfo();
-    return userInfo?['email'];
-  }
-
-  // Verificar si el token ha expirado (básico)
-  static Future<bool> isTokenExpired() async {
-    // Esta es una implementación básica
-    // En un escenario real, deberías decodificar el JWT y verificar la fecha de expiración
-    final token = await getToken();
-    if (token == null || token.isEmpty) {
-      return true;
+  static Future<void> clearAuthData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_tokenKey);
+      await prefs.remove(_userInfoKey);
+      await prefs.setBool(_isLoggedInKey, false);
+      print('Datos de autenticación limpiados exitosamente');
+    } catch (e) {
+      print('Error limpiando datos de autenticación: $e');
+      throw Exception('Error limpiando datos de autenticación: $e');
     }
-    
-    // TODO: Implementar verificación real de expiración del JWT
-    // Por ahora, asumimos que el token es válido
-    return false;
-  }
-
-  // Refrescar token (placeholder)
-  static Future<bool> refreshToken() async {
-    // TODO: Implementar lógica de refresh token con el backend
-    // Por ahora, retornamos false
-    return false;
-  }
-
-  // Obtener headers de autorización para requests HTTP
-  static Future<Map<String, String>> getAuthHeaders() async {
-    final token = await getToken();
-    if (token != null && token.isNotEmpty) {
-      return {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      };
-    }
-    return {
-      'Content-Type': 'application/json',
-    };
-  }
-
-  // Validar formato de token JWT (básico)
-  static bool isValidJWTFormat(String token) {
-    final parts = token.split('.');
-    return parts.length == 3;
-  }
-
-  // Debug: Imprimir información del usuario
-  static Future<void> debugPrintUserInfo() async {
-    final userInfo = await getUserInfo();
-    final token = await getToken();
-    print('=== DEBUG: Token Manager ===');
-    print('Token existe: ${token != null}');
-    print('Token length: ${token?.length ?? 0}');
-    print('User info: $userInfo');
-    print('============================');
   }
 }

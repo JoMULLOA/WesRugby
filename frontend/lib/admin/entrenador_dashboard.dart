@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import '../widgets/custom_drawer.dart';
 import '../widgets/wessex_widgets.dart';
 import '../config/colors.dart';
-import 'gestion_asistencia_screen.dart';
-import 'historial_asistencia_screen.dart';
+import 'gestion_asistencia_screen_wessex.dart';
+import 'historial_asistencia_screen_wessex.dart';
 
 class EntrenadorDashboard extends StatelessWidget {
   const EntrenadorDashboard({super.key});

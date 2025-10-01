@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "bioruta" "\0"
+            VALUE "CompanyName", "Club de Rugby Wessex" "\0"
+            VALUE "FileDescription", "WesRugby - Gestión Club de Rugby" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "bioruta" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2025 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "bioruta.exe" "\0"
-            VALUE "ProductName", "bioruta" "\0"
+            VALUE "InternalName", "wesrugby" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2025 Club de Rugby Wessex. All rights reserved." "\0"
+            VALUE "OriginalFilename", "wesrugby.exe" "\0"
+            VALUE "ProductName", "WesRugby" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

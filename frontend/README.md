@@ -1,16 +1,34 @@
-# bioruta
+# WesRugby
 
-A new Flutter project.
+Aplicación móvil para la gestión del Club de Rugby Wessex.
 
-## Getting Started
+## Características
 
-This project is a starting point for a Flutter application.
+- Sistema de autenticación por roles (Directiva, Tesorera, Entrenador, Apoderado)
+- Gestión de pagos y vouchers
+- Control de asistencias
+- Panel administrativo para cada rol
+- Notificaciones y comunicación
 
-A few resources to get you started if this is your first Flutter project:
+## Tecnologías
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+- **Frontend**: Flutter
+- **Backend**: Node.js + Express + TypeORM
+- **Base de datos**: PostgreSQL
+- **Autenticación**: JWT
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Instalación
+
+### Backend
+```bash
+cd backend
+npm install
+npm run dev
+```
+
+### Frontend
+```bash
+cd frontend
+flutter pub get
+flutter run
+```

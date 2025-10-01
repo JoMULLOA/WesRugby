@@ -1,48 +1,73 @@
-# Rugby The Wessex School
-**Solución Integral de la Gestión de la Rama de Rugby**
+# WesRugby - Club de Rugby Wessex
+**Sistema de Gestión Integral para Club de Rugby**
 
-Proyecto desarrollado para proyecto de titulo en el año 2025, Universidad del Bío Bío.
+Proyecto desarrollado para proyecto de título en el año 2025, Universidad del Bío Bío.
 
 ## 📋 Descripción del Proyecto
 
+WesRugby es una aplicación móvil diseñada específicamente para la gestión integral del Club de Rugby Wessex. El sistema permite la administración de pagos, control de asistencias, comunicación entre roles y gestión administrativa del club.
+
 ## 🚀 Características Principales
+
+- **Sistema de Roles**: Directiva, Tesorera, Entrenador, Apoderado
+- **Gestión de Pagos**: Subida de vouchers y comprobantes electrónicos
+- **Control de Asistencias**: Registro y seguimiento de entrenamientos
+- **Panel Administrativo**: Dashboards específicos para cada rol
+- **Notificaciones**: Sistema de comunicación en tiempo real
+- **Reportes**: Estadísticas y análisis del club
 
 ## 🛠️ Arquitectura Tecnológica
 
 ### Frontend
 - **Flutter**: Framework multiplataforma para desarrollo móvil
 - **Dart**: Lenguaje de programación principal
-- **Android Studio**: Entorno de desarrollo integrado
 - **Material Design**: Sistema de diseño para UI/UX consistente
 
 ### Backend
 - **Node.js**: Runtime de JavaScript del lado servidor
 - **Express.js**: Framework web minimalista y flexible
-- **Socket.io**: Comunicación en tiempo real
+- **TypeORM**: ORM para manejo de entidades y relaciones
 - **JWT**: Autenticación basada en tokens
+- **Nodemailer**: Sistema de envío de correos electrónicos
 
 ### Base de Datos
 - **PostgreSQL**: Sistema de gestión de base de datos relacional
-- **MongoDB**: Sistema de gestión NOSQL 
-- **TypeORM**: ORM para manejo de entidades y relaciones
 - **Migraciones**: Control de versiones de esquema de BD
-
-### APIs y Servicios Externos
 
 ### DevOps y Deployment
 - **Git**: Control de versiones
 - **GitHub**: Repositorio y colaboración
 
-## 📱 Funcionalidades por Módulo
+## 📱 Funcionalidades por Rol
+
+### Directiva
+- Dashboard ejecutivo con métricas del club
+- Gestión de usuarios y roles
+- Reportes financieros y de asistencia
+
+### Tesorera
+- Control de pagos y cuotas
+- Validación de vouchers
+- Reportes financieros detallados
+
+### Entrenador
+- Registro de asistencias
+- Gestión de entrenamientos
+- Control de jugadores
+
+### Apoderado
+- Subida de vouchers de pago
+- Consulta de historial de pagos
+- Recepción de comprobantes electrónicos
 
 ## 🏗️ Estructura del Proyecto
 
 ```
-BioRuta/
+WesRugby/
 ├── backend/                 # Servidor Node.js + Express
 │   ├── src/
 │   │   ├── controllers/     # Lógica de controladores
-│   │   ├── entities/        # Modelos de base de datos
+│   │   ├── entity/          # Modelos de base de datos
 │   │   ├── routes/          # Definición de rutas API
 │   │   ├── services/        # Lógica de negocio
 │   │   ├── middlewares/     # Middlewares personalizados
@@ -52,12 +77,11 @@ BioRuta/
 │
 ├── frontend/                # Aplicación Flutter
 │   ├── lib/
+│   │   ├── admin/           # Dashboards administrativos
 │   │   ├── auth/            # Módulo de autenticación
-│   │   ├── chat/            # Sistema de mensajería
-│   │   ├── perfil/          # Gestión de perfiles
-│   │   ├── services/        # Servicios API y WebSocket
+│   │   ├── services/        # Servicios API
 │   │   ├── widgets/         # Componentes reutilizables
-│   │   └── utils/           # Utilidades y helpers
+│   │   └── config/          # Configuraciones
 │   └── pubspec.yaml         # Dependencias Flutter
 │
 └── README.md                # Documentación del proyecto
