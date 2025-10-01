@@ -2,14 +2,14 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/confGlobal.dart';
-import '../utils/token_manager.dart';
+import 'tokenManager.dart';
 
 class UserService {
   static String get baseUrl => confGlobal.baseUrl;
   
   // Obtener token de autenticación
   static Future<String?> _getToken() async {
-    return await TokenManager.getValidToken();
+    return await TokenManager.getToken();
   }
   
   // Headers por defecto con autenticación
