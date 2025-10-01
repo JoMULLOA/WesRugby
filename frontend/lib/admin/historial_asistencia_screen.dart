@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/asistencia_model.dart';
 import '../services/asistencia_service.dart';
 import '../config/colors.dart';
+import '../widgets/wessex_widgets.dart';
 
 class HistorialAsistenciaScreen extends StatefulWidget {
   const HistorialAsistenciaScreen({super.key});
@@ -14,8 +15,6 @@ class _HistorialAsistenciaScreenState extends State<HistorialAsistenciaScreen> {
   List<SesionEntrenamiento> _sesiones = [];
   List<String> _categorias = [];
   String? _categoriaSeleccionada;
-  DateTime? _fechaInicio;
-  DateTime? _fechaFin;
   bool _cargando = true;
 
   @override
@@ -47,699 +46,6 @@ class _HistorialAsistenciaScreenState extends State<HistorialAsistenciaScreen> {
     }
   }
 
-  Future<void> _aplicarFiltros() async {
-    setState(() {
-      _cargando = true;
-    });
-
-    try {
-      final sesiones = await AsistenciaService.obtenerHistorialSesiones(
-        categoria: _categoriaSeleccionada,
-        fechaInicio: _fechaInicio,
-        fechaFin: _fechaFin,
-      );
-
-      setState(() {
-        _sesiones = sesiones;
-      });
-    } catch (e) {
-      _mostrarError('Error al aplicar filtros: $e');
-    } finally {
-      setState(() {
-        _cargando = false;
-      });
-    }
-  }
-
-  Future<void> _seleccionarFecha(bool esInicio) async {
-    final fecha = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now().subtract(const Duration(days: 365)),
-      lastDate: DateTime.now(),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: WessexColors.deepRoyalBlue,
-              onPrimary: Colors.white,
-              surface: Colors.white,
-              onSurface: WessexColors.darkGrape,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (fecha != null) {
-      setState(() {
-        if (esInicio) {
-          _fechaInicio = fecha;
-        } else {
-          _fechaFin = fecha;
-        }
-      });
-    }
-  }
-
-  void _limpiarFiltros() {
-    setState(() {
-      _categoriaSeleccionada = null;
-      _fechaInicio = null;
-      _fechaFin = null;
-    });
-    _aplicarFiltros();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: WessexColors.mistyRoseGray,
-      appBar: AppBar(
-        title: const Text(
-          'Historial de Asistencia',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        backgroundColor: WessexColors.midnightNavy,
-        iconTheme: const IconThemeData(color: Colors.white),
-        elevation: 2,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.filter_list, color: Colors.white),
-            onPressed: _mostrarFiltros,
-            tooltip: 'Filtros',
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Panel de filtros activos
-          if (_tienesFiltrosActivos()) _buildFiltrosActivos(),
-          
-          // Lista de sesiones
-          Expanded(
-            child: _cargando
-                ? const Center(child: CircularProgressIndicator())
-                : _sesiones.isEmpty
-                    ? _buildEstadoVacio()
-                    : _buildListaSesiones(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  bool _tienesFiltrosActivos() {
-    return _categoriaSeleccionada != null || _fechaInicio != null || _fechaFin != null;
-  }
-
-  Widget _buildFiltrosActivos() {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: WessexColors.deepRoyalBlue.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: WessexColors.deepRoyalBlue.withOpacity(0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.filter_list, color: WessexColors.deepRoyalBlue, size: 20),
-              const SizedBox(width: 8),
-              Text(
-                'Filtros activos:',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: WessexColors.deepRoyalBlue,
-                ),
-              ),
-              const Spacer(),
-              TextButton(
-                onPressed: _limpiarFiltros,
-                child: Text(
-                  'Limpiar',
-                  style: TextStyle(color: WessexColors.deepRoyalBlue),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            children: [
-              if (_categoriaSeleccionada != null)
-                _buildChipFiltro('Categoría: $_categoriaSeleccionada'),
-              if (_fechaInicio != null)
-                _buildChipFiltro('Desde: ${_formatearFecha(_fechaInicio!)}'),
-              if (_fechaFin != null)
-                _buildChipFiltro('Hasta: ${_formatearFecha(_fechaFin!)}'),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildChipFiltro(String texto) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: WessexColors.deepRoyalBlue.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        texto,
-        style: TextStyle(
-          color: WessexColors.deepRoyalBlue,
-          fontSize: 12,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEstadoVacio() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.history,
-            size: 64,
-            color: WessexColors.darkGrape.withOpacity(0.3),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No hay sesiones registradas',
-            style: TextStyle(
-              fontSize: 18,
-              color: WessexColors.darkGrape.withOpacity(0.7),
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Las sesiones de entrenamiento aparecerán aquí una vez que sean finalizadas',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: WessexColors.darkGrape.withOpacity(0.5),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildListaSesiones() {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: _sesiones.length,
-      itemBuilder: (context, index) {
-        final sesion = _sesiones[index];
-        return _buildTarjetaSesion(sesion);
-      },
-    );
-  }
-
-  Widget _buildTarjetaSesion(SesionEntrenamiento sesion) {
-    final estadisticas = sesion.estadisticas;
-    
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header de la sesión
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: WessexColors.deepRoyalBlue.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.sports_rugby,
-                    color: WessexColors.deepRoyalBlue,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        sesion.nombre,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: WessexColors.darkGrape,
-                        ),
-                      ),
-                      Text(
-                        sesion.categoria,
-                        style: TextStyle(
-                          color: WessexColors.darkGrape.withOpacity(0.7),
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: sesion.finalizada 
-                        ? WessexColors.leafGreen.withOpacity(0.1)
-                        : WessexColors.crimsonAlert.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    sesion.finalizada ? 'Finalizada' : 'En curso',
-                    style: TextStyle(
-                      color: sesion.finalizada 
-                          ? WessexColors.leafGreen
-                          : WessexColors.crimsonAlert,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            
-            const SizedBox(height: 12),
-
-            // Información de fecha y entrenador
-            Row(
-              children: [
-                Icon(Icons.calendar_today, size: 16, color: WessexColors.darkGrape.withOpacity(0.7)),
-                const SizedBox(width: 4),
-                Text(
-                  _formatearFechaHora(sesion.fechaInicio),
-                  style: TextStyle(
-                    color: WessexColors.darkGrape.withOpacity(0.7),
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Icon(Icons.person, size: 16, color: WessexColors.darkGrape.withOpacity(0.7)),
-                const SizedBox(width: 4),
-                Text(
-                  sesion.entrenadorNombre,
-                  style: TextStyle(
-                    color: WessexColors.darkGrape.withOpacity(0.7),
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-
-            if (sesion.descripcion != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                sesion.descripcion!,
-                style: TextStyle(
-                  color: WessexColors.darkGrape.withOpacity(0.8),
-                  fontSize: 14,
-                ),
-              ),
-            ],
-
-            const SizedBox(height: 12),
-
-            // Estadísticas de asistencia
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: WessexColors.mistyRoseGray.withOpacity(0.5),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.analytics, color: WessexColors.deepRoyalBlue, size: 18),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Estadísticas de Asistencia',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: WessexColors.darkGrape,
-                          fontSize: 14,
-                        ),
-                      ),
-                      const Spacer(),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: WessexColors.leafGreen.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          '${estadisticas.porcentajeAsistencia.toStringAsFixed(1)}%',
-                          style: TextStyle(
-                            color: WessexColors.leafGreen,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildEstadistica('Total', estadisticas.totalAlumnos, WessexColors.darkGrape),
-                      _buildEstadistica('Presentes', estadisticas.presentes, WessexColors.leafGreen),
-                      _buildEstadistica('Ausentes', estadisticas.ausentes, WessexColors.crimsonAlert),
-                      _buildEstadistica('Tardanzas', estadisticas.tardanzas, Colors.orange),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            // Botón ver detalles
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () => _verDetallesSesion(sesion),
-                icon: const Icon(Icons.visibility, size: 18),
-                label: const Text('Ver Detalles'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: WessexColors.deepRoyalBlue,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEstadistica(String label, int valor, Color color) {
-    return Column(
-      children: [
-        Text(
-          valor.toString(),
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
-        ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            color: color,
-          ),
-        ),
-      ],
-    );
-  }
-
-  void _verDetallesSesion(SesionEntrenamiento sesion) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.7,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          children: [
-            // Handle bar
-            Container(
-              margin: const EdgeInsets.only(top: 8),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            
-            // Header
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Detalle de Asistencia',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: WessexColors.darkGrape,
-                          ),
-                        ),
-                        Text(
-                          sesion.nombre,
-                          style: TextStyle(
-                            color: WessexColors.darkGrape.withOpacity(0.7),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: Icon(Icons.close, color: WessexColors.darkGrape),
-                  ),
-                ],
-              ),
-            ),
-            
-            const Divider(height: 1),
-            
-            // Lista de asistencias
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: sesion.registros.length,
-                itemBuilder: (context, index) {
-                  final registro = sesion.registros[index];
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: registro.estado.color.withOpacity(0.1),
-                        child: Icon(
-                          registro.estado.icono,
-                          color: registro.estado.color,
-                        ),
-                      ),
-                      title: Text(registro.nombreAlumno),
-                      subtitle: Text('RUT: ${registro.rutAlumno}'),
-                      trailing: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: registro.estado.color.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          registro.estado.nombre,
-                          style: TextStyle(
-                            color: registro.estado.color,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _mostrarFiltros() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) => Container(
-          padding: const EdgeInsets.all(20),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Row(
-                children: [
-                  Text(
-                    'Filtros',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: WessexColors.darkGrape,
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: Icon(Icons.close, color: WessexColors.darkGrape),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-
-              // Filtro por categoría
-              Text(
-                'Categoría',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: WessexColors.darkGrape,
-                ),
-              ),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                value: _categoriaSeleccionada,
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                ),
-                hint: const Text('Todas las categorías'),
-                items: _categorias.map((categoria) =>
-                  DropdownMenuItem(
-                    value: categoria,
-                    child: Text(categoria),
-                  ),
-                ).toList(),
-                onChanged: (value) {
-                  setModalState(() {
-                    _categoriaSeleccionada = value;
-                  });
-                },
-              ),
-
-              const SizedBox(height: 20),
-
-              // Filtros de fecha
-              Text(
-                'Rango de Fechas',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: WessexColors.darkGrape,
-                ),
-              ),
-              const SizedBox(height: 8),
-              
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () async {
-                        await _seleccionarFecha(true);
-                        setModalState(() {});
-                      },
-                      icon: const Icon(Icons.date_range),
-                      label: Text(_fechaInicio != null 
-                          ? _formatearFecha(_fechaInicio!)
-                          : 'Fecha inicio'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () async {
-                        await _seleccionarFecha(false);
-                        setModalState(() {});
-                      },
-                      icon: const Icon(Icons.date_range),
-                      label: Text(_fechaFin != null 
-                          ? _formatearFecha(_fechaFin!)
-                          : 'Fecha fin'),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-
-              // Botones de acción
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () {
-                        setModalState(() {
-                          _categoriaSeleccionada = null;
-                          _fechaInicio = null;
-                          _fechaFin = null;
-                        });
-                      },
-                      child: const Text('Limpiar'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        _aplicarFiltros();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: WessexColors.deepRoyalBlue,
-                      ),
-                      child: const Text('Aplicar', style: TextStyle(color: Colors.white)),
-                    ),
-                  ),
-                ],
-              ),
-
-              // Espacio adicional para el teclado
-              SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  String _formatearFecha(DateTime fecha) {
-    return '${fecha.day}/${fecha.month}/${fecha.year}';
-  }
-
-  String _formatearFechaHora(DateTime fecha) {
-    return '${_formatearFecha(fecha)} ${fecha.hour.toString().padLeft(2, '0')}:${fecha.minute.toString().padLeft(2, '0')}';
-  }
-
   void _mostrarError(String mensaje) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -748,6 +54,527 @@ class _HistorialAsistenciaScreenState extends State<HistorialAsistenciaScreen> {
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    final isTablet = screenSize.width > 600;
+    final isDesktop = screenSize.width > 1200;
+    
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: const WessexAppBar(
+        title: 'Historial de Asistencia',
+        elevation: 2,
+      ),
+      body: WessexBackground(
+        child: SafeArea(
+          child: Column(
+            children: [
+              // Header con filtros
+              Container(
+                padding: EdgeInsets.all(isDesktop ? 24 : (isTablet ? 20 : 16)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const WessexSectionTitle(
+                      title: 'Historial de Sesiones',
+                      subtitle: 'Consultar registros de entrenamientos anteriores',
+                      titleColor: WessexColors.white,
+                    ),
+                    const SizedBox(height: 20),
+                    
+                    // Filtros
+                    WessexCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Filtros',
+                            style: TextStyle(
+                              fontSize: isDesktop ? 18 : (isTablet ? 16 : 14),
+                              fontWeight: FontWeight.bold,
+                              color: WessexColors.darkGrape,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          
+                          // Selector de categoría
+                          DropdownButtonFormField<String>(
+                            value: _categoriaSeleccionada,
+                            decoration: InputDecoration(
+                              labelText: 'Categoría',
+                              prefixIcon: Icon(Icons.category, color: WessexColors.deepRoyalBlue),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              filled: true,
+                              fillColor: WessexColors.mistyRoseGray,
+                            ),
+                            items: [
+                              const DropdownMenuItem<String>(
+                                value: null,
+                                child: Text('Todas las categorías'),
+                              ),
+                              ..._categorias.map((categoria) {
+                                return DropdownMenuItem(
+                                  value: categoria,
+                                  child: Text(categoria),
+                                );
+                              }),
+                            ],
+                            onChanged: (valor) {
+                              setState(() {
+                                _categoriaSeleccionada = valor;
+                              });
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          
+                          // Botón de refrescar
+                          SizedBox(
+                            width: double.infinity,
+                            child: WessexButton(
+                              text: 'Actualizar',
+                              icon: Icons.refresh,
+                              backgroundColor: WessexColors.deepRoyalBlue,
+                              onPressed: _cargarDatos,
+                              isLoading: _cargando,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Lista de sesiones
+              Expanded(
+                child: _cargando
+                    ? const Center(
+                        child: CircularProgressIndicator(
+                          color: WessexColors.white,
+                        ),
+                      )
+                    : _sesiones.isEmpty
+                        ? _buildEmptyState(isDesktop, isTablet)
+                        : _buildListaSesiones(isDesktop, isTablet),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(bool isDesktop, bool isTablet) {
+    return Center(
+      child: WessexCard(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.history,
+              size: isDesktop ? 80 : (isTablet ? 64 : 48),
+              color: WessexColors.darkGrape.withOpacity(0.5),
+            ),
+            SizedBox(height: isDesktop ? 24 : (isTablet ? 20 : 16)),
+            Text(
+              'No hay sesiones registradas',
+              style: TextStyle(
+                fontSize: isDesktop ? 20 : (isTablet ? 18 : 16),
+                fontWeight: FontWeight.bold,
+                color: WessexColors.darkGrape,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Las sesiones de asistencia aparecerán aquí\ncuando se completen entrenamientos.',
+              style: TextStyle(
+                fontSize: isDesktop ? 16 : (isTablet ? 15 : 14),
+                color: WessexColors.darkGrape.withOpacity(0.7),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildListaSesiones(bool isDesktop, bool isTablet) {
+    final sesionesFiltradas = _filtrarSesiones();
+    
+    return ListView.builder(
+      padding: EdgeInsets.symmetric(horizontal: isDesktop ? 24 : (isTablet ? 20 : 16)),
+      itemCount: sesionesFiltradas.length,
+      itemBuilder: (context, index) {
+        final sesion = sesionesFiltradas[index];
+        return _buildSesionCard(sesion, isDesktop, isTablet);
+      },
+    );
+  }
+
+  Widget _buildSesionCard(SesionEntrenamiento sesion, bool isDesktop, bool isTablet) {
+    final estadisticas = sesion.estadisticas;
+    final fechaFormateada = _formatearFecha(sesion.fechaInicio);
+    
+    return WessexCard(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: InkWell(
+        onTap: () => _mostrarDetallesSesion(sesion),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: EdgeInsets.all(isDesktop ? 20 : (isTablet ? 16 : 14)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header de la sesión
+              Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(isDesktop ? 12 : (isTablet ? 10 : 8)),
+                    decoration: BoxDecoration(
+                      color: WessexColors.deepRoyalBlue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.sports_rugby,
+                      color: WessexColors.deepRoyalBlue,
+                      size: isDesktop ? 24 : (isTablet ? 22 : 20),
+                    ),
+                  ),
+                  SizedBox(width: isDesktop ? 16 : (isTablet ? 14 : 12)),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          sesion.nombre,
+                          style: TextStyle(
+                            fontSize: isDesktop ? 18 : (isTablet ? 16 : 14),
+                            fontWeight: FontWeight.bold,
+                            color: WessexColors.darkGrape,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${sesion.categoria} • $fechaFormateada',
+                          style: TextStyle(
+                            fontSize: isDesktop ? 14 : (isTablet ? 13 : 12),
+                            color: WessexColors.darkGrape.withOpacity(0.7),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    Icons.chevron_right,
+                    color: WessexColors.darkGrape.withOpacity(0.5),
+                    size: isDesktop ? 24 : (isTablet ? 22 : 20),
+                  ),
+                ],
+              ),
+              
+              SizedBox(height: isDesktop ? 20 : (isTablet ? 16 : 14)),
+              
+              // Estadísticas
+              Row(
+                children: [
+                  _buildEstadisticaMini(
+                    'Total',
+                    estadisticas.totalAlumnos.toString(),
+                    WessexColors.darkGrape,
+                    isDesktop,
+                    isTablet,
+                  ),
+                  const SizedBox(width: 16),
+                  _buildEstadisticaMini(
+                    'Presentes',
+                    estadisticas.presentes.toString(),
+                    WessexColors.leafGreen,
+                    isDesktop,
+                    isTablet,
+                  ),
+                  const SizedBox(width: 16),
+                  _buildEstadisticaMini(
+                    'Ausentes',
+                    estadisticas.ausentes.toString(),
+                    WessexColors.crimsonAlert,
+                    isDesktop,
+                    isTablet,
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isDesktop ? 12 : (isTablet ? 10 : 8),
+                      vertical: isDesktop ? 6 : (isTablet ? 5 : 4),
+                    ),
+                    decoration: BoxDecoration(
+                      color: estadisticas.porcentajeAsistencia >= 80
+                          ? WessexColors.leafGreen
+                          : estadisticas.porcentajeAsistencia >= 60
+                              ? WessexColors.crimsonAlert
+                              : WessexColors.crimsonAlert,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${estadisticas.porcentajeAsistencia.toStringAsFixed(1)}%',
+                      style: TextStyle(
+                        color: WessexColors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: isDesktop ? 14 : (isTablet ? 13 : 12),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEstadisticaMini(String label, String valor, Color color, bool isDesktop, bool isTablet) {
+    return Column(
+      children: [
+        Text(
+          valor,
+          style: TextStyle(
+            fontSize: isDesktop ? 20 : (isTablet ? 18 : 16),
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: isDesktop ? 12 : (isTablet ? 11 : 10),
+            color: WessexColors.darkGrape.withOpacity(0.7),
+          ),
+        ),
+      ],
+    );
+  }
+
+  List<SesionEntrenamiento> _filtrarSesiones() {
+    var sesionesFiltradas = _sesiones.toList();
+    
+    if (_categoriaSeleccionada != null) {
+      sesionesFiltradas = sesionesFiltradas
+          .where((sesion) => sesion.categoria == _categoriaSeleccionada)
+          .toList();
+    }
+    
+    // Ordenar por fecha más reciente primero
+    sesionesFiltradas.sort((a, b) => b.fechaInicio.compareTo(a.fechaInicio));
+    
+    return sesionesFiltradas;
+  }
+
+  String _formatearFecha(DateTime fecha) {
+    final meses = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+    
+    return '${fecha.day} de ${meses[fecha.month - 1]} ${fecha.year}';
+  }
+
+  void _mostrarDetallesSesion(SesionEntrenamiento sesion) {
+    final screenSize = MediaQuery.of(context).size;
+    final isDesktop = screenSize.width > 1200;
+    final isTablet = screenSize.width > 600;
+    
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          constraints: BoxConstraints(
+            maxWidth: isDesktop ? 600 : (isTablet ? 500 : double.infinity),
+            maxHeight: screenSize.height * 0.8,
+          ),
+          child: WessexCard(
+            margin: EdgeInsets.zero,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header del diálogo
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Detalles de la Sesión',
+                        style: TextStyle(
+                          fontSize: isDesktop ? 20 : (isTablet ? 18 : 16),
+                          fontWeight: FontWeight.bold,
+                          color: WessexColors.darkGrape,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close),
+                      color: WessexColors.darkGrape.withOpacity(0.7),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Información de la sesión
+                _buildInfoRow('Nombre:', sesion.nombre, isDesktop, isTablet),
+                _buildInfoRow('Categoría:', sesion.categoria, isDesktop, isTablet),
+                _buildInfoRow('Fecha:', _formatearFecha(sesion.fechaInicio), isDesktop, isTablet),
+                _buildInfoRow('Entrenador:', sesion.entrenadorNombre, isDesktop, isTablet),
+                if (sesion.descripcion != null && sesion.descripcion!.isNotEmpty)
+                  _buildInfoRow('Descripción:', sesion.descripcion!, isDesktop, isTablet),
+                
+                const SizedBox(height: 20),
+                
+                // Estadísticas detalladas
+                Text(
+                  'Estadísticas',
+                  style: TextStyle(
+                    fontSize: isDesktop ? 16 : (isTablet ? 15 : 14),
+                    fontWeight: FontWeight.bold,
+                    color: WessexColors.darkGrape,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: WessexColors.mistyRoseGray.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _buildEstadisticaDetalle(
+                            'Total',
+                            sesion.estadisticas.totalAlumnos.toString(),
+                            WessexColors.darkGrape,
+                            isDesktop,
+                            isTablet,
+                          ),
+                          _buildEstadisticaDetalle(
+                            'Presentes',
+                            sesion.estadisticas.presentes.toString(),
+                            WessexColors.leafGreen,
+                            isDesktop,
+                            isTablet,
+                          ),
+                          _buildEstadisticaDetalle(
+                            'Ausentes',
+                            sesion.estadisticas.ausentes.toString(),
+                            WessexColors.crimsonAlert,
+                            isDesktop,
+                            isTablet,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isDesktop ? 20 : (isTablet ? 16 : 14),
+                          vertical: isDesktop ? 12 : (isTablet ? 10 : 8),
+                        ),
+                        decoration: BoxDecoration(
+                          color: WessexColors.deepRoyalBlue,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          'Asistencia: ${sesion.estadisticas.porcentajeAsistencia.toStringAsFixed(1)}%',
+                          style: TextStyle(
+                            color: WessexColors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: isDesktop ? 16 : (isTablet ? 15 : 14),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                const SizedBox(height: 20),
+                
+                // Botón de cerrar
+                SizedBox(
+                  width: double.infinity,
+                  child: WessexButton(
+                    text: 'Cerrar',
+                    backgroundColor: WessexColors.deepRoyalBlue,
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String valor, bool isDesktop, bool isTablet) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: isDesktop ? 120 : (isTablet ? 100 : 80),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: isDesktop ? 14 : (isTablet ? 13 : 12),
+                fontWeight: FontWeight.w600,
+                color: WessexColors.darkGrape.withOpacity(0.7),
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              valor,
+              style: TextStyle(
+                fontSize: isDesktop ? 14 : (isTablet ? 13 : 12),
+                color: WessexColors.darkGrape,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEstadisticaDetalle(String label, String valor, Color color, bool isDesktop, bool isTablet) {
+    return Column(
+      children: [
+        Text(
+          valor,
+          style: TextStyle(
+            fontSize: isDesktop ? 24 : (isTablet ? 20 : 18),
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: isDesktop ? 14 : (isTablet ? 13 : 12),
+            color: WessexColors.darkGrape.withOpacity(0.7),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -5,13 +5,13 @@ import { DATABASE, DB_USERNAME, HOST, PASSWORD } from "./configEnv.js";
 export const AppDataSource = new DataSource({
   type: "postgres",
   host: `${HOST}`,
-  port: 5433,
+  port: 5432,
   username: `${DB_USERNAME}`,
   password: `${PASSWORD}`,
   database: `${DATABASE}`,
   entities: ["src/entity/**/*.js"],
   synchronize: true, // Activado para crear las tablas automáticamente
-  dropSchema: true, // Elimina el esquema antes de crear las tablas (solo usar cuando hay conflictos)
+  dropSchema: false, // No eliminar el esquema para conservar los datos
   logging: false,
 });
 

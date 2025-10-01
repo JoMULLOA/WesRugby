@@ -49,18 +49,28 @@ class _LoginPageState extends State<LoginPage> {
         _passwordController.text,
       );
 
+      print('🔍 DEBUG Login - Status Code: ${response.statusCode}');
+      print('🔍 DEBUG Login - Response Data: ${response.data}');
+
       if (response.statusCode == 200 && response.data['token'] != null) {
         // Guardar token y información del usuario
         await TokenManager.saveToken(response.data['token']);
         await TokenManager.saveUserInfo(response.data['user']);
 
+        // Verificar información del usuario
+        final userInfo = response.data['user'];
+        print('🔍 DEBUG User Info: $userInfo');
+        
         // Navegar según el rol
-        final rol = response.data['user']['rol'];
+        final rol = userInfo['rol'];
+        print('🔍 DEBUG Rol detectado: $rol');
         _navigateToRoleDashboard(rol);
       } else {
+        print('❌ DEBUG Login failed - Status: ${response.statusCode}, Token: ${response.data['token']}');
         _showError(response.message ?? 'Credenciales incorrectas');
       }
     } catch (e) {
+      print('❌ DEBUG Login error: $e');
       _showError('Error de conexión: $e');
     } finally {
       if (mounted) {
@@ -70,30 +80,41 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _navigateToRoleDashboard(String rol) {
+    print('🚀 DEBUG Navegando al dashboard del rol: $rol');
     Widget dashboard;
     
     switch (rol) {
       case 'directiva':
+        print('📊 Navegando a DirectivaDashboard');
         dashboard = const DirectivaDashboard();
         break;
       case 'tesorera':
+        print('💰 Navegando a TesoreraDashboard');
         dashboard = const TesoreraDashboard();
         break;
       case 'entrenador':
+        print('🏃 Navegando a EntrenadorDashboard');
         dashboard = const EntrenadorDashboard();
         break;
       case 'apoderado':
+        print('👨‍👩‍👧‍👦 Navegando a ApoderadoDashboard');
         dashboard = const ApoderadoDashboard();
         break;
       default:
+        print('❌ Rol no reconocido: $rol');
         _showError('Rol no reconocido: $rol');
         return;
     }
 
+    print('✅ Dashboard creado, realizando navegación...');
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => dashboard),
+      MaterialPageRoute(builder: (context) {
+        print('🔄 MaterialPageRoute builder ejecutado');
+        return dashboard;
+      }),
     );
+    print('🎯 Navigator.pushReplacement completado');
   }
 
   void _showError(String message) {

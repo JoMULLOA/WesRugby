@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/asistencia_model.dart';
 import '../services/asistencia_service.dart';
 import '../config/colors.dart';
+import '../widgets/wessex_widgets.dart';
 
 class GestionAsistenciaScreen extends StatefulWidget {
   const GestionAsistenciaScreen({super.key});
@@ -98,757 +99,6 @@ class _GestionAsistenciaScreenState extends State<GestionAsistenciaScreen> with 
     }
   }
 
-  Future<void> _iniciarSesion() async {
-    if (_nombreSesionController.text.isEmpty || _categoriaSeleccionada == null) {
-      _mostrarError('Completa todos los campos obligatorios');
-      return;
-    }
-
-    try {
-      final sesion = await AsistenciaService.iniciarSesion(
-        nombre: _nombreSesionController.text,
-        categoria: _categoriaSeleccionada!,
-        descripcion: _descripcionController.text.isNotEmpty ? _descripcionController.text : null,
-        entrenadorRut: '11111111-1', // TODO: Obtener del usuario autenticado
-        entrenadorNombre: 'Entrenador', // TODO: Obtener del usuario autenticado
-      );
-
-      setState(() {
-        _sesionActual = sesion;
-        _sesionIniciada = true;
-      });
-
-      await _cargarAlumnos(_categoriaSeleccionada!);
-      _mostrarExito('Sesión iniciada correctamente');
-    } catch (e) {
-      _mostrarError('Error al iniciar sesión: $e');
-    }
-  }
-
-  Future<void> _cambiarEstadoAsistencia(String rutAlumno, EstadoAsistencia nuevoEstado) async {
-    final registro = _registrosAsistencia[rutAlumno];
-    if (registro == null || _sesionActual == null) return;
-
-    if (nuevoEstado == EstadoAsistencia.justificado) {
-      await _mostrarDialogoJustificacion(rutAlumno, nuevoEstado);
-      return;
-    }
-
-    final registroActualizado = registro.copyWith(estado: nuevoEstado);
-    
-    if (_sesionIniciada) {
-      final exito = await AsistenciaService.registrarAsistencia(
-        sesionId: _sesionActual!.id,
-        rutAlumno: rutAlumno,
-        nombreAlumno: registro.nombreAlumno,
-        estado: nuevoEstado,
-      );
-
-      if (exito) {
-        setState(() {
-          _registrosAsistencia[rutAlumno] = registroActualizado;
-        });
-      } else {
-        _mostrarError('Error al registrar asistencia');
-      }
-    } else {
-      setState(() {
-        _registrosAsistencia[rutAlumno] = registroActualizado;
-      });
-    }
-  }
-
-  Future<void> _mostrarDialogoJustificacion(String rutAlumno, EstadoAsistencia estado) async {
-    final justificacionController = TextEditingController();
-    
-    final resultado = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          'Justificación',
-          style: TextStyle(
-            color: WessexColors.darkGrape,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Ingrese la justificación para ${_registrosAsistencia[rutAlumno]?.nombreAlumno}:',
-              style: TextStyle(color: WessexColors.darkGrape),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: justificacionController,
-              decoration: InputDecoration(
-                hintText: 'Motivo de la justificación...',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: WessexColors.deepRoyalBlue),
-                ),
-              ),
-              maxLines: 3,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancelar', style: TextStyle(color: WessexColors.darkGrape)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, justificacionController.text),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: WessexColors.deepRoyalBlue,
-            ),
-            child: const Text('Guardar', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-
-    if (resultado != null && resultado.isNotEmpty) {
-      final registro = _registrosAsistencia[rutAlumno];
-      if (registro != null) {
-        final registroActualizado = registro.copyWith(
-          estado: estado,
-          justificacion: resultado,
-        );
-
-        if (_sesionIniciada && _sesionActual != null) {
-          final exito = await AsistenciaService.registrarAsistencia(
-            sesionId: _sesionActual!.id,
-            rutAlumno: rutAlumno,
-            nombreAlumno: registro.nombreAlumno,
-            estado: estado,
-            justificacion: resultado,
-          );
-
-          if (exito) {
-            setState(() {
-              _registrosAsistencia[rutAlumno] = registroActualizado;
-            });
-          } else {
-            _mostrarError('Error al registrar justificación');
-          }
-        } else {
-          setState(() {
-            _registrosAsistencia[rutAlumno] = registroActualizado;
-          });
-        }
-      }
-    }
-  }
-
-  Future<void> _finalizarSesion() async {
-    if (_sesionActual == null) return;
-
-    final confirmacion = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          'Finalizar Sesión',
-          style: TextStyle(
-            color: WessexColors.darkGrape,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: const Text('¿Estás seguro de que deseas finalizar la sesión? Esta acción no se puede deshacer.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancelar', style: TextStyle(color: WessexColors.darkGrape)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: WessexColors.crimsonAlert,
-            ),
-            child: const Text('Finalizar', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmacion == true) {
-      final exito = await AsistenciaService.finalizarSesion(_sesionActual!.id);
-      
-      if (exito) {
-        _mostrarExito('Sesión finalizada correctamente');
-        Navigator.pop(context);
-      } else {
-        _mostrarError('Error al finalizar la sesión');
-      }
-    }
-  }
-
-  List<Alumno> get _alumnosFiltrados {
-    if (_filtroNombre.isEmpty) return _alumnos;
-    
-    return _alumnos.where((alumno) =>
-      alumno.nombreCompleto.toLowerCase().contains(_filtroNombre.toLowerCase()) ||
-      alumno.rut.contains(_filtroNombre)
-    ).toList();
-  }
-
-  EstadisticasAsistencia get _estadisticas {
-    final registros = _registrosAsistencia.values.toList();
-    final total = registros.length;
-    
-    if (total == 0) {
-      return EstadisticasAsistencia(
-        totalAlumnos: 0,
-        presentes: 0,
-        ausentes: 0,
-        tardanzas: 0,
-        justificados: 0,
-        porcentajeAsistencia: 0.0,
-      );
-    }
-
-    final presentes = registros.where((r) => r.estado == EstadoAsistencia.presente).length;
-    final ausentes = registros.where((r) => r.estado == EstadoAsistencia.ausente).length;
-    final tardanzas = registros.where((r) => r.estado == EstadoAsistencia.tardanza).length;
-    final justificados = registros.where((r) => r.estado == EstadoAsistencia.justificado).length;
-    
-    final porcentaje = total > 0 ? ((presentes + tardanzas) / total) * 100 : 0.0;
-
-    return EstadisticasAsistencia(
-      totalAlumnos: total,
-      presentes: presentes,
-      ausentes: ausentes,
-      tardanzas: tardanzas,
-      justificados: justificados,
-      porcentajeAsistencia: porcentaje,
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: WessexColors.mistyRoseGray,
-      appBar: AppBar(
-        title: const Text(
-          'Gestión de Asistencia',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        backgroundColor: WessexColors.midnightNavy,
-        iconTheme: const IconThemeData(color: Colors.white),
-        elevation: 2,
-        actions: [
-          if (_sesionIniciada)
-            IconButton(
-              icon: const Icon(Icons.stop_circle, color: Colors.white),
-              onPressed: _finalizarSesion,
-              tooltip: 'Finalizar Sesión',
-            ),
-        ],
-      ),
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: !_sesionIniciada ? _buildConfiguracionSesion() : _buildTomaAsistencia(),
-      ),
-    );
-  }
-
-  Widget _buildConfiguracionSesion() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header card
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [WessexColors.midnightNavy, WessexColors.deepRoyalBlue],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: WessexColors.darkGrape.withOpacity(0.1),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.how_to_reg,
-                        color: Colors.white,
-                        size: 32,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Nueva Sesión de Entrenamiento',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Configura los parámetros para iniciar la toma de asistencia',
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.9),
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          
-          const SizedBox(height: 24),
-
-          // Formulario de configuración
-          Card(
-            elevation: 4,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Configuración de Sesión',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: WessexColors.darkGrape,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Nombre de sesión
-                  TextField(
-                    controller: _nombreSesionController,
-                    decoration: InputDecoration(
-                      labelText: 'Nombre de la Sesión *',
-                      hintText: 'Ej: Entrenamiento Técnico',
-                      prefixIcon: Icon(Icons.title, color: WessexColors.deepRoyalBlue),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: WessexColors.deepRoyalBlue),
-                      ),
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 16),
-
-                  // Selector de categoría
-                  DropdownButtonFormField<String>(
-                    value: _categoriaSeleccionada,
-                    decoration: InputDecoration(
-                      labelText: 'Categoría *',
-                      prefixIcon: Icon(Icons.category, color: WessexColors.deepRoyalBlue),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: WessexColors.deepRoyalBlue),
-                      ),
-                    ),
-                    items: _categorias.map((categoria) =>
-                      DropdownMenuItem(
-                        value: categoria,
-                        child: Text(categoria),
-                      ),
-                    ).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        _categoriaSeleccionada = value;
-                      });
-                    },
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Descripción opcional
-                  TextField(
-                    controller: _descripcionController,
-                    decoration: InputDecoration(
-                      labelText: 'Descripción (Opcional)',
-                      hintText: 'Detalles adicionales de la sesión...',
-                      prefixIcon: Icon(Icons.description, color: WessexColors.deepRoyalBlue),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: WessexColors.deepRoyalBlue),
-                      ),
-                    ),
-                    maxLines: 3,
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Botón iniciar sesión
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: ElevatedButton.icon(
-                      onPressed: _iniciarSesion,
-                      icon: const Icon(Icons.play_arrow, color: Colors.white),
-                      label: const Text(
-                        'Iniciar Sesión de Asistencia',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: WessexColors.leafGreen,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        elevation: 2,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTomaAsistencia() {
-    final estadisticas = _estadisticas;
-    
-    return Column(
-      children: [
-        // Panel de estadísticas
-        Container(
-          margin: const EdgeInsets.all(16),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: WessexColors.darkGrape.withOpacity(0.1),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.analytics, color: WessexColors.deepRoyalBlue),
-                  const SizedBox(width: 8),
-                  Text(
-                    _sesionActual?.nombre ?? 'Sesión',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: WessexColors.darkGrape,
-                    ),
-                  ),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: WessexColors.leafGreen.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      '${estadisticas.porcentajeAsistencia.toStringAsFixed(1)}%',
-                      style: TextStyle(
-                        color: WessexColors.leafGreen,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  _buildEstadisticaChip('Total', estadisticas.totalAlumnos.toString(), WessexColors.darkGrape),
-                  const SizedBox(width: 8),
-                  _buildEstadisticaChip('Presentes', estadisticas.presentes.toString(), WessexColors.leafGreen),
-                  const SizedBox(width: 8),
-                  _buildEstadisticaChip('Ausentes', estadisticas.ausentes.toString(), WessexColors.crimsonAlert),
-                ],
-              ),
-            ],
-          ),
-        ),
-
-        // Barra de filtro
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: TextField(
-            controller: _filtroController,
-            decoration: InputDecoration(
-              hintText: 'Buscar por nombre o RUT...',
-              prefixIcon: Icon(Icons.search, color: WessexColors.deepRoyalBlue),
-              filled: true,
-              fillColor: Colors.white,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide.none,
-              ),
-            ),
-            onChanged: (value) {
-              setState(() {
-                _filtroNombre = value;
-              });
-            },
-          ),
-        ),
-
-        const SizedBox(height: 16),
-
-        // Lista de alumnos
-        Expanded(
-          child: _cargandoAlumnos
-              ? const Center(child: CircularProgressIndicator())
-              : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: _alumnosFiltrados.length,
-                  itemBuilder: (context, index) {
-                    final alumno = _alumnosFiltrados[index];
-                    final registro = _registrosAsistencia[alumno.rut];
-                    return _buildAlumnoCard(alumno, registro);
-                  },
-                ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildEstadisticaChip(String label, String valor, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Column(
-        children: [
-          Text(
-            valor,
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-            ),
-          ),
-          Text(
-            label,
-            style: TextStyle(
-              color: color,
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAlumnoCard(Alumno alumno, RegistroAsistencia? registro) {
-    final estado = registro?.estado ?? EstadoAsistencia.sinRegistrar;
-    
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor: estado.color.withOpacity(0.1),
-                  child: Icon(
-                    estado.icono,
-                    color: estado.color,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        alumno.nombreCompleto,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: WessexColors.darkGrape,
-                        ),
-                      ),
-                      Text(
-                        'RUT: ${alumno.rut}',
-                        style: TextStyle(
-                          color: WessexColors.darkGrape.withOpacity(0.7),
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: estado.color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    estado.nombre,
-                    style: TextStyle(
-                      color: estado.color,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildBotonEstado(
-                    'Presente',
-                    Icons.check_circle,
-                    WessexColors.leafGreen,
-                    () => _cambiarEstadoAsistencia(alumno.rut, EstadoAsistencia.presente),
-                    estado == EstadoAsistencia.presente,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildBotonEstado(
-                    'Ausente',
-                    Icons.cancel,
-                    WessexColors.crimsonAlert,
-                    () => _cambiarEstadoAsistencia(alumno.rut, EstadoAsistencia.ausente),
-                    estado == EstadoAsistencia.ausente,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildBotonEstado(
-                    'Tardanza',
-                    Icons.access_time,
-                    Colors.orange,
-                    () => _cambiarEstadoAsistencia(alumno.rut, EstadoAsistencia.tardanza),
-                    estado == EstadoAsistencia.tardanza,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildBotonEstado(
-                    'Justificado',
-                    Icons.info,
-                    WessexColors.deepRoyalBlue,
-                    () => _cambiarEstadoAsistencia(alumno.rut, EstadoAsistencia.justificado),
-                    estado == EstadoAsistencia.justificado,
-                  ),
-                ),
-              ],
-            ),
-            if (registro?.justificacion != null) ...[
-              const SizedBox(height: 8),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: WessexColors.deepRoyalBlue.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  'Justificación: ${registro!.justificacion}',
-                  style: TextStyle(
-                    color: WessexColors.deepRoyalBlue,
-                    fontSize: 12,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBotonEstado(String texto, IconData icono, Color color, VoidCallback onPressed, bool seleccionado) {
-    return ElevatedButton.icon(
-      onPressed: onPressed,
-      icon: Icon(
-        icono,
-        size: 16,
-        color: seleccionado ? Colors.white : color,
-      ),
-      label: Text(
-        texto,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-          color: seleccionado ? Colors.white : color,
-        ),
-      ),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: seleccionado ? color : Colors.white,
-        foregroundColor: seleccionado ? Colors.white : color,
-        side: BorderSide(color: color),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        elevation: seleccionado ? 2 : 0,
-      ),
-    );
-  }
-
   void _mostrarError(String mensaje) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -867,6 +117,589 @@ class _GestionAsistenciaScreenState extends State<GestionAsistenciaScreen> with 
         backgroundColor: WessexColors.leafGreen,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    final isTablet = screenSize.width > 600;
+    final isDesktop = screenSize.width > 1200;
+    
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: const WessexAppBar(
+        title: 'Gestión de Asistencia',
+        elevation: 2,
+      ),
+      body: WessexBackground(
+        child: SafeArea(
+          child: FadeTransition(
+            opacity: _fadeAnimation,
+            child: !_sesionIniciada 
+                ? _buildConfiguracionSesion(isDesktop, isTablet)
+                : _buildGestionAsistencia(isDesktop, isTablet),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildConfiguracionSesion(bool isDesktop, bool isTablet) {
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(isDesktop ? 24 : (isTablet ? 20 : 16)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          const WessexSectionTitle(
+            title: 'Nueva Sesión de Entrenamiento',
+            subtitle: 'Configure los detalles de la sesión',
+            titleColor: WessexColors.white,
+          ),
+          const SizedBox(height: 32),
+          
+          // Formulario de configuración
+          WessexCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Información de la Sesión',
+                  style: TextStyle(
+                    fontSize: isDesktop ? 20 : (isTablet ? 18 : 16),
+                    fontWeight: FontWeight.bold,
+                    color: WessexColors.darkGrape,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                
+                // Nombre de la sesión
+                _buildInputField(
+                  label: 'Nombre de la Sesión',
+                  hint: 'Ej: Entrenamiento Juvenil - Técnica',
+                  controller: _nombreSesionController,
+                  icon: Icons.sports_rugby,
+                  isDesktop: isDesktop,
+                  isTablet: isTablet,
+                ),
+                const SizedBox(height: 16),
+                
+                // Descripción
+                _buildInputField(
+                  label: 'Descripción (Opcional)',
+                  hint: 'Descripción de los objetivos del entrenamiento',
+                  controller: _descripcionController,
+                  icon: Icons.description,
+                  maxLines: 3,
+                  isDesktop: isDesktop,
+                  isTablet: isTablet,
+                ),
+                const SizedBox(height: 16),
+                
+                // Selector de categoría
+                Text(
+                  'Categoría',
+                  style: TextStyle(
+                    fontSize: isDesktop ? 16 : (isTablet ? 15 : 14),
+                    fontWeight: FontWeight.w600,
+                    color: WessexColors.darkGrape,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  value: _categoriaSeleccionada,
+                  decoration: InputDecoration(
+                    hintText: 'Seleccione una categoría',
+                    prefixIcon: Icon(Icons.category, color: WessexColors.deepRoyalBlue),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: WessexColors.maximumGrayMint),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: WessexColors.deepRoyalBlue, width: 2),
+                    ),
+                    filled: true,
+                    fillColor: WessexColors.mistyRoseGray,
+                  ),
+                  items: _categorias.map((categoria) {
+                    return DropdownMenuItem(
+                      value: categoria,
+                      child: Text(categoria),
+                    );
+                  }).toList(),
+                  onChanged: (valor) {
+                    setState(() {
+                      _categoriaSeleccionada = valor;
+                    });
+                    if (valor != null) {
+                      _cargarAlumnos(valor);
+                    }
+                  },
+                ),
+                const SizedBox(height: 24),
+                
+                // Botón para iniciar sesión
+                SizedBox(
+                  width: double.infinity,
+                  child: WessexButton(
+                    text: 'Iniciar Sesión de Asistencia',
+                    icon: Icons.play_arrow,
+                    backgroundColor: WessexColors.leafGreen,
+                    onPressed: _puedeIniciarSesion() ? _iniciarSesion : null,
+                    isLoading: _cargandoAlumnos,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          // Información adicional
+          if (_categoriaSeleccionada != null && _alumnos.isNotEmpty) ...[
+            const SizedBox(height: 24),
+            WessexCard(
+              backgroundColor: WessexColors.leafGreen.withOpacity(0.1),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info,
+                    color: WessexColors.leafGreen,
+                    size: isDesktop ? 24 : (isTablet ? 22 : 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Listo para iniciar',
+                          style: TextStyle(
+                            fontSize: isDesktop ? 16 : (isTablet ? 15 : 14),
+                            fontWeight: FontWeight.bold,
+                            color: WessexColors.leafGreen,
+                          ),
+                        ),
+                        Text(
+                          '${_alumnos.length} alumnos cargados en $_categoriaSeleccionada',
+                          style: TextStyle(
+                            fontSize: isDesktop ? 14 : (isTablet ? 13 : 12),
+                            color: WessexColors.darkGrape.withOpacity(0.7),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInputField({
+    required String label,
+    required String hint,
+    required TextEditingController controller,
+    required IconData icon,
+    required bool isDesktop,
+    required bool isTablet,
+    int maxLines = 1,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: isDesktop ? 16 : (isTablet ? 15 : 14),
+            fontWeight: FontWeight.w600,
+            color: WessexColors.darkGrape,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: controller,
+          maxLines: maxLines,
+          decoration: InputDecoration(
+            hintText: hint,
+            prefixIcon: Icon(icon, color: WessexColors.deepRoyalBlue),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: WessexColors.maximumGrayMint),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: WessexColors.deepRoyalBlue, width: 2),
+            ),
+            filled: true,
+            fillColor: WessexColors.mistyRoseGray,
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: isDesktop ? 16 : 14,
+            ),
+          ),
+          style: TextStyle(
+            fontSize: isDesktop ? 16 : (isTablet ? 15 : 14),
+            color: WessexColors.darkGrape,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGestionAsistencia(bool isDesktop, bool isTablet) {
+    final alumnosFiltrados = _alumnos.where((alumno) {
+      return alumno.nombreCompleto.toLowerCase().contains(_filtroNombre.toLowerCase());
+    }).toList();
+
+    return Column(
+      children: [
+        // Header fijo con estadísticas
+        Container(
+          padding: EdgeInsets.all(isDesktop ? 24 : (isTablet ? 20 : 16)),
+          child: Column(
+            children: [
+              const WessexSectionTitle(
+                title: 'Toma de Asistencia',
+                subtitle: 'Marcar presente/ausente para cada alumno',
+                titleColor: WessexColors.white,
+              ),
+              const SizedBox(height: 20),
+              
+              // Estadísticas en tiempo real
+              WessexCard(
+                child: Row(
+                  children: [
+                    _buildEstadistica(
+                      'Presentes',
+                      _contarEstado(EstadoAsistencia.presente).toString(),
+                      WessexColors.leafGreen,
+                      Icons.check_circle,
+                      isDesktop,
+                      isTablet,
+                    ),
+                    const SizedBox(width: 16),
+                    _buildEstadistica(
+                      'Ausentes',
+                      _contarEstado(EstadoAsistencia.ausente).toString(),
+                      WessexColors.crimsonAlert,
+                      Icons.cancel,
+                      isDesktop,
+                      isTablet,
+                    ),
+                    const SizedBox(width: 16),
+                    _buildEstadistica(
+                      'Sin Marcar',
+                      _contarEstado(EstadoAsistencia.sinRegistrar).toString(),
+                      WessexColors.maximumGrayMint,
+                      Icons.radio_button_unchecked,
+                      isDesktop,
+                      isTablet,
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Filtro de búsqueda
+              const SizedBox(height: 16),
+              WessexCard(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: TextField(
+                  controller: _filtroController,
+                  decoration: InputDecoration(
+                    hintText: 'Buscar alumno...',
+                    prefixIcon: Icon(Icons.search, color: WessexColors.deepRoyalBlue),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                  ),
+                  onChanged: (valor) {
+                    setState(() {
+                      _filtroNombre = valor;
+                    });
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        // Lista de alumnos
+        Expanded(
+          child: ListView.builder(
+            padding: EdgeInsets.symmetric(horizontal: isDesktop ? 24 : (isTablet ? 20 : 16)),
+            itemCount: alumnosFiltrados.length,
+            itemBuilder: (context, index) {
+              final alumno = alumnosFiltrados[index];
+              final registro = _registrosAsistencia[alumno.rut]!;
+              
+              return _buildAlumnoCard(alumno, registro, isDesktop, isTablet);
+            },
+          ),
+        ),
+        
+        // Botones de acción fijos
+        Container(
+          padding: EdgeInsets.all(isDesktop ? 24 : (isTablet ? 20 : 16)),
+          child: Row(
+            children: [
+              Expanded(
+                child: WessexButton(
+                  text: 'Finalizar Sesión',
+                  icon: Icons.save,
+                  backgroundColor: WessexColors.deepRoyalBlue,
+                  onPressed: _finalizarSesion,
+                ),
+              ),
+              const SizedBox(width: 12),
+              WessexButton(
+                text: 'Cancelar',
+                icon: Icons.cancel,
+                backgroundColor: WessexColors.crimsonAlert,
+                onPressed: _cancelarSesion,
+                width: isDesktop ? 140 : (isTablet ? 120 : 100),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEstadistica(String label, String valor, Color color, IconData icon, bool isDesktop, bool isTablet) {
+    return Expanded(
+      child: Column(
+        children: [
+          Icon(
+            icon,
+            color: color,
+            size: isDesktop ? 32 : (isTablet ? 28 : 24),
+          ),
+          SizedBox(height: isDesktop ? 8 : 6),
+          Text(
+            valor,
+            style: TextStyle(
+              fontSize: isDesktop ? 24 : (isTablet ? 20 : 18),
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: isDesktop ? 14 : (isTablet ? 13 : 12),
+              color: WessexColors.darkGrape.withOpacity(0.7),
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAlumnoCard(Alumno alumno, RegistroAsistencia registro, bool isDesktop, bool isTablet) {
+    return WessexCard(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          // Avatar del alumno
+          CircleAvatar(
+            radius: isDesktop ? 24 : (isTablet ? 22 : 20),
+            backgroundColor: WessexColors.deepRoyalBlue,
+            child: Text(
+              alumno.nombreCompleto.substring(0, 1).toUpperCase(),
+              style: TextStyle(
+                color: WessexColors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: isDesktop ? 16 : (isTablet ? 15 : 14),
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          
+          // Información del alumno
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  alumno.nombreCompleto,
+                  style: TextStyle(
+                    fontSize: isDesktop ? 16 : (isTablet ? 15 : 14),
+                    fontWeight: FontWeight.bold,
+                    color: WessexColors.darkGrape,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'RUT: ${alumno.rut}',
+                  style: TextStyle(
+                    fontSize: isDesktop ? 14 : (isTablet ? 13 : 12),
+                    color: WessexColors.darkGrape.withOpacity(0.7),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          // Botones de estado
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildEstadoButton(
+                Icons.check_circle,
+                WessexColors.leafGreen,
+                registro.estado == EstadoAsistencia.presente,
+                () => _cambiarEstado(alumno.rut, EstadoAsistencia.presente),
+                isDesktop,
+                isTablet,
+              ),
+              const SizedBox(width: 8),
+              _buildEstadoButton(
+                Icons.cancel,
+                WessexColors.crimsonAlert,
+                registro.estado == EstadoAsistencia.ausente,
+                () => _cambiarEstado(alumno.rut, EstadoAsistencia.ausente),
+                isDesktop,
+                isTablet,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEstadoButton(IconData icon, Color color, bool isSelected, VoidCallback onPressed, bool isDesktop, bool isTablet) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isSelected ? color : color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: color,
+          width: isSelected ? 0 : 1,
+        ),
+      ),
+      child: IconButton(
+        onPressed: onPressed,
+        icon: Icon(
+          icon,
+          color: isSelected ? WessexColors.white : color,
+          size: isDesktop ? 24 : (isTablet ? 22 : 20),
+        ),
+        padding: EdgeInsets.all(isDesktop ? 12 : (isTablet ? 10 : 8)),
+        constraints: BoxConstraints(
+          minWidth: isDesktop ? 48 : (isTablet ? 44 : 40),
+          minHeight: isDesktop ? 48 : (isTablet ? 44 : 40),
+        ),
+      ),
+    );
+  }
+
+  bool _puedeIniciarSesion() {
+    return _nombreSesionController.text.isNotEmpty &&
+           _categoriaSeleccionada != null &&
+           _alumnos.isNotEmpty;
+  }
+
+  void _iniciarSesion() {
+    if (!_puedeIniciarSesion()) return;
+
+    setState(() {
+      _sesionActual = SesionEntrenamiento(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        nombre: _nombreSesionController.text,
+        descripcion: _descripcionController.text.isEmpty ? null : _descripcionController.text,
+        categoria: _categoriaSeleccionada!,
+        fechaInicio: DateTime.now(),
+        entrenadorRut: 'trainer001', // TODO: Obtener del usuario autenticado
+        entrenadorNombre: 'Entrenador Wessex', // TODO: Obtener del usuario autenticado
+        registros: _registrosAsistencia.values.toList(),
+      );
+      _sesionIniciada = true;
+    });
+
+    _mostrarExito('Sesión de asistencia iniciada correctamente');
+  }
+
+  void _cambiarEstado(String rutAlumno, EstadoAsistencia nuevoEstado) {
+    setState(() {
+      _registrosAsistencia[rutAlumno] = _registrosAsistencia[rutAlumno]!.copyWith(
+        estado: nuevoEstado,
+      );
+    });
+  }
+
+  int _contarEstado(EstadoAsistencia estado) {
+    return _registrosAsistencia.values
+        .where((registro) => registro.estado == estado)
+        .length;
+  }
+
+  Future<void> _finalizarSesion() async {
+    if (_sesionActual == null) return;
+
+    // Validar que todos los alumnos tengan estado asignado
+    final sinRegistrar = _contarEstado(EstadoAsistencia.sinRegistrar);
+    if (sinRegistrar > 0) {
+      final confirmar = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Confirmar Finalización'),
+          content: Text('Hay $sinRegistrar alumno(s) sin marcar. ¿Desea continuar?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Continuar'),
+            ),
+          ],
+        ),
+      );
+      
+      if (confirmar != true) return;
+    }
+
+    try {
+      // TODO: Guardar la sesión completa en el servicio
+      await AsistenciaService.finalizarSesion(_sesionActual!.id);
+      
+      _mostrarExito('Sesión guardada correctamente');
+      
+      // Regresar al dashboard
+      Navigator.pop(context);
+      
+    } catch (e) {
+      _mostrarError('Error al guardar la sesión: $e');
+    }
+  }
+
+  void _cancelarSesion() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancelar Sesión'),
+        content: const Text('¿Está seguro que desea cancelar? Se perderán todos los datos.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('No'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context); // Cerrar diálogo
+              Navigator.pop(context); // Regresar al dashboard
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: WessexColors.crimsonAlert),
+            child: const Text('Sí, Cancelar'),
+          ),
+        ],
       ),
     );
   }

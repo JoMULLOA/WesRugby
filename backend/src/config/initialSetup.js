@@ -88,7 +88,7 @@ async function createInitialData() {
       const userApoderado = userRepository.create({
         rut: "45.678.901-2",
         nombreCompleto: "Apoderado Demo Wessex",
-        email: "apoderado@alumnos.ubiobio.cl",
+        email: "apoderado@ubiobio.cl",
         password: await encryptPassword("Apoderado2024"),
         genero: "femenino",
         fechaNacimiento: "1975-11-05",
@@ -106,7 +106,7 @@ async function createInitialData() {
       console.log("   - Directiva: directiva@ubiobio.cl / Directiva2024");
       console.log("   - Tesorera: tesorera@ubiobio.cl / Tesorera2024");
       console.log("   - Entrenador: entrenador@ubiobio.cl / Entrenador2024");
-      console.log("   - Apoderado: apoderado@alumnos.ubiobio.cl / Apoderado2024");
+      console.log("   - Apoderado: apoderado@ubiobio.cl / Apoderado2024");
 
       // Mantener referencia para creación de otros datos
       const user1 = userDirectiva;
