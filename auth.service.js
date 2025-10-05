@@ -27,12 +27,10 @@ export async function loginService({ email, password }) {
 
     const payload = {
       id: userFound.id,
-      fullName: userFound.fullName,
-      nombreCompleto: userFound.fullName,
+      nombreCompleto: userFound.nombreCompleto,
       email: userFound.email,
       rut: userFound.rut,
-      role: userFound.role,
-      rol: userFound.role,
+      rol: userFound.rol,
     };
 
     const token = jwt.sign(payload, ensureJwtSecret(), { expiresIn: "1d" });
@@ -46,7 +44,7 @@ export async function loginService({ email, password }) {
 export async function registerService(payload) {
   try {
     const userRepository = AppDataSource.getRepository(User);
-    const { fullName, email, rut, role, password, phone } = payload;
+    const { nombreCompleto, email, rut, rol, password, carrera, fechaNacimiento, genero, telefono } = payload;
 
     const existingEmail = await userRepository.findOne({ where: { email } });
     if (existingEmail) {
@@ -59,12 +57,15 @@ export async function registerService(payload) {
     }
 
     const newUser = userRepository.create({
-      fullName,
+      nombreCompleto,
       email,
       rut,
-      role,
-      phone,
+      rol,
       password: await encryptPassword(password),
+      carrera,
+      fechaNacimiento,
+      genero,
+      telefono,
     });
 
     await userRepository.save(newUser);

@@ -1,7 +1,6 @@
-"use strict";
-import passport from "passport";
-import User from "../entity/user.entity.js";
+﻿import passport from "passport";
 import { ExtractJwt, Strategy as JwtStrategy } from "passport-jwt";
+import User from "../entity/user.entity.js";
 import { ACCESS_TOKEN_SECRET } from "../config/configEnv.js";
 import { AppDataSource } from "../config/configDb.js";
 
@@ -10,41 +9,38 @@ const options = {
   secretOrKey: ACCESS_TOKEN_SECRET,
 };
 
-console.log("🔧 DEBUG - Passport JWT configurado con secretOrKey:", ACCESS_TOKEN_SECRET ? "✅ Definido" : "❌ No definido");
-
 passport.use(
-  new JwtStrategy(options, async (jwt_payload, done) => {
+  new JwtStrategy(options, async (jwtPayload, done) => {
     try {
-      console.log("🔍 DEBUG - JWT Payload recibido:", jwt_payload);
-      
       const userRepository = AppDataSource.getRepository(User);
-      
-      // Buscar por RUT si está disponible, o por email como respaldo
-      let user;
-      if (jwt_payload.rut) {
-        user = await userRepository.findOne({
-          where: { rut: jwt_payload.rut }
-        });
-        console.log("🔍 DEBUG - Usuario encontrado por RUT:", user ? "SÍ" : "NO");
-      } else if (jwt_payload.email) {
-        user = await userRepository.findOne({
-          where: { email: jwt_payload.email }
-        });
-        console.log("🔍 DEBUG - Usuario encontrado por EMAIL:", user ? "SÍ" : "NO");
+
+      let user = null;
+      if (jwtPayload?.id) {
+        user = await userRepository.findOne({ where: { id: jwtPayload.id } });
       }
 
-      if (user) {
-        console.log("✅ DEBUG - Usuario autenticado:", user.rut);
-        return done(null, user);
-      } else {
-        console.log("❌ DEBUG - Usuario no encontrado en base de datos");
+      if (!user && jwtPayload?.rut) {
+        user = await userRepository.findOne({ where: { rut: jwtPayload.rut } });
+      }
+
+      if (!user && jwtPayload?.email) {
+        user = await userRepository.findOne({ where: { email: jwtPayload.email } });
+      }
+
+      if (!user) {
         return done(null, false);
       }
+
+      // Alias temporales para compatibilidad con código existente
+      user.rol = user.role;
+      user.nombreCompleto = user.fullName;
+
+      return done(null, user);
     } catch (error) {
-      console.error("❌ DEBUG - Error en estrategia JWT:", error);
+      console.error("Error en estrategia JWT:", error);
       return done(error, false);
     }
-  }),
+  })
 );
 
 export function passportJwtSetup() {

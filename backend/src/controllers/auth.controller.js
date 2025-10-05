@@ -1,54 +1,40 @@
-"use strict";
+﻿import jwt from "jsonwebtoken";
 import { loginService, registerService } from "../services/auth.service.js";
-import {
-  authValidation,
-  registerValidation,
-} from "../validations/auth.validation.js";
-import {
-  handleErrorClient,
-  handleErrorServer,
-  handleSuccess,
-} from "../handlers/responseHandlers.js";
-import jwt from "jsonwebtoken";
+import { authValidation, registerValidation } from "../validations/auth.validation.js";
+import { handleErrorClient, handleErrorServer, handleSuccess } from "../handlers/responseHandlers.js";
 import { ACCESS_TOKEN_SECRET } from "../config/configEnv.js";
 
 export async function login(req, res) {
   try {
-    const { body } = req;
-    
-    // Debug: Imprimir lo que llega en el body
-    console.log("🔧 DEBUG - Body del login:", JSON.stringify(body, null, 2));
-    console.log("🔧 DEBUG - Tipo de body:", typeof body);
-    console.log("🔧 DEBUG - Claves del body:", Object.keys(body));
-
-    const { error } = authValidation.validate(body);
-
+    const { error } = authValidation.validate(req.body);
     if (error) {
-      console.log("🔧 DEBUG - Error de validación:", error.message);
-      console.log("🔧 DEBUG - Detalles del error:", error.details);
       return handleErrorClient(res, 400, "Error de validación", error.message);
     }
-    const [accessToken, errorToken] = await loginService(body);
 
-    if (errorToken) return handleErrorClient(res, 400, "Error iniciando sesión", errorToken);
+    const [accessToken, authError] = await loginService(req.body);
+    if (authError) {
+      return handleErrorClient(res, 400, "Error iniciando sesión", authError);
+    }
 
-    // Decodificar el token para obtener la información del usuario
     const decoded = jwt.verify(accessToken, ACCESS_TOKEN_SECRET);
 
     res.cookie("jwt", accessToken, {
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000,
+      sameSite: "strict",
     });
 
-    // Devolver tanto el token como la información del usuario decodificada
-    handleSuccess(res, 200, "Inicio de sesión exitoso", { 
+    handleSuccess(res, 200, "Inicio de sesión exitoso", {
       token: accessToken,
       user: {
+        id: decoded.id,
+        fullName: decoded.fullName,
         nombreCompleto: decoded.nombreCompleto,
         email: decoded.email,
         rut: decoded.rut,
-        rol: decoded.rol
-      }
+        role: decoded.role,
+        rol: decoded.rol,
+      },
     });
   } catch (error) {
     handleErrorServer(res, 500, error.message);
@@ -57,14 +43,15 @@ export async function login(req, res) {
 
 export async function register(req, res) {
   try {
-    const { body } = req;
-    const { error } = registerValidation.validate(body);
-    console.log("error", error);
-    if (error)
+    const { error } = registerValidation.validate(req.body);
+    if (error) {
       return handleErrorClient(res, 400, "Error de validación", error.message);
-    const [newUser, errorNewUser] = await registerService(body);
-    console.log("newUser", errorNewUser);
-    if (errorNewUser) return handleErrorClient(res, 400, "Error registrando al usuario", errorNewUser);
+    }
+
+    const [newUser, serviceError] = await registerService(req.body);
+    if (serviceError) {
+      return handleErrorClient(res, 400, "Error registrando al usuario", serviceError);
+    }
 
     handleSuccess(res, 201, "Usuario registrado con éxito", newUser);
   } catch (error) {
@@ -74,34 +61,17 @@ export async function register(req, res) {
 
 export async function logout(req, res) {
   try {
-    // Obtener información del usuario autenticado si está disponible
-    const userInfo = req.user ? {
-      email: req.user.email,
-      rut: req.user.rut,
-      nombreCompleto: req.user.nombreCompleto
-    } : 'Usuario anónimo';
-
-    // Log de seguridad para auditoría
-    console.log(`🔐 LOGOUT: Usuario ${userInfo.email || 'anónimo'} cerró sesión en ${new Date().toISOString()}`);
-
-    // Limpiar la cookie JWT
-    res.clearCookie("jwt", { 
+    res.clearCookie("jwt", {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production', // Solo HTTPS en producción
-      sameSite: 'strict'
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
     });
-
-    // En el futuro aquí se podría:
-    // 1. Agregar el token a una blacklist
-    // 2. Limpiar datos de sesión en Redis/caché
-    // 3. Notificar a otros servicios
 
     handleSuccess(res, 200, "Sesión cerrada exitosamente", {
       message: "Logout completado",
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Error durante el logout:", error);
     handleErrorServer(res, 500, "Error al cerrar sesión");
   }
 }

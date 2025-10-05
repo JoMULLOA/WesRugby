@@ -34,6 +34,11 @@ const UserSchema = new EntitySchema({
       length: 100,
       nullable: true,
     },
+    telefono: {
+      type: "varchar",
+      length: 20,
+      nullable: true,
+    },
     altura: {
       type: "int",
       nullable: true,

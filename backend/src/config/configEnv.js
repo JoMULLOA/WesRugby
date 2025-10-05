@@ -1,28 +1,81 @@
-"use strict";
-import { fileURLToPath } from "url";
+﻿import { config as loadEnv } from "dotenv";
 import path from "path";
-import dotenv from "dotenv";
+import { fileURLToPath } from "url";
 
-const _filename = fileURLToPath(import.meta.url);
+const currentFile = fileURLToPath(import.meta.url);
+const currentDir = path.dirname(currentFile);
+const envFile = path.resolve(currentDir, ".env");
 
-const _dirname = path.dirname(_filename);
+loadEnv({ path: envFile, override: false });
 
-const envFilePath = path.resolve(_dirname, ".env");
+const env = process.env;
 
-dotenv.config({ path: envFilePath });
+const parseNumber = (value, fallback) => {
+  if (value === undefined || value === null || value === "") {
+    return fallback;
+  }
 
-// Debug: Verificar que las variables se carguen correctamente
-console.log("🔧 DEBUG - Variables de entorno cargadas:");
-console.log("  - ACCESS_TOKEN_SECRET:", process.env.ACCESS_TOKEN_SECRET ? "✅ Definido" : "❌ No definido");
-console.log("  - HOST:", process.env.HOST);
-console.log("  - PORT:", process.env.PORT);
-console.log("  - Ruta del archivo .env:", envFilePath);
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
 
-export const PORT = process.env.PORT;
-export const HOST = process.env.HOST;
-export const DB_USERNAME = process.env.DB_USERNAME;
-export const PASSWORD = process.env.PASSWORD;
-export const DATABASE = process.env.DATABASE;
-export const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET;
-export const cookieKey = process.env.cookieKey;
-export const MONGO_URI = process.env.MONGO_URI;
+const parseBoolean = (value, fallback = false) => {
+  if (typeof value === "boolean") {
+    return value;
+  }
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (["1", "true", "yes", "y"].includes(normalized)) {
+      return true;
+    }
+    if (["0", "false", "no", "n"].includes(normalized)) {
+      return false;
+    }
+  }
+  return fallback;
+};
+
+export const NODE_ENV = env.NODE_ENV ?? "development";
+export const HOST = env.HOST?.trim() || "127.0.0.1";
+export const PORT = parseNumber(env.PORT, 3000);
+
+export const DB_HOST = env.DB_HOST?.trim() || HOST;
+export const DB_PORT = parseNumber(env.DB_PORT, 5432);
+export const DB_USERNAME = env.DB_USERNAME?.trim() || "postgres";
+export const PASSWORD = env.PASSWORD ?? "";
+export const DATABASE = env.DATABASE?.trim() || "postgres";
+export const DATABASE_URL = env.DATABASE_URL;
+export const DB_SSL = parseBoolean(env.DB_SSL, false);
+
+export const ACCESS_TOKEN_SECRET = env.ACCESS_TOKEN_SECRET;
+export const cookieKey = env.cookieKey;
+export const COOKIE_KEY = cookieKey;
+
+export const EMAIL_HOST = env.EMAIL_HOST;
+export const EMAIL_PORT = parseNumber(env.EMAIL_PORT, 587);
+export const EMAIL_USER = env.EMAIL_USER;
+export const EMAIL_PASS = env.EMAIL_PASS;
+
+export const SMTP_CONFIG = {
+  host: EMAIL_HOST,
+  port: EMAIL_PORT,
+  secure: EMAIL_PORT === 465,
+  auth: EMAIL_USER && EMAIL_PASS ? { user: EMAIL_USER, pass: EMAIL_PASS } : undefined,
+};
+
+export const APP_CONFIG = {
+  env: NODE_ENV,
+  host: HOST,
+  port: PORT,
+  cookieSecret: COOKIE_KEY,
+};
+
+export const DATABASE_CONFIG = {
+  url: DATABASE_URL,
+  host: DB_HOST,
+  port: DB_PORT,
+  username: DB_USERNAME,
+  password: PASSWORD,
+  database: DATABASE,
+  ssl: DB_SSL,
+};

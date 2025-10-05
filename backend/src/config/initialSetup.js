@@ -1,110 +1,142 @@
-"use strict";
-import { AppDataSource } from "./configDb.js";
+﻿import { AppDataSource } from "./configDb.js";
 import { encryptPassword } from "../helpers/bcrypt.helper.js";
 import User from "../entity/user.entity.js";
+import PaymentPlan from "../entity/paymentPlan.entity.js";
+import Player from "../entity/player.entity.js";
+import Enrollment from "../entity/enrollment.entity.js";
+import Payment from "../entity/payment.entity.js";
 
-
-//Los ruts estan hasta un maximo de 29.999.999-9, por lo que no se pueden crear usuarios con ruts mayores a ese valor, se creara, 
-//pero no se podra buscar como un amigo.
-async function createInitialData() {
-  try {
-    // Crear Usuarios Base del Sistema Wessex Rugby
-    const userRepository = AppDataSource.getRepository(User);
-    const userCount = await userRepository.count();
-
-    if (userCount === 0) {
-      
-      // Usuario 1: Directiva - Máximo nivel de acceso
-      const userDirectiva = userRepository.create({
-        rut: "12.345.678-9",
-        nombreCompleto: "Director Wessex Rugby",
-        email: "directiva@ubiobio.cl",
-        password: await encryptPassword("Directiva2024"),
-        genero: "masculino",
-        fechaNacimiento: "1980-01-15",
-        carrera: "Administración Deportiva",
-        rol: "directiva",
-        puntuacion: 5,
-        cantidadValoraciones: 0,
-        contadorReportes: 0,
-        saldo: 0,
-      });
-
-      // Usuario 2: Tesorera - Gestión financiera
-      const userTesorera = userRepository.create({
-        rut: "23.456.789-0",
-        nombreCompleto: "Tesorera Wessex Rugby",
-        email: "tesorera@ubiobio.cl",
-        password: await encryptPassword("Tesorera2024"),
-        genero: "femenino",
-        fechaNacimiento: "1985-03-22",
-        carrera: "Contabilidad",
-        rol: "tesorera",
-        puntuacion: 5,
-        cantidadValoraciones: 0,
-        contadorReportes: 0,
-        saldo: 0,
-      });
-
-      // Usuario 3: Entrenador - Gestión deportiva
-      const userEntrenador = userRepository.create({
-        rut: "34.567.890-1",
-        nombreCompleto: "Entrenador Wessex Rugby",
-        email: "entrenador@ubiobio.cl",
-        password: await encryptPassword("Entrenador2024"),
-        genero: "masculino",
-        fechaNacimiento: "1982-07-10",
-        carrera: "Educación Física",
-        rol: "entrenador",
-        puntuacion: 5,
-        cantidadValoraciones: 0,
-        contadorReportes: 0,
-        saldo: 0,
-      });
-
-      // Usuario 4: Apoderado - Acceso limitado
-      const userApoderado = userRepository.create({
-        rut: "45.678.901-2",
-        nombreCompleto: "Apoderado Demo Wessex",
-        email: "apoderado@ubiobio.cl",
-        password: await encryptPassword("Apoderado2024"),
-        genero: "femenino",
-        fechaNacimiento: "1975-11-05",
-        carrera: "Ingeniería Comercial",
-        rol: "apoderado",
-        puntuacion: 5,
-        cantidadValoraciones: 0,
-        contadorReportes: 0,
-        saldo: 0,
-      });
-
-      await userRepository.save([userDirectiva, userTesorera, userEntrenador, userApoderado]);
-      
-      console.log("✅ Usuarios del sistema Wessex Rugby creados exitosamente:");
-      console.log("   - Directiva: directiva@ubiobio.cl / Directiva2024");
-      console.log("   - Tesorera: tesorera@ubiobio.cl / Tesorera2024");
-      console.log("   - Entrenador: entrenador@ubiobio.cl / Entrenador2024");
-      console.log("   - Apoderado: apoderado@ubiobio.cl / Apoderado2024");
-
-      // Mantener referencia para creación de otros datos
-      const user1 = userDirectiva;
-      const user2 = userTesorera;
-      const user3 = userEntrenador;
-
-    } else {
-      console.log("✅ Usuarios del sistema ya existen, cargando referencias...");
-      const user1 = await userRepository.findOneBy({ email: "directiva@ubiobio.cl" });
-      const user2 = await userRepository.findOneBy({ email: "tesorera@ubiobio.cl" });
-      const user3 = await userRepository.findOneBy({ email: "entrenador@ubiobio.cl" });
-    }
-
-    console.log("✅ Sistema Wessex Rugby inicializado correctamente");
-
-  } catch (error) {
-    console.error("❌ Error al crear datos iniciales:", error);
+function ensureInitialized() {
+  if (!AppDataSource.isInitialized) {
+    throw new Error("DataSource must be initialized before running createInitialData()");
   }
 }
 
+async function upsertUser(userRepository, { rut, email, fullName, role, phone }, password) {
+  let user = await userRepository.findOne({ where: { email } });
 
+  if (!user) {
+    user = userRepository.create({
+      rut,
+      email,
+      fullName,
+      role,
+      phone,
+      password: await encryptPassword(password),
+    });
+    await userRepository.save(user);
+  }
+
+  return user;
+}
+
+async function createInitialData() {
+  try {
+    ensureInitialized();
+
+    const userRepository = AppDataSource.getRepository(User);
+    const planRepository = AppDataSource.getRepository(PaymentPlan);
+    const playerRepository = AppDataSource.getRepository(Player);
+    const enrollmentRepository = AppDataSource.getRepository(Enrollment);
+    const paymentRepository = AppDataSource.getRepository(Payment);
+
+    const [directiva, tesorera, entrenador, apoderado] = await Promise.all([
+      upsertUser(userRepository, {
+        rut: "12.345.678-9",
+        email: "directiva@wessex.cl",
+        fullName: "Tatiana Gutiérrez",
+        role: "directiva",
+        phone: "+56 9 1234 5678",
+      }, "Directiva2024"),
+      upsertUser(userRepository, {
+        rut: "23.456.789-0",
+        email: "tesorera@wessex.cl",
+        fullName: "María López",
+        role: "tesorera",
+        phone: "+56 9 2345 6789",
+      }, "Tesorera2024"),
+      upsertUser(userRepository, {
+        rut: "34.567.890-1",
+        email: "entrenador@wessex.cl",
+        fullName: "Diego Constanzo",
+        role: "entrenador",
+        phone: "+56 9 3456 7890",
+      }, "Entrenador2024"),
+      upsertUser(userRepository, {
+        rut: "45.678.901-2",
+        email: "apoderado@wessex.cl",
+        fullName: "Luis Pereira",
+        role: "apoderado",
+        phone: "+56 9 4567 8901",
+      }, "Apoderado2024"),
+    ]);
+
+    const planMensual = await planRepository.findOne({ where: { name: "Mensualidad 2025" } });
+    let monthlyPlan = planMensual;
+    if (!monthlyPlan) {
+      monthlyPlan = planRepository.create({
+        name: "Mensualidad 2025",
+        amount: 25000,
+        frequency: "mensual",
+        isActive: true,
+      });
+      await planRepository.save(monthlyPlan);
+    }
+
+    const playerRut = "26.789.012-3";
+    let player = await playerRepository.findOne({ where: { rut: playerRut } });
+    if (!player) {
+      player = playerRepository.create({
+        rut: playerRut,
+        firstName: "Tomás",
+        lastName: "González",
+        birthDate: "2015-04-12",
+        gender: "masculino",
+        schoolGrade: "6º Básico",
+        guardian: apoderado,
+      });
+      await playerRepository.save(player);
+    }
+
+    let enrollment = await enrollmentRepository.findOne({
+      where: { player: { id: player.id }, season: "2025" },
+      relations: { player: true },
+    });
+
+    if (!enrollment) {
+      enrollment = enrollmentRepository.create({
+        season: "2025",
+        status: "active",
+        player,
+        plan: monthlyPlan,
+        createdBy: directiva,
+        approvedBy: tesorera,
+        approvedAt: new Date(),
+      });
+      await enrollmentRepository.save(enrollment);
+    }
+
+    const existingPayments = await paymentRepository.count({ where: { enrollment: { id: enrollment.id } } });
+    if (existingPayments === 0) {
+      const samplePayment = paymentRepository.create({
+        enrollment,
+        submittedBy: apoderado,
+        method: "transferencia",
+        amount: 25000,
+        status: "validated",
+        paidAt: "2025-03-01",
+        dueDate: "2025-03-05",
+        referenceCode: "WR-2025-0001",
+        reviewedBy: tesorera,
+        reviewedAt: new Date(),
+      });
+      await paymentRepository.save(samplePayment);
+    }
+
+    console.log("Base de datos inicializada con datos semilla para WesRugby");
+  } catch (error) {
+    console.error("Error al crear datos iniciales:", error);
+  }
+}
 
 export { createInitialData };
