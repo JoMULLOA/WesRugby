@@ -4,7 +4,9 @@ import '../widgets/wessex_widgets.dart';
 import '../config/colors.dart';
 import '../services/voucher_service.dart';
 // ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html show Blob, Url, AnchorElement;
+import 'dart:html' as html show Blob, Url, AnchorElement, IFrameElement;
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:ui_web' as ui_web;
 
 class GestionVouchersScreen extends StatefulWidget {
   const GestionVouchersScreen({super.key});
@@ -662,8 +664,8 @@ class _GestionVouchersScreenState extends State<GestionVouchersScreen> {
       context: context,
       builder: (context) => Dialog(
         child: Container(
-          width: 600,
-          height: 500,
+          width: 800,
+          height: 700,
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -671,83 +673,61 @@ class _GestionVouchersScreenState extends State<GestionVouchersScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Voucher PDF - ${voucher['usuario']}',
-                    style: TextStyle(
-                      color: WessexColors.darkGrape,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Voucher PDF - ${voucher['usuario']}',
+                          style: TextStyle(
+                            color: WessexColors.darkGrape,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Archivo: ${voucher['archivo']}',
+                          style: TextStyle(
+                            color: WessexColors.darkGrape.withOpacity(0.7),
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: Icon(Icons.close),
+                  Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => _downloadFile(voucher),
+                        icon: Icon(Icons.download),
+                        tooltip: 'Descargar PDF',
+                        style: IconButton.styleFrom(
+                          backgroundColor: WessexColors.deepRoyalBlue.withOpacity(0.1),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: Icon(Icons.close),
+                        tooltip: 'Cerrar',
+                      ),
+                    ],
                   ),
                 ],
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Archivo: ${voucher['archivo']}',
-                style: TextStyle(
-                  color: WessexColors.darkGrape.withOpacity(0.7),
-                  fontSize: 14,
-                ),
               ),
               const SizedBox(height: 16),
               Expanded(
                 child: Container(
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    color: WessexColors.mistyRoseGray.withOpacity(0.3),
+                    color: WessexColors.mistyRoseGray.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: WessexColors.mistyRoseGray),
                   ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.picture_as_pdf,
-                        size: 64,
-                        color: WessexColors.crimsonAlert,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Archivo PDF',
-                        style: TextStyle(
-                          color: WessexColors.darkGrape,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        voucher['archivo'],
-                        style: TextStyle(
-                          color: WessexColors.darkGrape.withOpacity(0.7),
-                          fontSize: 14,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Tamaño: ${(voucher['archivoData'].length / 1024).toStringAsFixed(1)} KB',
-                        style: TextStyle(
-                          color: WessexColors.deepRoyalBlue,
-                          fontSize: 12,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton.icon(
-                        onPressed: () => _downloadFile(voucher),
-                        icon: Icon(Icons.download),
-                        label: Text('Descargar PDF'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: WessexColors.deepRoyalBlue,
-                          foregroundColor: WessexColors.white,
-                        ),
-                      ),
-                    ],
-                  ),
+                  child: kIsWeb 
+                    ? _buildPdfViewer(voucher)
+                    : _buildPdfPlaceholder(voucher),
                 ),
               ),
             ],
@@ -757,13 +737,123 @@ class _GestionVouchersScreenState extends State<GestionVouchersScreen> {
     );
   }
 
+  Widget _buildPdfViewer(Map<String, dynamic> voucher) {
+    try {
+      if (voucher['archivoData'] != null) {
+        // Crear un blob URL para el PDF
+        final blob = html.Blob([voucher['archivoData']], 'application/pdf');
+        final url = html.Url.createObjectUrlFromBlob(blob);
+        
+        // Registrar el view factory para el iframe
+        final String viewId = 'pdf-viewer-${voucher['id']}';
+        
+        // ignore: undefined_prefixed_name
+        ui_web.platformViewRegistry.registerViewFactory(
+          viewId,
+          (int viewId) {
+            final iframe = html.IFrameElement()
+              ..src = url
+              ..style.border = 'none'
+              ..style.width = '100%'
+              ..style.height = '100%';
+            return iframe;
+          },
+        );
+        
+        return HtmlElementView(viewType: viewId);
+      } else {
+        return _buildPdfPlaceholder(voucher);
+      }
+    } catch (e) {
+      print('Error creando visor PDF: $e');
+      return _buildPdfPlaceholder(voucher);
+    }
+  }
+
+  Widget _buildPdfPlaceholder(Map<String, dynamic> voucher) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          Icons.picture_as_pdf,
+          size: 64,
+          color: WessexColors.crimsonAlert,
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'Archivo PDF',
+          style: TextStyle(
+            color: WessexColors.darkGrape,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          voucher['archivo'],
+          style: TextStyle(
+            color: WessexColors.darkGrape.withOpacity(0.7),
+            fontSize: 14,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 16),
+        if (voucher['archivoData'] != null) ...[
+          Text(
+            'Tamaño: ${(voucher['archivoData'].length / 1024).toStringAsFixed(1)} KB',
+            style: TextStyle(
+              color: WessexColors.deepRoyalBlue,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: WessexColors.deepRoyalBlue.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  color: WessexColors.deepRoyalBlue,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Vista previa no disponible en esta plataforma',
+                  style: TextStyle(
+                    color: WessexColors.deepRoyalBlue,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+        const SizedBox(height: 16),
+        ElevatedButton.icon(
+          onPressed: () => _downloadFile(voucher),
+          icon: Icon(Icons.download),
+          label: Text('Descargar PDF'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: WessexColors.deepRoyalBlue,
+            foregroundColor: WessexColors.white,
+          ),
+        ),
+      ],
+    );
+  }
+
   void _showImageDialog(Map<String, dynamic> voucher) {
     showDialog(
       context: context,
       builder: (context) => Dialog(
         child: Container(
-          width: 600,
-          height: 500,
+          width: 800,
+          height: 700,
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -771,65 +861,107 @@ class _GestionVouchersScreenState extends State<GestionVouchersScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Voucher - ${voucher['usuario']}',
-                    style: TextStyle(
-                      color: WessexColors.darkGrape,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Voucher - ${voucher['usuario']}',
+                          style: TextStyle(
+                            color: WessexColors.darkGrape,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Archivo: ${voucher['archivo']}',
+                          style: TextStyle(
+                            color: WessexColors.darkGrape.withOpacity(0.7),
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: Icon(Icons.close),
+                  Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => _downloadFile(voucher),
+                        icon: Icon(Icons.download),
+                        tooltip: 'Descargar imagen',
+                        style: IconButton.styleFrom(
+                          backgroundColor: WessexColors.deepRoyalBlue.withOpacity(0.1),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: Icon(Icons.close),
+                        tooltip: 'Cerrar',
+                      ),
+                    ],
                   ),
                 ],
               ),
               const SizedBox(height: 16),
-              Text(
-                'Archivo: ${voucher['archivo']}',
-                style: TextStyle(
-                  color: WessexColors.darkGrape.withOpacity(0.7),
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(height: 16),
               Expanded(
-                child: Center(
-                  child: Image.memory(
-                    voucher['archivoData'],
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.error_outline,
-                              size: 64,
-                              color: WessexColors.crimsonAlert,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'Error al cargar la imagen',
-                              style: TextStyle(
-                                color: WessexColors.darkGrape,
-                                fontSize: 16,
+                child: Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: WessexColors.mistyRoseGray.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: WessexColors.mistyRoseGray),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.memory(
+                      voucher['archivoData'],
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.error_outline,
+                                size: 64,
+                                color: WessexColors.crimsonAlert,
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'El archivo podría no ser una imagen válida',
-                              style: TextStyle(
-                                color: WessexColors.darkGrape.withOpacity(0.7),
-                                fontSize: 12,
+                              const SizedBox(height: 16),
+                              Text(
+                                'Error al cargar la imagen',
+                                style: TextStyle(
+                                  color: WessexColors.darkGrape,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
+                              const SizedBox(height: 8),
+                              Text(
+                                'El archivo podría no ser una imagen válida o estar dañado',
+                                style: TextStyle(
+                                  color: WessexColors.darkGrape.withOpacity(0.7),
+                                  fontSize: 12,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 16),
+                              ElevatedButton.icon(
+                                onPressed: () => _downloadFile(voucher),
+                                icon: Icon(Icons.download),
+                                label: Text('Descargar archivo'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: WessexColors.deepRoyalBlue,
+                                  foregroundColor: WessexColors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 ),
               ),
