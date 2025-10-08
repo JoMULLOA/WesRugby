@@ -4,6 +4,7 @@ import '../widgets/wessex_widgets.dart';
 import '../config/colors.dart';
 import 'gestion_asistencia_screen_wessex.dart';
 import 'historial_asistencia_screen_wessex.dart';
+import 'entrenador_justificantes_screen.dart';
 
 class EntrenadorDashboard extends StatelessWidget {
   const EntrenadorDashboard({super.key});
@@ -107,6 +108,41 @@ class EntrenadorDashboard extends StatelessWidget {
                         Icons.history,
                         WessexColors.deepRoyalBlue,
                         () => _navigateToHistorialAsistencia(context),
+                        isDesktop: isDesktop,
+                        isTablet: isTablet,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                
+                // Fila adicional para justificantes
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildActionCard(
+                        'Ver Justificantes',
+                        'Consultar justificantes de jugadores',
+                        Icons.assignment_outlined,
+                        WessexColors.leafGreen,
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const EntrenadorJustificantesScreen(),
+                          ),
+                        ),
+                        isDesktop: isDesktop,
+                        isTablet: isTablet,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildActionCard(
+                        'Evaluaciones',
+                        'Rendimiento de jugadores',
+                        Icons.assessment,
+                        WessexColors.deepRoyalBlue,
+                        () => _showComingSoon(context, 'Evaluaciones'),
                         isDesktop: isDesktop,
                         isTablet: isTablet,
                       ),

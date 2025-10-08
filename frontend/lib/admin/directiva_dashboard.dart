@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../widgets/custom_drawer.dart';
 import '../widgets/wessex_widgets.dart';
 import '../config/colors.dart';
+import 'gestion_justificantes_screen.dart';
 
 class DirectivaDashboard extends StatelessWidget {
   const DirectivaDashboard({super.key});
@@ -105,6 +106,42 @@ class DirectivaDashboard extends StatelessWidget {
                         Icons.account_balance_wallet,
                         WessexColors.deepRoyalBlue,
                         () => _showComingSoon(context, 'Control Financiero'),
+                        isDesktop: isDesktop,
+                        isTablet: isTablet,
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 12),
+                
+                // Fila para gestión de justificantes
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildActionCard(
+                        'Gestión de Justificantes',
+                        'Evaluar justificantes de inasistencia',
+                        Icons.assignment_turned_in,
+                        WessexColors.crimsonAlert,
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const GestionJustificantesScreen(),
+                          ),
+                        ),
+                        isDesktop: isDesktop,
+                        isTablet: isTablet,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildActionCard(
+                        'Estadísticas Club',
+                        'Métricas y análisis general',
+                        Icons.bar_chart,
+                        WessexColors.leafGreen,
+                        () => _showComingSoon(context, 'Estadísticas del Club'),
                         isDesktop: isDesktop,
                         isTablet: isTablet,
                       ),

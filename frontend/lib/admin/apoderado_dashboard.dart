@@ -4,6 +4,8 @@ import '../widgets/wessex_widgets.dart';
 import '../config/colors.dart';
 import 'voucher_pago_screen.dart';
 import 'historial_vouchers_screen.dart';
+import 'justificante_screen.dart';
+import 'historial_justificantes_screen.dart';
 
 class ApoderadoDashboard extends StatelessWidget {
   const ApoderadoDashboard({super.key});
@@ -153,6 +155,54 @@ class ApoderadoDashboard extends StatelessWidget {
                           context,
                           MaterialPageRoute(
                             builder: (context) => const HistorialVouchersScreen(),
+                          ),
+                        ),
+                        isDesktop: isDesktop,
+                        isTablet: isTablet,
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 32),
+                
+                // Sección: Justificantes de Inasistencia
+                const WessexSectionTitle(
+                  title: 'Justificantes de Inasistencia',
+                  subtitle: 'Justificar ausencias a entrenamientos o eventos',
+                  titleColor: WessexColors.white,
+                ),
+                const SizedBox(height: 20),
+                
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildActionCard(
+                        'Subir Justificante',
+                        'Justificar una inasistencia',
+                        Icons.medical_information,
+                        WessexColors.deepRoyalBlue,
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const JustificanteScreen(),
+                          ),
+                        ),
+                        isDesktop: isDesktop,
+                        isTablet: isTablet,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildActionCard(
+                        'Historial Justificantes',
+                        'Ver justificantes enviados',
+                        Icons.assignment_turned_in,
+                        WessexColors.leafGreen,
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const HistorialJustificantesScreen(),
                           ),
                         ),
                         isDesktop: isDesktop,
