@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../widgets/custom_drawer.dart';
 import '../widgets/wessex_widgets.dart';
 import '../config/colors.dart';
+import 'gestion_vouchers_screen.dart';
 
 class TesoreraDashboard extends StatelessWidget {
   const TesoreraDashboard({super.key});
@@ -78,7 +79,7 @@ class TesoreraDashboard extends StatelessWidget {
                 // Sección: Gestión Financiera
                 const WessexSectionTitle(
                   title: 'Gestión Financiera',
-                  subtitle: 'Control de ingresos y gastos',
+                  subtitle: 'Control de ingresos y pagos',
                   titleColor: WessexColors.white,
                 ),
                 const SizedBox(height: 20),
@@ -86,6 +87,23 @@ class TesoreraDashboard extends StatelessWidget {
                 // Botones principales financieros
                 Row(
                   children: [
+                    Expanded(
+                      child: _buildActionCard(
+                        'Gestión de Vouchers',
+                        'Aprobar pagos de apoderados',
+                        Icons.receipt_long,
+                        WessexColors.crimsonAlert,
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const GestionVouchersScreen(),
+                          ),
+                        ),
+                        isDesktop: isDesktop,
+                        isTablet: isTablet,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: _buildActionCard(
                         'Registrar Pago',
@@ -97,7 +115,13 @@ class TesoreraDashboard extends StatelessWidget {
                         isTablet: isTablet,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                  ],
+                ),
+                
+                const SizedBox(height: 12),
+                
+                Row(
+                  children: [
                     Expanded(
                       child: _buildActionCard(
                         'Generar Reporte',
@@ -105,6 +129,18 @@ class TesoreraDashboard extends StatelessWidget {
                         Icons.assessment,
                         WessexColors.deepRoyalBlue,
                         () => _showComingSoon(context, 'Generar Reporte'),
+                        isDesktop: isDesktop,
+                        isTablet: isTablet,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildActionCard(
+                        'Control de Gastos',
+                        'Supervisar egresos del club',
+                        Icons.trending_down,
+                        WessexColors.midnightNavy,
+                        () => _showComingSoon(context, 'Control de Gastos'),
                         isDesktop: isDesktop,
                         isTablet: isTablet,
                       ),

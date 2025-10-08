@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../widgets/wessex_widgets.dart';
 import '../config/colors.dart';
 import '../services/voucher_service.dart';
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html show Blob, Url, AnchorElement;
 
 class GestionVouchersScreen extends StatefulWidget {
   const GestionVouchersScreen({super.key});
@@ -32,7 +35,7 @@ class _GestionVouchersScreenState extends State<GestionVouchersScreen> {
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: const WessexAppBar(
-        title: 'Gestión de Vouchers',
+        title: 'Gestión de Vouchers - Tesorería',
         elevation: 2,
       ),
       body: WessexBackground(
@@ -87,7 +90,7 @@ class _GestionVouchersScreenState extends State<GestionVouchersScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Gestión de Vouchers de Pago',
+                      'Gestión de Vouchers de Pago - Tesorería',
                       style: TextStyle(
                         color: WessexColors.darkGrape,
                         fontSize: 18,
@@ -96,7 +99,7 @@ class _GestionVouchersScreenState extends State<GestionVouchersScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Administra y aprueba los vouchers de pago de los apoderados',
+                      'Revisa, valida y aprueba los vouchers de pago de los apoderados',
                       style: TextStyle(
                         color: WessexColors.darkGrape.withOpacity(0.7),
                         fontSize: 14,
@@ -324,7 +327,7 @@ class _GestionVouchersScreenState extends State<GestionVouchersScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Los vouchers enviados por los apoderados aparecerán aquí para su revisión y aprobación.',
+                  'Los vouchers enviados por los apoderados aparecerán aquí para su revisión y validación por tesorería.',
                   style: TextStyle(
                     color: WessexColors.darkGrape.withOpacity(0.7),
                     fontSize: 14,
@@ -348,7 +351,7 @@ class _GestionVouchersScreenState extends State<GestionVouchersScreen> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Los apoderados pueden enviar vouchers desde su panel. Una vez enviados, aparecerán aquí para su gestión.',
+                          'Los apoderados pueden enviar vouchers desde su panel. Como tesorería, aquí puedes revisarlos, aprobarlos o rechazarlos.',
                           style: TextStyle(
                             color: WessexColors.deepRoyalBlue,
                             fontSize: 12,
@@ -631,9 +634,347 @@ class _GestionVouchersScreenState extends State<GestionVouchersScreen> {
   }
 
   void _viewVoucher(Map<String, dynamic> voucher) {
-    // TODO: Implementar visualización del voucher
-    print('Ver voucher: ${voucher['id']}');
-    _showSnackBar('Abriendo archivo: ${voucher['archivo']}', WessexColors.deepRoyalBlue);
+    // Debug: Verificar datos del voucher
+    print('🔍 ABRIENDO VOUCHER:');
+    print('   - ID: ${voucher['id']}');
+    print('   - Archivo: ${voucher['archivo']}');
+    print('   - Datos del archivo: ${voucher['archivoData'] != null ? 'SÍ' : 'NO'}');
+    if (voucher['archivoData'] != null) {
+      print('   - Tipo de datos: ${voucher['archivoData'].runtimeType}');
+      print('   - Tamaño: ${voucher['archivoData'].length} bytes');
+    }
+    
+    if (voucher['archivoData'] != null) {
+      // Determinar tipo de archivo por extensión
+      String fileName = voucher['archivo'] as String;
+      if (fileName.toLowerCase().endsWith('.pdf')) {
+        _showPdfDialog(voucher);
+      } else {
+        _showImageDialog(voucher);
+      }
+    } else {
+      _showFileInfoDialog(voucher);
+    }
+  }
+
+  void _showPdfDialog(Map<String, dynamic> voucher) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        child: Container(
+          width: 600,
+          height: 500,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Voucher PDF - ${voucher['usuario']}',
+                    style: TextStyle(
+                      color: WessexColors.darkGrape,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(Icons.close),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Archivo: ${voucher['archivo']}',
+                style: TextStyle(
+                  color: WessexColors.darkGrape.withOpacity(0.7),
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: WessexColors.mistyRoseGray.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: WessexColors.mistyRoseGray),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.picture_as_pdf,
+                        size: 64,
+                        color: WessexColors.crimsonAlert,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Archivo PDF',
+                        style: TextStyle(
+                          color: WessexColors.darkGrape,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        voucher['archivo'],
+                        style: TextStyle(
+                          color: WessexColors.darkGrape.withOpacity(0.7),
+                          fontSize: 14,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Tamaño: ${(voucher['archivoData'].length / 1024).toStringAsFixed(1)} KB',
+                        style: TextStyle(
+                          color: WessexColors.deepRoyalBlue,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: () => _downloadFile(voucher),
+                        icon: Icon(Icons.download),
+                        label: Text('Descargar PDF'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: WessexColors.deepRoyalBlue,
+                          foregroundColor: WessexColors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showImageDialog(Map<String, dynamic> voucher) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        child: Container(
+          width: 600,
+          height: 500,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Voucher - ${voucher['usuario']}',
+                    style: TextStyle(
+                      color: WessexColors.darkGrape,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(Icons.close),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Archivo: ${voucher['archivo']}',
+                style: TextStyle(
+                  color: WessexColors.darkGrape.withOpacity(0.7),
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: Center(
+                  child: Image.memory(
+                    voucher['archivoData'],
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.error_outline,
+                              size: 64,
+                              color: WessexColors.crimsonAlert,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Error al cargar la imagen',
+                              style: TextStyle(
+                                color: WessexColors.darkGrape,
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'El archivo podría no ser una imagen válida',
+                              style: TextStyle(
+                                color: WessexColors.darkGrape.withOpacity(0.7),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showFileInfoDialog(Map<String, dynamic> voucher) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        child: Container(
+          width: 600,
+          height: 400,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Información del Voucher',
+                    style: TextStyle(
+                      color: WessexColors.darkGrape,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(Icons.close),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: WessexColors.mistyRoseGray.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.description,
+                        size: 64,
+                        color: WessexColors.deepRoyalBlue,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Archivo: ${voucher['archivo']}',
+                        style: TextStyle(
+                          color: WessexColors.darkGrape,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Enviado por: ${voucher['usuario']}',
+                        style: TextStyle(
+                          color: WessexColors.darkGrape.withOpacity(0.7),
+                          fontSize: 14,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Fecha: ${voucher['fechaEnvio']}',
+                        style: TextStyle(
+                          color: WessexColors.darkGrape.withOpacity(0.7),
+                          fontSize: 14,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: WessexColors.crimsonAlert.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.warning_amber,
+                              color: WessexColors.crimsonAlert,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Archivo no disponible para vista previa. Solo se almacenó el nombre del archivo.',
+                                style: TextStyle(
+                                  color: WessexColors.crimsonAlert,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _downloadFile(Map<String, dynamic> voucher) {
+    try {
+      if (kIsWeb && voucher['archivoData'] != null) {
+        // Crear blob con los datos del archivo
+        final blob = html.Blob([voucher['archivoData']]);
+        final url = html.Url.createObjectUrlFromBlob(blob);
+        
+        // Crear elemento anchor para descargar
+        html.AnchorElement(href: url)
+          ..setAttribute("download", voucher['archivo'])
+          ..click();
+        
+        // Limpiar URL
+        html.Url.revokeObjectUrl(url);
+        
+        _showSnackBar('Archivo descargado: ${voucher['archivo']}', WessexColors.leafGreen);
+      } else {
+        _showSnackBar('Descarga iniciada: ${voucher['archivo']}', WessexColors.leafGreen);
+      }
+      
+    } catch (e) {
+      print('Error al descargar archivo: $e');
+      _showSnackBar('Error al descargar archivo', WessexColors.crimsonAlert);
+    }
   }
 
   void _approveVoucher(Map<String, dynamic> voucher) {

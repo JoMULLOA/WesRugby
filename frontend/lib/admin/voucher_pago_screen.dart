@@ -549,8 +549,8 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
         archivoData: _webFile,
       );
 
-      // Notificar a directiva
-      _voucherService.notifyDirectiva(voucherId);
+      // Notificar a tesorería
+      _voucherService.notifyTesoreria(voucherId);
       
       print('Usuario: $_nombreUsuario');
       print('Voucher ID: $voucherId');
@@ -605,7 +605,7 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Tu voucher ha sido enviado correctamente a la Directiva del club. El voucher será revisado y procesado. Puedes verificar el estado en tu historial de vouchers.',
+              'Tu voucher ha sido enviado correctamente a la Tesorería del club. El voucher será revisado y procesado. Puedes verificar el estado en tu historial de vouchers.',
               style: TextStyle(
                 color: WessexColors.darkGrape.withOpacity(0.7),
                 fontSize: 14,

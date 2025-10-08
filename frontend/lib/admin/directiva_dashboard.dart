@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../widgets/custom_drawer.dart';
 import '../widgets/wessex_widgets.dart';
 import '../config/colors.dart';
-import 'gestion_vouchers_screen.dart';
 
 class DirectivaDashboard extends StatelessWidget {
   const DirectivaDashboard({super.key});
@@ -115,26 +114,9 @@ class DirectivaDashboard extends StatelessWidget {
                 
                 const SizedBox(height: 12),
                 
-                // Nueva fila para gestión de vouchers
+                // Fila para reportes y gestión administrativa
                 Row(
                   children: [
-                    Expanded(
-                      child: _buildActionCard(
-                        'Gestión de Vouchers',
-                        'Aprobar pagos de apoderados',
-                        Icons.receipt_long,
-                        WessexColors.crimsonAlert,
-                        () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const GestionVouchersScreen(),
-                          ),
-                        ),
-                        isDesktop: isDesktop,
-                        isTablet: isTablet,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
                     Expanded(
                       child: _buildActionCard(
                         'Reportes',
@@ -142,6 +124,18 @@ class DirectivaDashboard extends StatelessWidget {
                         Icons.assessment,
                         WessexColors.leafGreen,
                         () => _showComingSoon(context, 'Reportes'),
+                        isDesktop: isDesktop,
+                        isTablet: isTablet,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildActionCard(
+                        'Gestión de Eventos',
+                        'Administrar eventos deportivos',
+                        Icons.event,
+                        WessexColors.deepRoyalBlue,
+                        () => _showComingSoon(context, 'Gestión de Eventos'),
                         isDesktop: isDesktop,
                         isTablet: isTablet,
                       ),

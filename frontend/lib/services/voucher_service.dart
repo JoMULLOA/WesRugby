@@ -65,6 +65,15 @@ class VoucherService {
     DateTime now = DateTime.now();
     String fechaEnvio = '${now.day.toString().padLeft(2, '0')} ${_getMonthName(now.month)} ${now.year} - ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
     
+    // Debug: Verificar datos del archivo
+    print('🔍 GUARDANDO VOUCHER:');
+    print('   - ID: $newId');
+    print('   - Archivo: $archivo');
+    print('   - Datos del archivo: ${archivoData != null ? 'SÍ (${archivoData.runtimeType})' : 'NO'}');
+    if (archivoData != null) {
+      print('   - Tamaño de datos: ${archivoData.length} bytes');
+    }
+    
     Map<String, dynamic> newVoucher = {
       'id': newId,
       'usuario': usuario,
@@ -80,6 +89,8 @@ class VoucherService {
     };
     
     _vouchers.insert(0, newVoucher); // Agregar al inicio
+    
+    print('✅ Voucher guardado exitosamente');
     return newId;
   }
 
@@ -130,12 +141,12 @@ class VoucherService {
     return months[month];
   }
 
-  // Simular notificación a directiva
-  void notifyDirectiva(String voucherId) {
-    print('📧 NOTIFICACIÓN A DIRECTIVA: Nuevo voucher recibido');
+  // Simular notificación a tesorería
+  void notifyTesoreria(String voucherId) {
+    print('📧 NOTIFICACIÓN A TESORERÍA: Nuevo voucher recibido');
     print('   - ID del voucher: $voucherId');
     print('   - Estado: Pendiente de revisión');
-    print('   - La directiva puede ver este voucher en "Gestión de Vouchers"');
+    print('   - La tesorería puede ver este voucher en "Gestión de Vouchers"');
     // TODO: Implementar notificación real (email, push notification, etc.)
   }
 
