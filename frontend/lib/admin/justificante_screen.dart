@@ -387,31 +387,16 @@ class _JustificanteScreenState extends State<JustificanteScreen> {
                               ),
                               prefixIcon: Icon(Icons.person, color: WessexColors.crimsonAlert),
                             ),
+                            isExpanded: true,
+                            hint: const Text('Selecciona un estudiante'),
                             items: _misEstudiantes.map((estudiante) => DropdownMenuItem<String>(
                               value: estudiante['rut'] as String,
-                              child: Container(
-                                constraints: const BoxConstraints(maxWidth: 300),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      '${estudiante['nombres']} ${estudiante['apellidos']}',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    Text(
-                                      'RUT: ${estudiante['rut']} - ${estudiante['curso'] ?? 'Sin curso'}',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey[600],
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ],
+                              child: Text(
+                                '${estudiante['nombres']} ${estudiante['apellidos']} (${estudiante['curso'] ?? 'Sin curso'})',
+                                style: const TextStyle(
+                                  fontSize: 14,
                                 ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             )).toList(),
                             onChanged: (value) => setState(() => _selectedEstudiante = value),

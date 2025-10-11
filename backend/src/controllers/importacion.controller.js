@@ -49,10 +49,14 @@ export async function importEstudiantesFromExcel(req, res) {
 
           if (apoderadoError) {
             // Si el error es que ya existe, no es un problema crítico
-            if (!apoderadoError.includes("ya existe")) {
-              console.log(`⚠️ Error creando apoderado principal: ${apoderadoError}`);
-            } else {
+            const errorMessage = typeof apoderadoError === 'string' ? apoderadoError : 
+                                typeof apoderadoError === 'object' ? apoderadoError.message || JSON.stringify(apoderadoError) : 
+                                String(apoderadoError);
+            
+            if (errorMessage.includes("ya asociado") || errorMessage.includes("ya existe")) {
               console.log(`ℹ️ Apoderado principal ya existe: ${estudianteData.rutResponsable}`);
+            } else {
+              console.log(`⚠️ Error creando apoderado principal: ${errorMessage}`);
             }
           } else {
             results.apoderadosCreados.push({
@@ -79,10 +83,14 @@ export async function importEstudiantesFromExcel(req, res) {
 
           if (apoderado2Error) {
             // Si el error es que ya existe, no es un problema crítico
-            if (!apoderado2Error.includes("ya existe")) {
-              console.log(`⚠️ Error creando apoderado secundario: ${apoderado2Error}`);
-            } else {
+            const errorMessage2 = typeof apoderado2Error === 'string' ? apoderado2Error : 
+                                 typeof apoderado2Error === 'object' ? apoderado2Error.message || JSON.stringify(apoderado2Error) : 
+                                 String(apoderado2Error);
+            
+            if (errorMessage2.includes("ya asociado") || errorMessage2.includes("ya existe")) {
               console.log(`ℹ️ Apoderado secundario ya existe: ${estudianteData.rutResponsable2}`);
+            } else {
+              console.log(`⚠️ Error creando apoderado secundario: ${errorMessage2}`);
             }
           } else {
             results.apoderadosCreados.push({
