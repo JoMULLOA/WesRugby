@@ -21,48 +21,6 @@ const UserSchema = new EntitySchema({
       type: "date",
       nullable: true,
     },
-    genero: {
-      type: "enum",
-      enum: ["masculino", "femenino", "no_binario", "prefiero_no_decir"],
-      nullable: false,
-    },
-    carrera: {
-      type: "varchar",
-      length: 100,
-      nullable: true,
-    },
-    altura: {
-      type: "int",
-      nullable: true,
-    },
-    Peso: {
-      type: "int",
-      nullable: true,
-    },
-    descripcion: {
-      type: "text",
-      nullable: true,
-    },
-    clasificacion: {
-      type: "float",
-      nullable: true,
-    },
-    cantidadValoraciones: {
-      type: "int",
-      nullable: false,
-      default: 0,
-      comment: "Número total de valoraciones recibidas por este usuario",
-    },
-    puntuacion: {
-      type: "int",
-      nullable: true,
-    },
-    contadorReportes: {
-      type: "int",
-      nullable: false,
-      default: 0,
-      comment: "Número total de reportes recibidos por este usuario",
-    },
     email: {
       type: "varchar",
       length: 255,
@@ -77,24 +35,6 @@ const UserSchema = new EntitySchema({
     password: {
       type: "varchar",
       nullable: false,
-    },
-    fcmToken: {
-      type: "text",
-      nullable: true,
-      comment: "Token FCM para notificaciones push",
-    },
-    saldo: {
-      type: "decimal",
-      precision: 10,
-      scale: 2,
-      nullable: false,
-      default: 0,
-      comment: "Saldo disponible del usuario para pagos",
-    },
-    tarjetas: {
-      type: "jsonb",
-      nullable: true,
-      comment: "Lista de tarjetas agregadas por el usuario",
     },
     createdAt: {
       type: "timestamp with time zone",

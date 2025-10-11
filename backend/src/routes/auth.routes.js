@@ -10,6 +10,7 @@ const router = Router();
 router
   .post("/login", login)
   .post("/register", authenticateJwt, isAdmin, register) // Solo admins pueden crear usuarios
+  .post("/register-apoderado", register) // Endpoint temporal para registro de apoderados sin autenticación
   .post("/logout", authenticateJwt, logout) // Requiere autenticación
   .post("/send-code", sendCode)
   .post("/send-coder", sendCoder)

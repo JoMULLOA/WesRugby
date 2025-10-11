@@ -38,11 +38,6 @@ const InscripcionSchema = new EntitySchema({
       type: "date",
       nullable: false,
     },
-    genero: {
-      type: "enum",
-      enum: ["masculino", "femenino", "no_binario", "prefiero_no_decir"],
-      nullable: false,
-    },
     direccion: {
       type: "text",
       nullable: true,

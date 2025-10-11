@@ -61,9 +61,7 @@ async function setupServer() {
 
     // Inicio del servidor HTTP básico
     app.listen(PORT, '0.0.0.0', () => {
-      console.log(`✅ Servidor WesRugby corriendo en ${HOST}:${PORT}/api`);
-      console.log(`🌐 Accesible desde navegador en localhost:${PORT}/api`);
-      console.log(`🏉 Sistema de gestión del Club de Rugby Wessex`);
+      console.log(`Corriendo en ${HOST}:${PORT}/api`);
     });
   } catch (error) {
     console.error("Error en index.js -> setupServer():", error);

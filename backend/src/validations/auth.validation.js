@@ -2,7 +2,7 @@
 import Joi from "joi";
 
 const domainEmailValidator = (value, helper) => {
-  const allowedDomains = ["@alumnos.ubiobio.cl", "@ubiobio.cl"]; // Lista de dominios permitidos
+  const allowedDomains = ["@alumnos.ubiobio.cl", "@ubiobio.cl", "wessex.cl"]; // Lista de dominios permitidos
 
   const isValidDomain = allowedDomains.some(domain => value.endsWith(domain));
   if (!isValidDomain) {
@@ -104,36 +104,6 @@ export const registerValidation = Joi.object({
       "string.min": "La contraseña debe tener al menos 8 caracteres.",
       "string.max": "La contraseña debe tener como máximo 26 caracteres.",
       "string.pattern.base": "La contraseña solo puede contener letras y números.",
-    }),
-  carrera: Joi.string()
-    .min(5)
-    .max(50)
-    .required()
-    .messages({
-      "string.empty": "La carrera no puede estar vacía.",
-      "any.required": "La carrera es obligatoria.",
-      "string.base": "La carrera debe ser de tipo texto.",
-      "string.min": "La carrera debe tener al menos 5 caracteres.",
-      "string.max": "La carrera debe tener como máximo 50 caracteres.",
-    }),
-  fechaNacimiento: Joi.date()
-    .max('now')
-    .min('1900-01-01')
-    .required()
-    .messages({
-      "date.base": "La fecha de nacimiento debe ser una fecha válida.",
-      "date.max": "La fecha de nacimiento no puede ser una fecha futura.",
-      "date.min": "La fecha de nacimiento debe ser posterior a 1900.",
-      "any.required": "La fecha de nacimiento es obligatoria.",
-    }),
-  genero: Joi.string()
-    .valid("masculino", "femenino", "no_binario", "prefiero_no_decir")
-    .required()
-    .messages({
-      "string.empty": "El género no puede estar vacío.",
-      "any.required": "El género es obligatorio.",
-      "string.base": "El género debe ser de tipo texto.",
-      "any.only": "El género debe ser uno de: masculino, femenino, no_binario, prefiero_no_decir.",
     }),
 }).unknown(false).messages({
   "object.unknown": "No se permiten propiedades adicionales.",

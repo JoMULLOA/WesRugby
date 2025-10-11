@@ -3,6 +3,9 @@ import '../widgets/custom_drawer.dart';
 import '../widgets/wessex_widgets.dart';
 import '../config/colors.dart';
 import 'gestion_justificantes_screen.dart';
+import 'registro_datos_screen.dart';
+import 'gestion_usuarios_screen.dart';
+import 'base_datos_screen.dart';
 
 class DirectivaDashboard extends StatelessWidget {
   const DirectivaDashboard({super.key});
@@ -89,11 +92,16 @@ class DirectivaDashboard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: _buildActionCard(
-                        'Gestión de Usuarios',
-                        'Administrar miembros del club',
-                        Icons.people,
-                        WessexColors.leafGreen,
-                        () => _showComingSoon(context, 'Gestión de Usuarios'),
+                        'Registro de Datos',
+                        'Importar estudiantes desde Excel',
+                        Icons.upload_file,
+                        WessexColors.crimsonAlert,
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const RegistroDatosScreen(),
+                          ),
+                        ),
                         isDesktop: isDesktop,
                         isTablet: isTablet,
                       ),
@@ -101,11 +109,51 @@ class DirectivaDashboard extends StatelessWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: _buildActionCard(
+                        'Gestión de Usuarios',
+                        'Administrar miembros del club',
+                        Icons.people,
+                        WessexColors.leafGreen,
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const GestionUsuariosScreen(),
+                          ),
+                        ),
+                        isDesktop: isDesktop,
+                        isTablet: isTablet,
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 12),
+                
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildActionCard(
                         'Control Financiero',
                         'Supervisar ingresos y gastos',
                         Icons.account_balance_wallet,
                         WessexColors.deepRoyalBlue,
                         () => _showComingSoon(context, 'Control Financiero'),
+                        isDesktop: isDesktop,
+                        isTablet: isTablet,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildActionCard(
+                        'Base de Datos',
+                        'Consultar estudiantes registrados',
+                        Icons.storage,
+                        WessexColors.leafGreen,
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const BaseDatosScreen(),
+                          ),
+                        ),
                         isDesktop: isDesktop,
                         isTablet: isTablet,
                       ),

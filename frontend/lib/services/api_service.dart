@@ -103,6 +103,25 @@ class ApiService {
     }
   }
 
+  // PATCH request
+  static Future<ApiResponse> patch(String endpoint, Map<String, dynamic> data) async {
+    try {
+      final headers = await _getAuthHeaders();
+      final response = await http.patch(
+        Uri.parse('$baseUrl$endpoint'),
+        headers: headers,
+        body: jsonEncode(data),
+      );
+      
+      return _handleResponse(response);
+    } catch (e) {
+      return ApiResponse(
+        statusCode: 500,
+        message: 'Error de conexión: $e',
+      );
+    }
+  }
+
   // POST sin autenticación (para login)
   static Future<ApiResponse> postWithoutAuth(String endpoint, Map<String, dynamic> data) async {
     try {
@@ -182,5 +201,37 @@ class ApiService {
 
   static Future<ApiResponse> getDirectiva() async {
     return get('/directiva');
+  }
+
+  // Métodos específicos para gestión de usuarios
+  static Future<ApiResponse> getAllUsers() async {
+    return get('/user/all');
+  }
+
+  static Future<ApiResponse> getUserByRut(String rut) async {
+    return get('/user/detail?rut=$rut');
+  }
+
+  static Future<ApiResponse> searchUserByEmail(String email) async {
+    return get('/user/busqueda?email=$email');
+  }
+
+  static Future<ApiResponse> createUser(Map<String, dynamic> userData) async {
+    return post('/auth/register-apoderado', userData);
+  }
+
+  static Future<ApiResponse> updateUser(Map<String, dynamic> userData) async {
+    return patch('/user/actualizar', userData);
+  }
+
+  static Future<ApiResponse> deleteUserByRut(String rut) async {
+    return delete('/user/delete/$rut');
+  }
+
+  static Future<ApiResponse> changeUserRole(String rut, String newRole) async {
+    return put('/user/changeRole', {
+      'rut': rut,
+      'rol': newRole,
+    });
   }
 }

@@ -6,7 +6,7 @@ import { handleErrorClient } from "../handlers/responseHandlers.js";
 
 // Validador de dominio de email (copiado de auth.validation.js)
 const domainEmailValidator = (value, helper) => {
-  const allowedDomains = ["@alumnos.ubiobio.cl", "@ubiobio.cl"];
+  const allowedDomains = ["@alumnos.ubiobio.cl", "@ubiobio.cl", "wessex.cl"];
   const isValidDomain = allowedDomains.some((domain) => value.endsWith(domain));
   if (!isValidDomain) {
     return helper.message(

@@ -20,14 +20,7 @@ async function createInitialData() {
         nombreCompleto: "Director Wessex Rugby",
         email: "directiva@ubiobio.cl",
         password: await encryptPassword("Directiva2024"),
-        genero: "masculino",
-        fechaNacimiento: "1980-01-15",
-        carrera: "Administración Deportiva",
         rol: "directiva",
-        puntuacion: 5,
-        cantidadValoraciones: 0,
-        contadorReportes: 0,
-        saldo: 0,
       });
 
       // Usuario 2: Tesorera - Gestión financiera
@@ -36,14 +29,7 @@ async function createInitialData() {
         nombreCompleto: "Tesorera Wessex Rugby",
         email: "tesorera@ubiobio.cl",
         password: await encryptPassword("Tesorera2024"),
-        genero: "femenino",
-        fechaNacimiento: "1985-03-22",
-        carrera: "Contabilidad",
         rol: "tesorera",
-        puntuacion: 5,
-        cantidadValoraciones: 0,
-        contadorReportes: 0,
-        saldo: 0,
       });
 
       // Usuario 3: Entrenador - Gestión deportiva
@@ -52,14 +38,7 @@ async function createInitialData() {
         nombreCompleto: "Entrenador Wessex Rugby",
         email: "entrenador@ubiobio.cl",
         password: await encryptPassword("Entrenador2024"),
-        genero: "masculino",
-        fechaNacimiento: "1982-07-10",
-        carrera: "Educación Física",
         rol: "entrenador",
-        puntuacion: 5,
-        cantidadValoraciones: 0,
-        contadorReportes: 0,
-        saldo: 0,
       });
 
       // Usuario 4: Apoderado - Acceso limitado
@@ -68,14 +47,7 @@ async function createInitialData() {
         nombreCompleto: "Apoderado Demo Wessex",
         email: "apoderado@ubiobio.cl",
         password: await encryptPassword("Apoderado2024"),
-        genero: "femenino",
-        fechaNacimiento: "1975-11-05",
-        carrera: "Ingeniería Comercial",
         rol: "apoderado",
-        puntuacion: 5,
-        cantidadValoraciones: 0,
-        contadorReportes: 0,
-        saldo: 0,
       });
 
       await userRepository.save([userDirectiva, userTesorera, userEntrenador, userApoderado]);
@@ -92,13 +64,8 @@ async function createInitialData() {
       const user3 = userEntrenador;
 
     } else {
-      console.log("✅ Usuarios del sistema ya existen, cargando referencias...");
-      const user1 = await userRepository.findOneBy({ email: "directiva@ubiobio.cl" });
-      const user2 = await userRepository.findOneBy({ email: "tesorera@ubiobio.cl" });
-      const user3 = await userRepository.findOneBy({ email: "entrenador@ubiobio.cl" });
+      console.log("Usuarios del sistema ya existen, cargando referencias...");
     }
-
-    console.log("✅ Sistema Wessex Rugby inicializado correctamente");
 
   } catch (error) {
     console.error("❌ Error al crear datos iniciales:", error);

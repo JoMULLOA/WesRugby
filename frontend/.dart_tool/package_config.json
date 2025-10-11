@@ -3,7 +3,7 @@
   "packages": [
     {
       "name": "archive",
-      "rootUri": "file:///C:/Users/manri/AppData/Local/Pub/Cache/hosted/pub.dev/archive-4.0.7",
+      "rootUri": "file:///C:/Users/manri/AppData/Local/Pub/Cache/hosted/pub.dev/archive-3.6.1",
       "packageUri": "lib/",
       "languageVersion": "3.0"
     },
@@ -84,6 +84,12 @@
       "rootUri": "file:///C:/Users/manri/AppData/Local/Pub/Cache/hosted/pub.dev/equatable-2.0.7",
       "packageUri": "lib/",
       "languageVersion": "2.12"
+    },
+    {
+      "name": "excel",
+      "rootUri": "file:///C:/Users/manri/AppData/Local/Pub/Cache/hosted/pub.dev/excel-4.0.6",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
     },
     {
       "name": "fake_async",
@@ -231,9 +237,9 @@
     },
     {
       "name": "image",
-      "rootUri": "file:///C:/Users/manri/AppData/Local/Pub/Cache/hosted/pub.dev/image-4.5.4",
+      "rootUri": "file:///C:/Users/manri/AppData/Local/Pub/Cache/hosted/pub.dev/image-4.3.0",
       "packageUri": "lib/",
-      "languageVersion": "3.0"
+      "languageVersion": "2.15"
     },
     {
       "name": "intl",
@@ -382,12 +388,6 @@
     {
       "name": "plugin_platform_interface",
       "rootUri": "file:///C:/Users/manri/AppData/Local/Pub/Cache/hosted/pub.dev/plugin_platform_interface-2.1.8",
-      "packageUri": "lib/",
-      "languageVersion": "3.0"
-    },
-    {
-      "name": "posix",
-      "rootUri": "file:///C:/Users/manri/AppData/Local/Pub/Cache/hosted/pub.dev/posix-6.0.3",
       "packageUri": "lib/",
       "languageVersion": "3.0"
     },
