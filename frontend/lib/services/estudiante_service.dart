@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'usuario_service.dart';
+import 'api_service.dart';
 
 class EstudianteService extends ChangeNotifier {
   static final EstudianteService _instance = EstudianteService._internal();
@@ -38,114 +38,183 @@ class EstudianteService extends ChangeNotifier {
     };
   }
 
-  // Importar estudiantes desde Excel (datos procesados)
-  Future<int> importStudentsFromExcel(List<Map<String, dynamic>> excelData) async {
+  // Obtener estudiantes asignados a un apoderado
+  Future<List<Map<String, dynamic>>> getMisEstudiantes() async {
     try {
-      int imported = 0;
-      Set<String> responsablesCreados = <String>{};
-      DateTime now = DateTime.now();
+      // Agregar timestamp para evitar cache
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final response = await ApiService.get('/estudiantes/mis-estudiantes?t=$timestamp');
       
-      for (var row in excelData) {
-        // Validar datos requeridos
-        if (_validateStudentData(row)) {
-          // Verificar si el RUT ya existe
-          bool exists = _estudiantes.any((e) => 
-            e['rut']?.toString().toLowerCase() == row['rut']?.toString().toLowerCase()
-          );
-          
-          if (!exists) {
-            // Agregar campos adicionales
-            Map<String, dynamic> newStudent = Map.from(row);
-            newStudent['fechaRegistro'] = now;
-            newStudent['id'] = 'EST${(_estudiantes.length + 1).toString().padLeft(4, '0')}';
-            newStudent['estado'] = 'Registrado';
-            
-            _estudiantes.add(newStudent);
-            imported++;
-            
-            // Crear apoderado en la base de datos si no existe
-            String rutResponsable = row['rutResponsable']?.toString() ?? '';
-            String nombreResponsable = row['responsable']?.toString() ?? '';
-            
-            if (rutResponsable.isNotEmpty && nombreResponsable.isNotEmpty && !responsablesCreados.contains(rutResponsable)) {
-              print('🔄 Creando cuenta para responsable: $nombreResponsable ($rutResponsable)');
-              
-              await _createApoderadoAccount(
-                rut: rutResponsable,
-                nombre: nombreResponsable,
-                estudiante: row['nombre']?.toString() ?? '',
-              );
-              responsablesCreados.add(rutResponsable);
-            } else if (rutResponsable.isNotEmpty && responsablesCreados.contains(rutResponsable)) {
-              print('ℹ️ Responsable ya procesado: $rutResponsable');
-            } else {
-              print('⚠️ Datos incompletos del responsable para estudiante: ${row['nombre']}');
-            }
-            
-            print('📝 Estudiante registrado: ${newStudent['nombre']} (${newStudent['rut']})');
-          } else {
-            print('⚠️ RUT duplicado ignorado: ${row['rut']}');
+      if (kDebugMode) {
+        print('🔍 Response status code: ${response.statusCode}');
+        print('🔍 Response data: ${response.data}');
+        print('🔍 Response data type: ${response.data.runtimeType}');
+      }
+      
+      if (response.statusCode == 200 && response.data != null) {
+        if (response.data is Map<String, dynamic> && response.data['success'] == true) {
+          final estudiantes = List<Map<String, dynamic>>.from(response.data['data']);
+          if (kDebugMode) {
+            print('✅ Estudiantes parsed from success response: ${estudiantes.length}');
+            print('📊 Estudiantes data: $estudiantes');
           }
-        } else {
-          print('❌ Datos inválidos para: ${row['nombre'] ?? 'Nombre faltante'}');
+          return estudiantes;
+        } else if (response.data is List) {
+          final estudiantes = List<Map<String, dynamic>>.from(response.data);
+          if (kDebugMode) {
+            print('✅ Estudiantes parsed from direct list: ${estudiantes.length}');
+            print('📊 Estudiantes data: $estudiantes');
+          }
+          return estudiantes;
         }
       }
-      
-      notifyListeners();
-      print('✅ Importación completada: $imported estudiantes registrados');
-      print('👥 Apoderados creados en BD: ${responsablesCreados.length}');
-      
-      return imported;
+      throw Exception(response.message ?? 'Error al obtener estudiantes');
     } catch (e) {
-      print('Error en importación: $e');
-      return 0;
-    }
-  }
-  
-  // Crear cuenta de apoderado automáticamente
-  Future<void> _createApoderadoAccount({
-    required String rut,
-    required String nombre,
-    required String estudiante,
-  }) async {
-    try {
-      print('📞 Iniciando creación de cuenta para: $nombre ($rut)');
-      
-      final usuarioService = UsuarioService();
-      
-      // Primero verificar si el usuario ya existe en la base de datos
-      await usuarioService.loadUsuarios(); // Cargar usuarios desde BD
-      Map<String, dynamic>? existingUser = usuarioService.getUsuarioByRut(rut);
-      
-      if (existingUser != null) {
-        print('ℹ️ Usuario ya existe en BD: $nombre ($rut)');
-        return;
+      if (kDebugMode) {
+        print('❌ Error al obtener mis estudiantes: $e');
       }
-      
-      // Generar correo único basado en el nombre con formato wessex.cl
-      String email = usuarioService.generateUniqueEmail(nombre, rut);
-      print('📧 Email generado: $email');
-      
-      // Crear cuenta de apoderado usando el servicio que se conecta a la API
-      String? userId = await usuarioService.addUsuario(
-        rut: rut,
-        nombre: nombre,
-        email: email,
-        rol: 'apoderado',
-      );
-      
-      if (userId != null) {
-        print('✅ Apoderado creado exitosamente en BD: $nombre ($email)');
-      } else {
-        print('❌ Error: No se pudo crear el apoderado en BD: $nombre');
-      }
-      
-    } catch (e) {
-      print('💥 Error crítico creando apoderado $nombre ($rut): $e');
-      // No lanzar la excepción para no interrumpir la importación completa
+      throw Exception('Error al obtener estudiantes asignados');
     }
   }
 
+  // Importar estudiantes desde Excel (datos procesados)
+  Future<Map<String, dynamic>> importStudentsFromExcel(List<Map<String, dynamic>> excelData) async {
+    try {
+      if (excelData.isEmpty) {
+        throw Exception('No hay datos para importar');
+      }
+
+      // Preparar datos para enviar al backend
+      List<Map<String, dynamic>> estudiantesParaImportar = [];
+
+      for (var row in excelData) {
+        if (_validateStudentData(row)) {
+          // Extraer datos del estudiante
+          String rut = _cleanString(row['rut']);
+          String nombre = _cleanString(row['nombre']);
+          String curso = _cleanString(row['curso']);
+          String telefono = _cleanString(row['telefono'] ?? '');
+          String direccion = _cleanString(row['direccion'] ?? '');
+          String contactoEmergencia = _cleanString(row['contactoEmergencia'] ?? '');
+          String telefonoEmergencia = _cleanString(row['telefonoEmergencia'] ?? '');
+          String rutResponsable = _cleanString(row['rutResponsable']);
+          String nombreResponsable = _cleanString(row['responsable']);
+
+          // Generar email único para el responsable con formato nombre.apellido0@wessex.cl
+          String emailResponsable = _generateResponsableEmail(nombreResponsable, rutResponsable);
+
+          // Preparar datos del estudiante para el backend
+          Map<String, dynamic> estudianteData = {
+            'rut': rut,
+            'nombre': nombre,
+            'curso': curso,
+            'telefono': telefono.isNotEmpty ? telefono : null,
+            'direccion': direccion.isNotEmpty ? direccion : null,
+            'contactoEmergencia': contactoEmergencia.isNotEmpty ? contactoEmergencia : null,
+            'telefonoEmergencia': telefonoEmergencia.isNotEmpty ? telefonoEmergencia : null,
+            'rutResponsable': rutResponsable,
+            'nombreResponsable': nombreResponsable,
+            'emailResponsable': emailResponsable,
+            'observaciones': null,
+          };
+
+          estudiantesParaImportar.add(estudianteData);
+        }
+      }
+
+      if (estudiantesParaImportar.isEmpty) {
+        throw Exception('No se encontraron estudiantes válidos para importar');
+      }
+
+      print('� Enviando ${estudiantesParaImportar.length} estudiantes al backend...');
+
+      // Enviar al backend usando la API de importación masiva
+      final response = await ApiService.importEstudiantesFromExcel(estudiantesParaImportar);
+
+      if (response.statusCode == 201 && response.data != null) {
+        final results = response.data['data'];
+        
+        // Actualizar la lista local con los estudiantes creados
+        if (results['estudiantesCreados'] != null) {
+          for (var estudiante in results['estudiantesCreados']) {
+            _estudiantes.add(_adaptEstudianteFromBackend(estudiante));
+          }
+        }
+
+        notifyListeners();
+
+        print('✅ Importación completada:');
+        print('   - Estudiantes creados: ${results['estudiantesCreados']?.length ?? 0}');
+        print('   - Apoderados creados: ${results['apoderadosCreados']?.length ?? 0}');
+        print('   - Errores: ${results['errores']?.length ?? 0}');
+
+        return {
+          'success': true,
+          'estudiantesCreados': results['estudiantesCreados']?.length ?? 0,
+          'apoderadosCreados': results['apoderadosCreados']?.length ?? 0,
+          'errores': results['errores'] ?? [],
+          'message': 'Importación completada exitosamente. ${results['estudiantesCreados']?.length ?? 0} estudiantes y ${results['apoderadosCreados']?.length ?? 0} apoderados creados en la base de datos.',
+        };
+
+      } else {
+        throw Exception('Error del servidor: ${response.message}');
+      }
+
+    } catch (e) {
+      print('❌ Error importando estudiantes: $e');
+      return {
+        'success': false,
+        'error': e.toString(),
+        'message': 'Error durante la importación: $e',
+      };
+    }
+  }
+
+  // Adaptar estudiante del backend al formato del frontend
+  Map<String, dynamic> _adaptEstudianteFromBackend(Map<String, dynamic> backendEstudiante) {
+    return {
+      'id': 'EST${_estudiantes.length + 1}',
+      'rut': backendEstudiante['rut'] ?? '',
+      'nombre': backendEstudiante['nombre'] ?? '',
+      'curso': backendEstudiante['curso'] ?? '',
+      'telefono': backendEstudiante['telefono'] ?? '',
+      'direccion': backendEstudiante['direccion'] ?? '',
+      'contactoEmergencia': backendEstudiante['contactoEmergencia'] ?? '',
+      'telefonoEmergencia': backendEstudiante['telefonoEmergencia'] ?? '',
+      'rutResponsable': backendEstudiante['rutResponsable'] ?? '',
+      'responsable': backendEstudiante['nombreResponsable'] ?? '',
+      'validez': 'Válido',
+      'estado': 'Registrado',
+      'fechaRegistro': DateTime.now(),
+    };
+  }
+
+  // Generar email para el responsable con formato nombre.apellido0@wessex.cl
+  String _generateResponsableEmail(String nombreCompleto, String rut) {
+    // Limpiar nombre (solo letras y espacios)
+    String cleanName = nombreCompleto
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-záéíóúñ\s]'), '')
+        .trim();
+
+    // Tomar primer nombre y primer apellido
+    List<String> words = cleanName.split(' ').where((w) => w.isNotEmpty).toList();
+    String firstName = words.isNotEmpty ? words[0] : 'usuario';
+    String lastName = words.length > 1 ? words[1] : '';
+
+    // Generar email base
+    String email = lastName.isNotEmpty 
+        ? '${firstName}.${lastName}0@wessex.cl'
+        : '${firstName}0@wessex.cl';
+
+    return email;
+  }
+
+  // Limpiar cadenas de texto
+  String _cleanString(dynamic value) {
+    if (value == null) return '';
+    return value.toString().trim();
+  }
   // Validar datos de un estudiante
   bool _validateStudentData(Map<String, dynamic> data) {
     // Verificar campos obligatorios

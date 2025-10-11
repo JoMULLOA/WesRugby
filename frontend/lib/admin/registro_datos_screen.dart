@@ -906,32 +906,31 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
         _isProcessing = true;
       });
       
-      // Importar datos usando el servicio (ahora es asíncrono)
-      int imported = await _estudianteService.importStudentsFromExcel(_previewData);
-      
-      // Contar responsables únicos
-      Set<String> responsablesUnicos = {};
-      for (var student in _previewData) {
-        String rutResponsable = student['rutResponsable']?.toString() ?? '';
-        if (rutResponsable.isNotEmpty) {
-          responsablesUnicos.add(rutResponsable);
-        }
-      }
+      // Importar datos usando el servicio (ahora devuelve un Map con resultados)
+      Map<String, dynamic> result = await _estudianteService.importStudentsFromExcel(_previewData);
       
       setState(() {
         _isProcessing = false;
       });
       
-      _showSuccessDialog(imported, responsablesUnicos.length);
-      
-      // Limpiar después de importar
-      setState(() {
-        _fileName = null;
-        _fileData = null;
-        _showPreview = false;
-        _previewData.clear();
-        _errorMessages.clear();
-      });
+      if (result['success'] == true) {
+        int estudiantesCreados = result['estudiantesCreados'] ?? 0;
+        int apoderadosCreados = result['apoderadosCreados'] ?? 0;
+        List<dynamic> errores = result['errores'] ?? [];
+        
+        _showSuccessDialog(estudiantesCreados, apoderadosCreados, errores);
+        
+        // Limpiar después de importar exitosamente
+        setState(() {
+          _fileName = null;
+          _fileData = null;
+          _showPreview = false;
+          _previewData.clear();
+          _errorMessages.clear();
+        });
+      } else {
+        _showErrorSnackBar('Error durante la importación: ${result['message']}');
+      }
       
     } catch (e) {
       setState(() {
@@ -954,7 +953,7 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
     _showSuccessSnackBar('Plantilla Excel descargada exitosamente');
   }
 
-  void _showSuccessDialog(int importedCount, int apoderadosCount) {
+  void _showSuccessDialog(int estudiantesCreados, int apoderadosCreados, List<dynamic> errores) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -977,7 +976,7 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
             ),
             const SizedBox(height: 24),
             Text(
-              '¡Importación Exitosa!',
+              '¡Importación Completada!',
               style: TextStyle(
                 color: WessexColors.darkGrape,
                 fontSize: 20,
@@ -987,7 +986,7 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Se han importado $importedCount estudiantes correctamente al sistema.',
+              'Se han creado $estudiantesCreados estudiantes en la base de datos.',
               style: TextStyle(
                 color: WessexColors.darkGrape.withOpacity(0.7),
                 fontSize: 14,
@@ -996,7 +995,7 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              '👥 Se crearon $apoderadosCount cuentas de apoderado en la base de datos con correos únicos.',
+              '👥 Se crearon $apoderadosCreados cuentas de apoderado con correos formato nombre.apellido0@wessex.cl',
               style: TextStyle(
                 color: WessexColors.deepRoyalBlue,
                 fontSize: 14,
@@ -1004,7 +1003,47 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 8),
+            if (errores.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: WessexColors.crimsonAlert.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '⚠️ ${errores.length} error(es) durante la importación:',
+                      style: TextStyle(
+                        color: WessexColors.crimsonAlert,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    ...errores.take(3).map((error) => Text(
+                      '• ${error['error'] ?? error.toString()}',
+                      style: TextStyle(
+                        color: WessexColors.crimsonAlert,
+                        fontSize: 11,
+                      ),
+                    )),
+                    if (errores.length > 3)
+                      Text(
+                        '... y ${errores.length - 3} errores más',
+                        style: TextStyle(
+                          color: WessexColors.crimsonAlert.withOpacity(0.7),
+                          fontSize: 10,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(

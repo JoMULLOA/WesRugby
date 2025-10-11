@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart';
 import '../widgets/wessex_widgets.dart';
 import '../config/colors.dart';
 import '../services/justificante_service.dart';
+import '../services/estudiante_service.dart';
+import '../services/api_service.dart';
 import 'dart:typed_data';
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html' as html;
@@ -17,6 +19,7 @@ class JustificanteScreen extends StatefulWidget {
 class _JustificanteScreenState extends State<JustificanteScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final JustificanteService _justificanteService = JustificanteService();
+  final EstudianteService _estudianteService = EstudianteService();
   
   // Controladores
   final TextEditingController _motivoController = TextEditingController();
@@ -24,22 +27,94 @@ class _JustificanteScreenState extends State<JustificanteScreen> {
   
   // Variables de estado
   String? _selectedTipoJustificante;
+  String? _selectedEstudiante;
   DateTime? _selectedFechaInasistencia;
   bool _isUploading = false;
+  bool _isLoadingEstudiantes = true;
+  bool _isLoadingUserData = true;
   
   // Archivo
   Uint8List? _webFile;
   String? _archivoNombre;
   
-  // Usuario simulado
-  final String _nombreUsuario = "Carlos Rodríguez";
+  // Datos del usuario autenticado
+  Map<String, dynamic>? _userData;
+  
+  // Lista de estudiantes asignados
+  List<Map<String, dynamic>> _misEstudiantes = [];
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Asegurar que el widget está completamente construido
+      if (mounted) {
+        _loadUserData();
+        _loadMisEstudiantes();
+      }
     });
+  }
+
+  Future<void> _loadUserData() async {
+    if (!mounted) return;
+    
+    try {
+      setState(() {
+        _isLoadingUserData = true;
+      });
+      
+      print('🔍 Cargando perfil del usuario...');
+      final response = await ApiService.getProfile();
+      print('📋 Respuesta del perfil: ${response.statusCode}');
+      
+      if (mounted && response.statusCode == 200 && response.data != null) {
+        setState(() {
+          _userData = response.data;
+          _isLoadingUserData = false;
+        });
+        print('✅ Perfil cargado exitosamente');
+      } else if (mounted) {
+        setState(() {
+          _isLoadingUserData = false;
+        });
+      }
+    } catch (e) {
+      print('❌ Error al cargar datos del usuario: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingUserData = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _loadMisEstudiantes() async {
+    if (!mounted) return;
+    
+    try {
+      setState(() {
+        _isLoadingEstudiantes = true;
+      });
+      
+      print('🔍 Cargando estudiantes...');
+      final estudiantes = await _estudianteService.getMisEstudiantes();
+      print('📋 Estudiantes recibidos: ${estudiantes.length}');
+      
+      if (mounted) {
+        setState(() {
+          _misEstudiantes = estudiantes;
+          _isLoadingEstudiantes = false;
+        });
+        print('✅ Estudiantes cargados en UI: ${_misEstudiantes.length}');
+      }
+    } catch (e) {
+      print('❌ Error al cargar estudiantes: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingEstudiantes = false;
+        });
+        _showErrorSnackBar('Error al cargar estudiantes asignados');
+      }
+    }
   }
 
   @override
@@ -123,7 +198,7 @@ class _JustificanteScreenState extends State<JustificanteScreen> {
                     ),
                   ),
                 
-                  // Información del Usuario
+                  // Información del Justificante
                   WessexCard(
                     margin: const EdgeInsets.only(bottom: 24),
                     child: Row(
@@ -135,7 +210,7 @@ class _JustificanteScreenState extends State<JustificanteScreen> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Icon(
-                            Icons.person,
+                            Icons.medical_information,
                             color: WessexColors.leafGreen,
                             size: 24,
                           ),
@@ -146,25 +221,202 @@ class _JustificanteScreenState extends State<JustificanteScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Justificante de: $_nombreUsuario',
+                                _selectedEstudiante != null ? 'Justificante para:' : 'Selecciona un estudiante',
                                 style: TextStyle(
-                                  color: WessexColors.darkGrape,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Apoderado - Sub-16',
-                                style: TextStyle(
-                                  color: WessexColors.leafGreen,
-                                  fontSize: 14,
+                                  color: WessexColors.darkGrape.withOpacity(0.7),
+                                  fontSize: 12,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
+                              const SizedBox(height: 2),
+                              if (_selectedEstudiante != null) ...[
+                                Builder(
+                                  builder: (context) {
+                                    final estudianteSeleccionado = _misEstudiantes.firstWhere(
+                                      (e) => e['rut'] == _selectedEstudiante,
+                                      orElse: () => {},
+                                    );
+                                    return Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          '${estudianteSeleccionado['nombres']} ${estudianteSeleccionado['apellidos']}',
+                                          style: TextStyle(
+                                            color: WessexColors.darkGrape,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        Text(
+                                          'Estudiante - ${estudianteSeleccionado['curso'] ?? 'Sin curso'}',
+                                          style: TextStyle(
+                                            color: WessexColors.leafGreen,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Enviado por: ${_userData?['nombreCompleto'] ?? 'Apoderado'}',
+                                          style: TextStyle(
+                                            color: WessexColors.darkGrape.withOpacity(0.6),
+                                            fontSize: 11,
+                                            fontStyle: FontStyle.italic,
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                ),
+                              ] else ...[
+                                Text(
+                                  'Primero selecciona un estudiante',
+                                  style: TextStyle(
+                                    color: WessexColors.darkGrape.withOpacity(0.5),
+                                    fontSize: 16,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                                Text(
+                                  'Enviado por: ${_userData?['nombreCompleto'] ?? 'Apoderado'}',
+                                  style: TextStyle(
+                                    color: WessexColors.leafGreen,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),
+                      ],
+                    ),
+                  ),
+
+                  // Selección de Estudiante
+                  WessexCard(
+                    margin: const EdgeInsets.only(bottom: 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: WessexColors.crimsonAlert.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                Icons.school,
+                                color: WessexColors.crimsonAlert,
+                                size: 24,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Seleccionar Estudiante',
+                                    style: TextStyle(
+                                      color: WessexColors.darkGrape,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Selecciona el estudiante para el cual envías este justificante',
+                                    style: TextStyle(
+                                      color: WessexColors.darkGrape.withOpacity(0.7),
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        if (_isLoadingEstudiantes)
+                          Center(
+                            child: CircularProgressIndicator(
+                              color: WessexColors.deepRoyalBlue,
+                            ),
+                          )
+                        else if (_misEstudiantes.isEmpty)
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: WessexColors.crimsonAlert.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: WessexColors.crimsonAlert.withOpacity(0.3),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.warning,
+                                  color: WessexColors.crimsonAlert,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    'No tienes estudiantes asignados. Contacta con la administración.',
+                                    style: TextStyle(
+                                      color: WessexColors.crimsonAlert,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          DropdownButtonFormField<String>(
+                            value: _selectedEstudiante,
+                            decoration: InputDecoration(
+                              labelText: 'Estudiante',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              prefixIcon: Icon(Icons.person, color: WessexColors.crimsonAlert),
+                            ),
+                            items: _misEstudiantes.map((estudiante) => DropdownMenuItem<String>(
+                              value: estudiante['rut'] as String,
+                              child: Container(
+                                constraints: const BoxConstraints(maxWidth: 300),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      '${estudiante['nombres']} ${estudiante['apellidos']}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Text(
+                                      'RUT: ${estudiante['rut']} - ${estudiante['curso'] ?? 'Sin curso'}',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey[600],
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )).toList(),
+                            onChanged: (value) => setState(() => _selectedEstudiante = value),
+                            validator: (value) => value == null ? 'Selecciona un estudiante' : null,
+                          ),
                       ],
                     ),
                   ),
@@ -546,19 +798,35 @@ class _JustificanteScreenState extends State<JustificanteScreen> {
       return;
     }
 
+    if (_selectedEstudiante == null) {
+      _showErrorSnackBar('Debes seleccionar un estudiante');
+      return;
+    }
+
     setState(() {
       _isUploading = true;
     });
 
     try {
+      // Buscar el estudiante seleccionado para obtener su información completa
+      final estudianteSeleccionado = _misEstudiantes.firstWhere(
+        (e) => e['rut'] == _selectedEstudiante,
+      );
+
+      // Crear descripción que incluya la información del estudiante
+      String descripcionCompleta = 'Estudiante: ${estudianteSeleccionado['nombres']} ${estudianteSeleccionado['apellidos']} (RUT: ${_selectedEstudiante})';
+      if (_descripcionController.text.trim().isNotEmpty) {
+        descripcionCompleta += '\nDescripción adicional: ${_descripcionController.text.trim()}';
+      }
+
       // Enviar justificante usando el servicio
       String justificanteId = _justificanteService.addJustificante(
-        usuario: _nombreUsuario,
-        rol: 'Apoderado - Sub-16',
+        usuario: '${estudianteSeleccionado['nombres']} ${estudianteSeleccionado['apellidos']}',
+        rol: 'Estudiante - ${estudianteSeleccionado['curso'] ?? 'Sin curso'}',
         tipoJustificante: _selectedTipoJustificante!,
         fechaInasistencia: _selectedFechaInasistencia!,
         motivo: _motivoController.text.trim(),
-        descripcion: _descripcionController.text.trim(),
+        descripcion: descripcionCompleta,
         archivo: _archivoNombre,
         archivoData: _webFile,
       );
@@ -567,7 +835,9 @@ class _JustificanteScreenState extends State<JustificanteScreen> {
       _justificanteService.notifyDirectiva(justificanteId);
       _justificanteService.notifyEntrenador(justificanteId);
       
-      print('Usuario: $_nombreUsuario');
+      print('Apoderado: ${_userData?['nombreCompleto'] ?? 'Usuario'}');
+      print('Estudiante: ${estudianteSeleccionado['nombres']} ${estudianteSeleccionado['apellidos']}');
+      print('RUT Estudiante: $_selectedEstudiante');
       print('Justificante ID: $justificanteId');
       print('Archivo seleccionado: ${_archivoNombre ?? 'Ninguno'}');
       if (_webFile != null) {
@@ -646,7 +916,7 @@ class _JustificanteScreenState extends State<JustificanteScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Enviado por: $_nombreUsuario\nFecha: ${DateTime.now().toString().substring(0, 10)}',
+                      'Enviado por: ${_userData?['nombreCompleto'] ?? 'Apoderado'}\nFecha: ${DateTime.now().toString().substring(0, 10)}',
                       style: TextStyle(
                         color: WessexColors.deepRoyalBlue,
                         fontSize: 12,

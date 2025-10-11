@@ -4,6 +4,8 @@ import 'dart:html' as html;
 import '../widgets/wessex_widgets.dart';
 import '../config/colors.dart';
 import '../services/voucher_service.dart';
+import '../services/estudiante_service.dart';
+import '../services/api_service.dart';
 
 class VoucherPagoScreen extends StatefulWidget {
   const VoucherPagoScreen({super.key});
@@ -18,19 +20,92 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
   final _descripcionController = TextEditingController();
   String? _selectedMonth;
   String? _selectedMetodoPago;
+  String? _selectedEstudiante;
   String? _archivoNombre;
   Uint8List? _webFile;
   bool _isUploading = false;
-  String _nombreUsuario = "Carlos Rodríguez"; // Simular usuario logueado
+  bool _isLoadingEstudiantes = true;
+  bool _isLoadingUserData = true;
+  Map<String, dynamic>? _userData;
   final VoucherService _voucherService = VoucherService();
+  final EstudianteService _estudianteService = EstudianteService();
+  List<Map<String, dynamic>> _misEstudiantes = [];
 
   @override
   void initState() {
     super.initState();
-    // Inicializar cualquier configuración necesaria
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Asegurar que el widget está completamente construido
+      if (mounted) {
+        _loadUserData();
+        _loadMisEstudiantes();
+      }
     });
+  }
+
+  Future<void> _loadUserData() async {
+    if (!mounted) return;
+    
+    try {
+      setState(() {
+        _isLoadingUserData = true;
+      });
+      
+      print('🔍 Cargando perfil del usuario...');
+      final response = await ApiService.getProfile();
+      print('📋 Respuesta del perfil: ${response.statusCode}');
+      print('📋 Datos del perfil: ${response.data}');
+      
+      if (mounted && response.statusCode == 200 && response.data != null) {
+        setState(() {
+          _userData = response.data;
+          _isLoadingUserData = false;
+        });
+        print('✅ Perfil cargado exitosamente');
+      } else if (mounted) {
+        setState(() {
+          _isLoadingUserData = false;
+        });
+        print('❌ Error en respuesta del perfil');
+      }
+    } catch (e) {
+      print('❌ Error al cargar datos del usuario: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingUserData = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _loadMisEstudiantes() async {
+    if (!mounted) return;
+    
+    try {
+      setState(() {
+        _isLoadingEstudiantes = true;
+      });
+      
+      print('🔍 Cargando estudiantes...');
+      final estudiantes = await _estudianteService.getMisEstudiantes();
+      print('📋 Estudiantes recibidos: ${estudiantes.length}');
+      print('📋 Primer estudiante: ${estudiantes.isNotEmpty ? estudiantes.first : 'N/A'}');
+      
+      if (mounted) {
+        setState(() {
+          _misEstudiantes = estudiantes;
+          _isLoadingEstudiantes = false;
+        });
+        print('✅ Estudiantes cargados en UI: ${_misEstudiantes.length}');
+      }
+    } catch (e) {
+      print('❌ Error al cargar estudiantes: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingEstudiantes = false;
+        });
+        _showErrorSnackBar('Error al cargar estudiantes asignados');
+      }
+    }
   }
 
   @override
@@ -118,7 +193,7 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
                     ),
                   ),
                 
-                  // Información del Usuario
+                  // Información del Voucher
                   WessexCard(
                     margin: const EdgeInsets.only(bottom: 24),
                     child: Row(
@@ -130,7 +205,7 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Icon(
-                            Icons.person,
+                            Icons.receipt_long,
                             color: WessexColors.deepRoyalBlue,
                             size: 24,
                           ),
@@ -141,7 +216,7 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Enviando como:',
+                                _selectedEstudiante != null ? 'Voucher para:' : 'Selecciona un estudiante',
                                 style: TextStyle(
                                   color: WessexColors.darkGrape.withOpacity(0.7),
                                   fontSize: 12,
@@ -149,25 +224,194 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
                                 ),
                               ),
                               const SizedBox(height: 2),
-                              Text(
-                                _nombreUsuario,
-                                style: TextStyle(
-                                  color: WessexColors.darkGrape,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
+                              if (_selectedEstudiante != null) ...[
+                                Builder(
+                                  builder: (context) {
+                                    final estudianteSeleccionado = _misEstudiantes.firstWhere(
+                                      (e) => e['rut'] == _selectedEstudiante,
+                                      orElse: () => {},
+                                    );
+                                    return Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          '${estudianteSeleccionado['nombres']} ${estudianteSeleccionado['apellidos']}',
+                                          style: TextStyle(
+                                            color: WessexColors.darkGrape,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        Text(
+                                          'Estudiante - ${estudianteSeleccionado['curso'] ?? 'Sin curso'}',
+                                          style: TextStyle(
+                                            color: WessexColors.deepRoyalBlue,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Enviado por: ${_userData?['nombreCompleto'] ?? 'Apoderado'}',
+                                          style: TextStyle(
+                                            color: WessexColors.darkGrape.withOpacity(0.6),
+                                            fontSize: 11,
+                                            fontStyle: FontStyle.italic,
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  },
                                 ),
-                              ),
-                              Text(
-                                'Apoderado - Sub-16',
-                                style: TextStyle(
-                                  color: WessexColors.deepRoyalBlue,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
+                              ] else ...[
+                                Text(
+                                  'Primero selecciona un estudiante',
+                                  style: TextStyle(
+                                    color: WessexColors.darkGrape.withOpacity(0.5),
+                                    fontSize: 16,
+                                    fontStyle: FontStyle.italic,
+                                  ),
                                 ),
-                              ),
+                                Text(
+                                  'Enviado por: ${_userData?['nombreCompleto'] ?? 'Apoderado'}',
+                                  style: TextStyle(
+                                    color: WessexColors.deepRoyalBlue,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),
+                      ],
+                    ),
+                  ),
+
+                  // Selección de Estudiante
+                  WessexCard(
+                    margin: const EdgeInsets.only(bottom: 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: WessexColors.crimsonAlert.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                Icons.school,
+                                color: WessexColors.crimsonAlert,
+                                size: 24,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Seleccionar Estudiante',
+                                    style: TextStyle(
+                                      color: WessexColors.darkGrape,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Selecciona el estudiante para el cual envías este voucher',
+                                    style: TextStyle(
+                                      color: WessexColors.darkGrape.withOpacity(0.7),
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        if (_isLoadingEstudiantes)
+                          Center(
+                            child: CircularProgressIndicator(
+                              color: WessexColors.deepRoyalBlue,
+                            ),
+                          )
+                        else if (_misEstudiantes.isEmpty)
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: WessexColors.crimsonAlert.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: WessexColors.crimsonAlert.withOpacity(0.3),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.warning,
+                                  color: WessexColors.crimsonAlert,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    'No tienes estudiantes asignados. Contacta con la administración.',
+                                    style: TextStyle(
+                                      color: WessexColors.crimsonAlert,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          DropdownButtonFormField<String>(
+                            value: _selectedEstudiante,
+                            decoration: InputDecoration(
+                              labelText: 'Estudiante',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              prefixIcon: Icon(Icons.person, color: WessexColors.crimsonAlert),
+                            ),
+                            items: _misEstudiantes.map((estudiante) => DropdownMenuItem<String>(
+                              value: estudiante['rut'] as String,
+                              child: Container(
+                                constraints: const BoxConstraints(maxWidth: 300),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      '${estudiante['nombres']} ${estudiante['apellidos']}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Text(
+                                      'RUT: ${estudiante['rut']} - ${estudiante['curso'] ?? 'Sin curso'}',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey[600],
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )).toList(),
+                            onChanged: (value) => setState(() => _selectedEstudiante = value),
+                            validator: (value) => value == null ? 'Selecciona un estudiante' : null,
+                          ),
                       ],
                     ),
                   ),
@@ -532,19 +776,35 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
       return;
     }
 
+    if (_selectedEstudiante == null) {
+      _showErrorSnackBar('Debes seleccionar un estudiante');
+      return;
+    }
+
     setState(() {
       _isUploading = true;
     });
 
     try {
+      // Buscar el estudiante seleccionado para obtener su información completa
+      final estudianteSeleccionado = _misEstudiantes.firstWhere(
+        (e) => e['rut'] == _selectedEstudiante,
+      );
+
+      // Crear descripción que incluya la información del estudiante
+      String descripcionCompleta = 'Estudiante: ${estudianteSeleccionado['nombres']} ${estudianteSeleccionado['apellidos']} (RUT: ${_selectedEstudiante})';
+      if (_descripcionController.text.isNotEmpty) {
+        descripcionCompleta += '\nDescripción adicional: ${_descripcionController.text}';
+      }
+
       // Enviar voucher usando el servicio
       String voucherId = _voucherService.addVoucher(
-        usuario: _nombreUsuario,
-        rol: 'Apoderado - Sub-16',
+        usuario: '${estudianteSeleccionado['nombres']} ${estudianteSeleccionado['apellidos']}',
+        rol: 'Estudiante - ${estudianteSeleccionado['curso'] ?? 'Sin curso'}',
         mes: _selectedMonth!,
         monto: double.parse(_montoController.text),
         metodoPago: _selectedMetodoPago!,
-        descripcion: _descripcionController.text,
+        descripcion: descripcionCompleta,
         archivo: _archivoNombre!,
         archivoData: _webFile,
       );
@@ -552,7 +812,9 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
       // Notificar a tesorería
       _voucherService.notifyTesoreria(voucherId);
       
-      print('Usuario: $_nombreUsuario');
+      print('Apoderado: ${_userData?['nombreCompleto'] ?? 'Usuario'}');
+      print('Estudiante: ${estudianteSeleccionado['nombres']} ${estudianteSeleccionado['apellidos']}');
+      print('RUT Estudiante: $_selectedEstudiante');
       print('Voucher ID: $voucherId');
       print('Archivo seleccionado: $_archivoNombre');
       print('Tamaño del archivo: ${_webFile!.length} bytes');
@@ -629,7 +891,7 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Enviado por: $_nombreUsuario\nFecha: ${DateTime.now().toString().substring(0, 10)}',
+                      'Enviado por: ${_userData?['nombreCompleto'] ?? 'Apoderado'}\nFecha: ${DateTime.now().toString().substring(0, 10)}',
                       style: TextStyle(
                         color: WessexColors.deepRoyalBlue,
                         fontSize: 12,

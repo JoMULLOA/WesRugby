@@ -10,6 +10,8 @@ import asistenciaRoutes from "./asistencia.routes.js";
 import comprobantePagoRoutes from "./comprobantePago.routes.js";
 import eventoDeportivoRoutes from "./eventoDeportivo.routes.js";
 import directivaRoutes from "./directiva.routes.js";
+import estudianteRoutes from "./estudiante.routes.js";
+import importacionRoutes from "./importacion.routes.js";
 
 const router = Router();
 
@@ -22,6 +24,8 @@ router
     .use("/asistencia", asistenciaRoutes)
     .use("/comprobantes-pago", comprobantePagoRoutes)
     .use("/eventos-deportivos", eventoDeportivoRoutes)
-    .use("/directiva", directivaRoutes);
+    .use("/directiva", directivaRoutes)
+    .use("/estudiantes", estudianteRoutes)
+    .use("/importacion", importacionRoutes);
 
 export default router;

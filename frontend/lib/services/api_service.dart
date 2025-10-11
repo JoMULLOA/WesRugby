@@ -234,4 +234,30 @@ class ApiService {
       'rol': newRole,
     });
   }
+
+  // Métodos para estudiantes
+  static Future<ApiResponse> getAllEstudiantes() async {
+    return get('/estudiantes');
+  }
+
+  static Future<ApiResponse> getEstudiantesByApoderado(String rutApoderado) async {
+    return get('/estudiantes/por-apoderado?rut=$rutApoderado');
+  }
+
+  static Future<ApiResponse> getEstudiante(String rut) async {
+    return get('/estudiantes/$rut');
+  }
+
+  static Future<ApiResponse> updateEstudiante(String rut, Map<String, dynamic> data) async {
+    return put('/estudiantes/$rut', data);
+  }
+
+  static Future<ApiResponse> updateEstudianteFoto(String rut, String fotoUrl) async {
+    return put('/estudiantes/$rut/foto', {'fotoUrl': fotoUrl});
+  }
+
+  // Importación masiva de estudiantes desde Excel
+  static Future<ApiResponse> importEstudiantesFromExcel(List<Map<String, dynamic>> estudiantes) async {
+    return post('/importacion/estudiantes-excel', {'estudiantes': estudiantes});
+  }
 }

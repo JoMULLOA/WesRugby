@@ -105,3 +105,24 @@ export async function logout(req, res) {
     handleErrorServer(res, 500, "Error al cerrar sesión");
   }
 }
+
+export async function getProfile(req, res) {
+  try {
+    // El usuario ya está autenticado por el middleware authenticateJwt
+    const user = req.user;
+
+    if (!user) {
+      return handleErrorClient(res, 401, "No autenticado", "No se encontró información del usuario");
+    }
+
+    handleSuccess(res, 200, "Perfil obtenido exitosamente", {
+      nombreCompleto: user.nombreCompleto,
+      email: user.email,
+      rut: user.rut,
+      rol: user.rol
+    });
+  } catch (error) {
+    console.error("Error obteniendo perfil:", error);
+    handleErrorServer(res, 500, "Error al obtener perfil del usuario");
+  }
+}
