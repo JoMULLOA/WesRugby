@@ -50,13 +50,23 @@ async function createInitialData() {
         rol: "apoderado",
       });
 
-      await userRepository.save([userDirectiva, userTesorera, userEntrenador, userApoderado]);
+      // Usuario 5: RamaExterna - Gestión de eventos deportivos
+      const userRamaExterna = userRepository.create({
+        rut: "56.789.012-3",
+        nombreCompleto: "Rama Externa Rugby Sub-12",
+        email: "coordinador@ubiobio.cl",
+        password: await encryptPassword("Coordinador2024"),
+        rol: "RamaExterna",
+      });
+
+      await userRepository.save([userDirectiva, userTesorera, userEntrenador, userApoderado, userRamaExterna]);
       
       console.log("✅ Usuarios del sistema Wessex Rugby creados exitosamente:");
       console.log("   - Directiva: directiva@ubiobio.cl / Directiva2024");
       console.log("   - Tesorera: tesorera@ubiobio.cl / Tesorera2024");
       console.log("   - Entrenador: entrenador@ubiobio.cl / Entrenador2024");
       console.log("   - Apoderado: apoderado@ubiobio.cl / Apoderado2024");
+      console.log("   - RamaExterna: coordinador@ubiobio.cl / Coordinador2024");
 
       // Mantener referencia para creación de otros datos
       const user1 = userDirectiva;

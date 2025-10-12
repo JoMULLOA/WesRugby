@@ -6,6 +6,7 @@ import '../admin/directiva_dashboard.dart';
 import '../admin/tesorera_dashboard.dart';
 import '../admin/entrenador_dashboard.dart';
 import '../admin/apoderado_dashboard.dart';
+import '../admin/rama_externa_screen.dart';
 import './recuperacion.dart';
 
 class LoginPage extends StatefulWidget {
@@ -155,6 +156,16 @@ class _LoginPageState extends State<LoginPage> {
             MaterialPageRoute(builder: (context) {
               print('👨‍👩‍👧‍👦 Construyendo ApoderadoDashboard');
               return const ApoderadoDashboard();
+            }),
+          );
+          break;
+        case 'RamaExterna':
+          print('🏆 Navegando a RamaExternaScreen...');
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) {
+              print('🏆 Construyendo RamaExternaScreen');
+              return RamaExternaScreen();
             }),
           );
           break;

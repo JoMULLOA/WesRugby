@@ -19,7 +19,7 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
   bool _isLoading = false;
   String? _error;
 
-  final List<String> _roles = ['Todos', 'directiva', 'tesorera', 'entrenador', 'apoderado'];
+    final List<String> _roles = ['Todos', 'directiva', 'tesorera', 'entrenador', 'apoderado', 'RamaExterna'];
 
   @override
   void initState() {
@@ -205,6 +205,7 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
     int tesoreras = _allUsuarios.where((u) => u['rol'] == 'tesorera').length;
     int entrenadores = _allUsuarios.where((u) => u['rol'] == 'entrenador').length;
     int apoderados = _allUsuarios.where((u) => u['rol'] == 'apoderado').length;
+    int coordinadores = _allUsuarios.where((u) => u['rol'] == 'RamaExterna').length;
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -259,6 +260,12 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
                   '$apoderados',
                   Icons.family_restroom,
                   WessexColors.maximumGrayMint,
+                ),
+                _buildStatCard(
+                  'Coord. Rama',
+                  '$coordinadores',
+                  Icons.sports_soccer,
+                  WessexColors.crimsonAlert,
                 ),
               ],
             );
@@ -817,14 +824,16 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
                 
                 // Rol
                 DropdownButtonFormField<String>(
-                  value: selectedRol,
+                  value: ['directiva', 'tesorera', 'entrenador', 'apoderado', 'RamaExterna'].contains(selectedRol) 
+                      ? selectedRol 
+                      : 'apoderado',
                   onChanged: (value) => selectedRol = value!,
                   decoration: InputDecoration(
                     labelText: 'Rol',
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  items: ['directiva', 'tesorera', 'entrenador', 'apoderado']
-                      .map((rol) => DropdownMenuItem(value: rol, child: Text(rol.toUpperCase())))
+                  items: ['directiva', 'tesorera', 'entrenador', 'apoderado', 'RamaExterna']
+                      .map((rol) => DropdownMenuItem(value: rol, child: Text(rol == 'RamaExterna' ? 'RAMA EXTERNA' : rol.toUpperCase())))
                       .toList(),
                 ),
                 const SizedBox(height: 24),

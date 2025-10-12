@@ -8,6 +8,9 @@ class ApiResponse {
   final String? message;
 
   ApiResponse({required this.statusCode, this.data, this.message});
+  
+  // Getter para determinar si la respuesta fue exitosa
+  bool get success => statusCode >= 200 && statusCode < 300;
 }
 
 class ApiService {
@@ -273,5 +276,132 @@ class ApiService {
   // Importación masiva de estudiantes desde Excel
   static Future<ApiResponse> importEstudiantesFromExcel(List<Map<String, dynamic>> estudiantes) async {
     return post('/importacion/estudiantes-excel', {'estudiantes': estudiantes});
+  }
+
+  // ============================================================================
+  // MÉTODOS PARA GESTIÓN DE TORNEOS
+  // ============================================================================
+
+  // Crear torneo (solo directiva)
+  static Future<ApiResponse> crearTorneo(Map<String, dynamic> torneoData) async {
+    return post('/torneos/crear', torneoData);
+  }
+
+  // Obtener todos los torneos (directiva)
+  static Future<ApiResponse> obtenerTodosLosTorneos({String? estado}) async {
+    String endpoint = '/torneos/todos';
+    if (estado != null) {
+      endpoint += '?estado=$estado';
+    }
+    return get(endpoint);
+  }
+
+  // Obtener torneos disponibles para participar (coordinadores de rama)
+  static Future<ApiResponse> obtenerTorneosDisponibles() async {
+    return get('/torneos/disponibles');
+  }
+
+  // Participar en torneo (coordinadores de rama)
+  static Future<ApiResponse> participarEnTorneo(Map<String, dynamic> participacionData) async {
+    return post('/torneos/participar', participacionData);
+  }
+
+  // Obtener mis participaciones (coordinadores de rama)
+  static Future<ApiResponse> obtenerMisParticipaciones() async {
+    return get('/torneos/mis-participaciones');
+  }
+
+  // Actualizar estado del torneo (directiva)
+  static Future<ApiResponse> actualizarEstadoTorneo(int torneoId, String estado) async {
+    return put('/torneos/$torneoId/estado', {'estado': estado});
+  }
+
+  // Obtener torneos públicos (todos los roles)
+  static Future<ApiResponse> obtenerTorneosPublicos() async {
+    return get('/torneos/publicos');
+  }
+
+  // ============================================================================
+  // MÉTODOS PARA GESTIÓN DE EVENTOS
+  // ============================================================================
+
+  // Crear evento (solo directiva)
+  static Future<Map<String, dynamic>> crearEvento(Map<String, dynamic> eventoData) async {
+    final response = await post('/eventos/crear', eventoData);
+    if (response.success) {
+      return response.data;
+    } else {
+      throw Exception(response.message ?? 'Error al crear evento');
+    }
+  }
+
+  // Obtener todos los eventos (directiva)
+  static Future<Map<String, dynamic>> obtenerEventos() async {
+    final response = await get('/eventos/todos');
+    if (response.success) {
+      return response.data;
+    } else {
+      throw Exception(response.message ?? 'Error al obtener eventos');
+    }
+  }
+
+  // Obtener eventos disponibles (RamaExterna)
+  static Future<Map<String, dynamic>> obtenerEventosDisponibles() async {
+    final response = await get('/eventos/disponibles');
+    if (response.success) {
+      return response.data;
+    } else {
+      throw Exception(response.message ?? 'Error al obtener eventos disponibles');
+    }
+  }
+
+  // Participar en evento (RamaExterna)
+  static Future<Map<String, dynamic>> participarEnEvento(Map<String, dynamic> participacionData) async {
+    final response = await post('/eventos/participar', participacionData);
+    if (response.success) {
+      return response.data;
+    } else {
+      throw Exception(response.message ?? 'Error al participar en evento');
+    }
+  }
+
+  // Obtener mis participaciones en eventos (RamaExterna)
+  static Future<Map<String, dynamic>> obtenerMisParticipacionesEvento() async {
+    final response = await get('/eventos/mis-participaciones');
+    if (response.success) {
+      return response.data;
+    } else {
+      throw Exception(response.message ?? 'Error al obtener participaciones');
+    }
+  }
+
+  // Actualizar evento (directiva)
+  static Future<Map<String, dynamic>> actualizarEvento(int eventoId, Map<String, dynamic> datos) async {
+    final response = await put('/eventos/$eventoId', datos);
+    if (response.success) {
+      return response.data;
+    } else {
+      throw Exception(response.message ?? 'Error al actualizar evento');
+    }
+  }
+
+  // Eliminar evento (directiva)
+  static Future<Map<String, dynamic>> eliminarEvento(int eventoId) async {
+    final response = await delete('/eventos/$eventoId');
+    if (response.success) {
+      return response.data;
+    } else {
+      throw Exception(response.message ?? 'Error al eliminar evento');
+    }
+  }
+
+  // Obtener participaciones de un evento (directiva)
+  static Future<Map<String, dynamic>> obtenerParticipacionesEvento(int eventoId) async {
+    final response = await get('/eventos/$eventoId/participaciones');
+    if (response.success) {
+      return response.data;
+    } else {
+      throw Exception(response.message ?? 'Error al obtener participaciones del evento');
+    }
   }
 }

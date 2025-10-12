@@ -6,6 +6,7 @@ import 'gestion_justificantes_screen.dart';
 import 'registro_datos_screen.dart';
 import 'gestion_usuarios_screen.dart';
 import 'base_datos_screen.dart';
+import 'gestion_eventos_screen.dart';
 
 class DirectivaDashboard extends StatelessWidget {
   const DirectivaDashboard({super.key});
@@ -220,7 +221,7 @@ class DirectivaDashboard extends StatelessWidget {
                         'Administrar eventos deportivos',
                         Icons.event,
                         WessexColors.deepRoyalBlue,
-                        () => _showComingSoon(context, 'Gestión de Eventos'),
+                        () => Navigator.push(context, MaterialPageRoute(builder: (context) => GestionEventosScreen())),
                         isDesktop: isDesktop,
                         isTablet: isTablet,
                       ),
@@ -246,7 +247,7 @@ class DirectivaDashboard extends StatelessWidget {
                         'Planificar actividades del club',
                         Icons.event,
                         WessexColors.crimsonAlert,
-                        () => _showComingSoon(context, 'Gestión de Eventos'),
+                        () => Navigator.push(context, MaterialPageRoute(builder: (context) => GestionEventosScreen())),
                         isDesktop: isDesktop,
                         isTablet: isTablet,
                       ),

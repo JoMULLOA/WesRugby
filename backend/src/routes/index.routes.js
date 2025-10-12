@@ -12,6 +12,8 @@ import eventoDeportivoRoutes from "./eventoDeportivo.routes.js";
 import directivaRoutes from "./directiva.routes.js";
 import estudianteRoutes from "./estudiante.routes.js";
 import importacionRoutes from "./importacion.routes.js";
+import torneoRoutes from "./torneo.routes.js";
+import eventoRoutes from "./evento.routes.js";
 
 const router = Router();
 
@@ -26,6 +28,8 @@ router
     .use("/eventos-deportivos", eventoDeportivoRoutes)
     .use("/directiva", directivaRoutes)
     .use("/estudiantes", estudianteRoutes)
-    .use("/importacion", importacionRoutes);
+    .use("/importacion", importacionRoutes)
+    .use("/torneos", torneoRoutes)
+    .use("/eventos", eventoRoutes);
 
 export default router;

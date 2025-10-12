@@ -105,7 +105,7 @@ try {
         );
     }
 
-    const validRoles = ["directiva", "tesorera", "apoderado", "entrenador"];
+    const validRoles = ["directiva", "tesorera", "apoderado", "entrenador", "RamaExterna"];
     if (!validRoles.includes(userFound.rol)) {
         return handleErrorClient(
             res,
@@ -176,6 +176,35 @@ try {
             403,
             "Error al acceder al recurso",
             "Se requiere rol de apoderado, tesorera o directiva para realizar esta acción."
+        );
+    }
+    next();
+} catch (error) {
+    handleErrorServer(res, 500, error.message);
+}
+}
+
+// Middleware para verificar rol de RamaExterna
+export async function isRamaExterna(req, res, next) {
+try {
+    const userRepository = AppDataSource.getRepository(User);
+    const userFound = await userRepository.findOneBy({ email: req.user.email });
+
+    if (!userFound) {
+        return handleErrorClient(
+            res,
+            404,
+            "Usuario no encontrado en la base de datos",
+        );
+    }
+
+    const allowedRoles = ["directiva", "RamaExterna"];
+    if (!allowedRoles.includes(userFound.rol)) {
+        return handleErrorClient(
+            res,
+            403,
+            "Error al acceder al recurso",
+            "Se requiere rol de RamaExterna o directiva para realizar esta acción."
         );
     }
     next();

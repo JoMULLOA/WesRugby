@@ -5,6 +5,7 @@ import 'admin/directiva_dashboard.dart';
 import 'admin/tesorera_dashboard.dart';
 import 'admin/entrenador_dashboard.dart';
 import 'admin/apoderado_dashboard.dart';
+import 'admin/rama_externa_screen.dart';
 import 'config/colors.dart';
 
 void main() async {
@@ -13,7 +14,7 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  const MyApp({super.key}); 
 
   @override
   Widget build(BuildContext context) {
@@ -38,6 +39,7 @@ class MyApp extends StatelessWidget {
         '/dashboard/tesorera': (context) => const TesoreraDashboard(),
         '/dashboard/entrenador': (context) => const EntrenadorDashboard(),
         '/dashboard/apoderado': (context) => const ApoderadoDashboard(),
+        '/dashboard/rama_externa': (context) => RamaExternaScreen(),
       },
     );
   }
