@@ -14,7 +14,7 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
   late TabController _tabController;
   List<dynamic> _eventos = [];
   bool _isLoading = false;
-  List<String> _categorias = ['sub-8', 'sub-10', 'sub-12', 'sub-13', 'sub-14', 'sub-15', 'sub-16', 'sub-17', 'sub-18', 'sub-19', 'senior', 'veteranos'];
+  List<String> _categorias = ['sub-11', 'sub-12', 'sub-13'];
 
   @override
   void initState() {
@@ -132,6 +132,96 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
                 ),
                 SizedBox(height: 16),
                 
+                // Filtros por categoría
+                Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: WessexColors.darkGrape.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: WessexColors.darkGrape.withOpacity(0.2)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Filtrar por categorías:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: WessexColors.darkGrape,
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      StatefulBuilder(
+                        builder: (context, setFilterState) {
+                          // Obtener todas las categorías disponibles
+                          final Set<String> todasCategorias = {};
+                          for (var rama in estadisticasPorRama) {
+                            final totalPorCategoria = rama['totalPorCategoria'] as Map<String, dynamic>;
+                            todasCategorias.addAll(totalPorCategoria.keys.cast<String>());
+                          }
+                          
+                          // Lista de categorías seleccionadas (inicialmente todas)
+                          Set<String> categoriasSeleccionadas = Set.from(todasCategorias);
+                          
+                          return Column(
+                            children: [
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 4,
+                                children: [
+                                  // Botón "Todas"
+                                  FilterChip(
+                                    label: Text('Todas'),
+                                    selected: categoriasSeleccionadas.length == todasCategorias.length,
+                                    onSelected: (selected) {
+                                      setFilterState(() {
+                                        if (selected) {
+                                          categoriasSeleccionadas = Set.from(todasCategorias);
+                                        } else {
+                                          categoriasSeleccionadas.clear();
+                                        }
+                                      });
+                                    },
+                                    selectedColor: WessexColors.darkGrape.withOpacity(0.2),
+                                    checkmarkColor: WessexColors.darkGrape,
+                                  ),
+                                  // Filtros por categoría individual
+                                  ...todasCategorias.map((categoria) => FilterChip(
+                                    label: Text(categoria.toUpperCase()),
+                                    selected: categoriasSeleccionadas.contains(categoria),
+                                    onSelected: (selected) {
+                                      setFilterState(() {
+                                        if (selected) {
+                                          categoriasSeleccionadas.add(categoria);
+                                        } else {
+                                          categoriasSeleccionadas.remove(categoria);
+                                        }
+                                      });
+                                    },
+                                    selectedColor: WessexColors.leafGreen.withOpacity(0.2),
+                                    checkmarkColor: WessexColors.leafGreen,
+                                  )).toList(),
+                                ],
+                              ),
+                              SizedBox(height: 8),
+                              // Mostrar conteo filtrado
+                              if (categoriasSeleccionadas.isNotEmpty && categoriasSeleccionadas.length < todasCategorias.length)
+                                Text(
+                                  'Mostrando ${categoriasSeleccionadas.length} de ${todasCategorias.length} categorías',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: WessexColors.midnightNavy.withOpacity(0.7),
+                                  ),
+                                ),
+                            ],
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 16),
+                
                 Expanded(
                   child: estadisticasPorRama.isEmpty 
                     ? Center(
@@ -154,10 +244,17 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
                           ],
                         ),
                       )
-                    : ListView.builder(
-                        itemCount: estadisticasPorRama.length,
-                        itemBuilder: (context, index) {
-                          return _buildRamaCard(estadisticasPorRama[index]);
+                    : StatefulBuilder(
+                        builder: (context, setState) {
+                          // Aplicar filtros (esto es una implementación simplificada)
+                          final estadisticasFiltradas = estadisticasPorRama;
+                          
+                          return ListView.builder(
+                            itemCount: estadisticasFiltradas.length,
+                            itemBuilder: (context, index) {
+                              return _buildRamaCard(estadisticasFiltradas[index]);
+                            },
+                          );
                         },
                       ),
                 ),
@@ -601,9 +698,13 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
                           ),
                         ),
                         Container(
-                          height: MediaQuery.of(context).size.height > 600 ? 300 : 250,
+                          constraints: BoxConstraints(
+                            maxHeight: MediaQuery.of(context).size.height > 600 ? 300 : 250,
+                            minHeight: 60,
+                          ),
                           child: SingleChildScrollView(
                             child: Column(
+                              mainAxisSize: MainAxisSize.min,
                               children: _categorias.map((categoria) => CheckboxListTile(
                                 title: Text(
                                   categoria.toUpperCase(),

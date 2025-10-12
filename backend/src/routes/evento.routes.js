@@ -6,6 +6,7 @@ import {
   obtenerEventos,
   obtenerEventosDisponibles,
   participarEnEvento,
+  editarParticipacion,
   obtenerMisParticipacionesEvento,
   obtenerCategoriasRegistradas,
   actualizarEvento,
@@ -31,6 +32,7 @@ router
 router
   .get("/disponibles", authenticateJWT, isRamaExterna, obtenerEventosDisponibles)
   .post("/participar", authenticateJWT, isRamaExterna, participarEnEvento)
+  .put("/participacion/:participacionId", authenticateJWT, isRamaExterna, editarParticipacion)
   .get("/:eventoId/categorias-registradas", authenticateJWT, isRamaExterna, obtenerCategoriasRegistradas);
 
 // Rutas compartidas entre Directiva y RamaExterna

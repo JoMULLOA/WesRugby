@@ -387,6 +387,21 @@ class ApiService {
     }
   }
 
+  // Editar participación en evento (RamaExterna - solo durante 10 minutos)
+  static Future<Map<String, dynamic>> editarParticipacion(int participacionId, int cantidadNinos, String? listaInvitados) async {
+    final body = {
+      'cantidadNinos': cantidadNinos,
+      if (listaInvitados != null) 'listaInvitados': listaInvitados,
+    };
+    
+    final response = await put('/eventos/participacion/$participacionId', body);
+    if (response.success) {
+      return {'success': true, 'data': response.data, 'message': 'Participación actualizada exitosamente'};
+    } else {
+      return {'success': false, 'message': response.message ?? 'Error al editar participación'};
+    }
+  }
+
   // Obtener mis participaciones en eventos (RamaExterna)
   static Future<Map<String, dynamic>> obtenerMisParticipacionesEvento() async {
     final response = await get('/eventos/mis-participaciones');

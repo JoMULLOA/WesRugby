@@ -613,7 +613,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
       }
     ];
     
-    final categorias = ['sub-8', 'sub-10', 'sub-12', 'sub-14', 'sub-16', 'sub-18'];
+    final categorias = ['sub-11', 'sub-12', 'sub-13'];
 
     showDialog(
       context: context,

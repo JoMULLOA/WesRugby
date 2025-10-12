@@ -761,6 +761,26 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                           color: WessexColors.leafGreen,
                         ),
                       ),
+                      // Botón de editar (solo visible durante 10 minutos)
+                      if (_puedeEditarParticipacion(participacion)) ...[
+                        SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: () => _mostrarDialogoEditarParticipacion(participacion),
+                          child: Container(
+                            padding: EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: Colors.orange, width: 1),
+                            ),
+                            child: Icon(
+                              Icons.edit,
+                              size: 14,
+                              color: Colors.orange,
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                   if (participacion['listaInvitados'] != null && participacion['listaInvitados'].toString().isNotEmpty) ...[
@@ -1350,5 +1370,186 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
     
     final participaciones = participacion['participaciones'] as List? ?? [];
     return participaciones.map((p) => p['categoria'].toString()).toList();
+  }
+
+  // Verificar si se puede editar una participación (solo durante 10 minutos)
+  bool _puedeEditarParticipacion(Map<String, dynamic> participacion) {
+    try {
+      final createdAt = DateTime.parse(participacion['createdAt']);
+      final tiempoTranscurrido = DateTime.now().difference(createdAt);
+      return tiempoTranscurrido.inMinutes < 10;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Mostrar diálogo para editar participación
+  void _mostrarDialogoEditarParticipacion(Map<String, dynamic> participacion) {
+    final TextEditingController cantidadController = TextEditingController(
+      text: participacion['cantidadNinos'].toString()
+    );
+    final TextEditingController invitadosController = TextEditingController(
+      text: participacion['listaInvitados']?.toString() ?? ''
+    );
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(
+            'Editar Participación',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: WessexColors.darkGrape,
+            ),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Categoría: ${participacion['categoria'].toString().toUpperCase()}',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: WessexColors.midnightNavy,
+                  ),
+                ),
+                SizedBox(height: 16),
+                Text(
+                  'Cantidad de niños:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w500,
+                    color: WessexColors.midnightNavy,
+                  ),
+                ),
+                SizedBox(height: 8),
+                TextField(
+                  controller: cantidadController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    hintText: 'Ingrese cantidad',
+                  ),
+                ),
+                SizedBox(height: 16),
+                Text(
+                  'Lista de invitados (opcional):',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w500,
+                    color: WessexColors.midnightNavy,
+                  ),
+                ),
+                SizedBox(height: 8),
+                TextField(
+                  controller: invitadosController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    hintText: 'Nombres de invitados separados por comas',
+                  ),
+                ),
+                SizedBox(height: 16),
+                Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, color: Colors.orange, size: 20),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Solo puedes editar durante los primeros 10 minutos después de crear la participación.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.orange.shade700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'Cancelar',
+                style: TextStyle(color: WessexColors.midnightNavy),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final cantidadNinos = int.tryParse(cantidadController.text);
+                if (cantidadNinos == null || cantidadNinos <= 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Ingrese una cantidad válida de niños'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+
+                Navigator.of(context).pop();
+                await _editarParticipacion(
+                  participacion['id'], 
+                  cantidadNinos, 
+                  invitadosController.text.trim().isEmpty 
+                    ? null 
+                    : invitadosController.text.trim()
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: WessexColors.darkGrape,
+                foregroundColor: Colors.white,
+              ),
+              child: Text('Guardar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Método para editar la participación
+  Future<void> _editarParticipacion(int participacionId, int cantidadNinos, String? listaInvitados) async {
+    try {
+      final response = await ApiService.editarParticipacion(
+        participacionId, 
+        cantidadNinos, 
+        listaInvitados
+      );
+      
+      if (response['success']) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Participación actualizada exitosamente'),
+            backgroundColor: WessexColors.leafGreen,
+          ),
+        );
+        // Recargar las participaciones
+        await _cargarMisParticipaciones();
+      } else {
+        throw Exception(response['message'] ?? 'Error al actualizar participación');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al actualizar participación: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }

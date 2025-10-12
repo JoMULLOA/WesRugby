@@ -14,7 +14,7 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
   late TabController _tabController;
   List<dynamic> _eventos = [];
   bool _isLoading = false;
-  List<String> _categorias = ['sub-8', 'sub-10', 'sub-12', 'sub-13', 'sub-14', 'sub-15', 'sub-16', 'sub-17', 'sub-18', 'sub-19', 'senior', 'veteranos'];
+  List<String> _categorias = ['sub-11', 'sub-12', 'sub-13'];
 
   @override
   void initState() {

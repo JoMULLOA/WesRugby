@@ -126,6 +126,84 @@ export async function obtenerEventosDisponibles(req, res) {
   }
 }
 
+// Editar participación en un evento (RamaExterna - solo durante 10 minutos)
+export async function editarParticipacion(req, res) {
+  try {
+    const { participacionId } = req.params;
+    const { cantidadNinos, listaInvitados } = req.body;
+    const rutRamaExterna = req.user.rut;
+
+    if (!cantidadNinos) {
+      return handleErrorClient(
+        res,
+        400,
+        "Faltan campos obligatorios",
+        "La cantidad de niños es requerida"
+      );
+    }
+
+    const participacionRepository = AppDataSource.getRepository(ParticipacionEvento);
+    
+    // Importar repositorios para eventos deportivos
+    const { AppDataSource: dataSource } = await import("../config/configDb.js");
+    const ParticipacionEventoDeportivo = (await import("../entity/participacionEventoDeportivo.entity.js")).default;
+    const participacionDeportivaRepository = dataSource.getRepository(ParticipacionEventoDeportivo);
+
+    // Buscar la participación (puede ser regular o deportiva)
+    let participacion = await participacionRepository.findOne({
+      where: { id: parseInt(participacionId), rutRamaExterna }
+    });
+    
+    let esEventoDeportivo = false;
+    if (!participacion) {
+      participacion = await participacionDeportivaRepository.findOne({
+        where: { id: parseInt(participacionId), rutRamaExterna }
+      });
+      esEventoDeportivo = true;
+    }
+
+    if (!participacion) {
+      return handleErrorClient(
+        res,
+        404,
+        "Error al editar",
+        "Participación no encontrada o no tienes permisos para editarla"
+      );
+    }
+
+    // Verificar que no hayan pasado más de 10 minutos
+    const tiempoLimite = 10 * 60 * 1000; // 10 minutos en milisegundos
+    const tiempoTranscurrido = Date.now() - new Date(participacion.createdAt).getTime();
+    
+    if (tiempoTranscurrido > tiempoLimite) {
+      return handleErrorClient(
+        res,
+        400,
+        "Tiempo agotado",
+        "Solo puedes editar una participación durante los primeros 10 minutos después de crearla"
+      );
+    }
+
+    // Actualizar los campos permitidos
+    participacion.cantidadNinos = cantidadNinos;
+    if (listaInvitados !== undefined) {
+      participacion.listaInvitados = listaInvitados;
+    }
+
+    let participacionActualizada;
+    if (esEventoDeportivo) {
+      participacionActualizada = await participacionDeportivaRepository.save(participacion);
+    } else {
+      participacionActualizada = await participacionRepository.save(participacion);
+    }
+
+    handleSuccess(res, 200, "Participación actualizada exitosamente", participacionActualizada);
+  } catch (error) {
+    console.error("Error al editar participación:", error);
+    handleErrorServer(res, 500, error.message);
+  }
+}
+
 // Participar en un evento (RamaExterna)
 export async function participarEnEvento(req, res) {
   try {
@@ -447,12 +525,27 @@ export async function obtenerCategoriasRegistradas(req, res) {
 
     const categoriasRegistradas = participaciones.map(p => p.categoria);
     
-    // Lista completa de categorías disponibles incluyendo las nuevas
-    const todasCategorias = [
-      "sub-8", "sub-9", "sub-10", "sub-11", "sub-12", "sub-13",
-      "sub-14", "sub-15", "sub-16", "sub-17", "sub-18", "sub-19",
-      "senior", "veteranos"
-    ];
+    // Lista de categorías predeterminadas (reducida según requerimiento)
+    const categoriasPredeterminadas = ["sub-11", "sub-12", "sub-13"];
+    
+    // Obtener categorías dinámicas del evento deportivo específico si existe
+    let categoriasDelEvento = [];
+    if (esUUID(eventoId)) {
+      const { AppDataSource: dataSource } = await import("../config/configDb.js");
+      const EventoDeportivo = (await import("../entity/eventoDeportivo.entity.js")).default;
+      const eventoDeportivoRepository = dataSource.getRepository(EventoDeportivo);
+      
+      const eventoDeportivo = await eventoDeportivoRepository.findOne({
+        where: { id: eventoId }
+      });
+      
+      if (eventoDeportivo && eventoDeportivo.categoria) {
+        categoriasDelEvento = eventoDeportivo.categoria.split(',').map(cat => cat.trim());
+      }
+    }
+    
+    // Combinar categorías predeterminadas con las del evento
+    const todasCategorias = [...new Set([...categoriasPredeterminadas, ...categoriasDelEvento])];
     
     const categoriasDisponibles = todasCategorias.filter(cat => !categoriasRegistradas.includes(cat));
 
