@@ -588,6 +588,9 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
       case 'apoderado':
         color = WessexColors.deepRoyalBlue;
         break;
+      case 'ramaexterna':
+        color = const Color(0xFFFFA726); // Color naranja/amber para RamaExterna
+        break;
       default:
         color = WessexColors.mistyRoseGray;
     }
@@ -600,7 +603,7 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
         border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Text(
-        rol.toUpperCase(),
+        rol == 'RamaExterna' ? 'RAMA EXTERNA' : rol.toUpperCase(),
         style: TextStyle(
           color: color,
           fontSize: 11,

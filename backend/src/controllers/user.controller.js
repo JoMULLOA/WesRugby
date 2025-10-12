@@ -482,8 +482,8 @@ export async function changeUserRole(req, res) {
     }
 
     // Actualizar roles válidos según la entidad User
-    if (!['directiva', 'tesorera', 'entrenador', 'apoderado'].includes(nuevoRol)) {
-      return handleErrorClient(res, 400, "Rol inválido. Debe ser 'directiva', 'tesorera', 'entrenador' o 'apoderado'");
+    if (!['directiva', 'tesorera', 'entrenador', 'apoderado', 'RamaExterna'].includes(nuevoRol)) {
+      return handleErrorClient(res, 400, "Rol inválido. Debe ser 'directiva', 'tesorera', 'entrenador', 'apoderado' o 'RamaExterna'");
     }
 
     // Buscar el usuario por RUT
@@ -521,8 +521,8 @@ export async function createUserByDirectiva(req, res) {
     }
 
     // Validar que el rol sea válido
-    if (!['directiva', 'tesorera', 'entrenador', 'apoderado'].includes(rol)) {
-      return handleErrorClient(res, 400, "Rol inválido. Debe ser 'directiva', 'tesorera', 'entrenador' o 'apoderado'");
+    if (!['directiva', 'tesorera', 'entrenador', 'apoderado', 'RamaExterna'].includes(rol)) {
+      return handleErrorClient(res, 400, "Rol inválido. Debe ser 'directiva', 'tesorera', 'entrenador', 'apoderado' o 'RamaExterna'");
     }
 
     // Verificar que el usuario no exista
@@ -582,8 +582,8 @@ export async function updateUserByDirectiva(req, res) {
     }
 
     // Validar que el rol sea válido
-    if (!['directiva', 'tesorera', 'entrenador', 'apoderado'].includes(rol)) {
-      return handleErrorClient(res, 400, "Rol inválido. Debe ser 'directiva', 'tesorera', 'entrenador' o 'apoderado'");
+    if (!['directiva', 'tesorera', 'entrenador', 'apoderado', 'RamaExterna'].includes(rol)) {
+      return handleErrorClient(res, 400, "Rol inválido. Debe ser 'directiva', 'tesorera', 'entrenador', 'apoderado' o 'RamaExterna'");
     }
 
     // Buscar el usuario a actualizar

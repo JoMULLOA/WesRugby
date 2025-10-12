@@ -697,7 +697,7 @@ export async function obtenerParticipacionesEvento(req, res) {
         return {
           ...participacion,
           ramaExterna: usuario,
-          nombreRama: usuario ? usuario.nombre : "Rama no identificada"
+          nombreRama: usuario ? usuario.nombreCompleto : "Rama no identificada"
         };
       })
     );
