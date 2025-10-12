@@ -26,7 +26,7 @@ const ParticipacionEventoSchema = new EntitySchema({
     },
     categoria: {
       type: "enum",
-      enum: ["sub-8", "sub-10", "sub-12", "sub-13", "sub-14", "sub-15", "sub-16", "sub-17", "sub-18", "sub-19", "senior", "veteranos"],
+      enum: ["sub-8", "sub-9", "sub-10", "sub-11", "sub-12", "sub-13", "sub-14", "sub-15", "sub-16", "sub-17", "sub-18", "sub-19", "senior", "veteranos"],
       nullable: false,
     },
     listaInvitados: {

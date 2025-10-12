@@ -275,10 +275,11 @@ export async function participarEnEvento(req, res) {
   }
 }
 
-// Obtener mis participaciones (RamaExterna)
+// Obtener mis participaciones (filtrado por rol)
 export async function obtenerMisParticipacionesEvento(req, res) {
   try {
-    const rutRamaExterna = req.user.rut;
+    const rutUsuario = req.user.rut;
+    const rolUsuario = req.user.rol;
     const participacionRepository = AppDataSource.getRepository(ParticipacionEvento);
     const eventoRepository = AppDataSource.getRepository(Evento);
 
@@ -289,15 +290,29 @@ export async function obtenerMisParticipacionesEvento(req, res) {
     const eventoDeportivoRepository = dataSource.getRepository(EventoDeportivo);
     const participacionDeportivaRepository = dataSource.getRepository(ParticipacionEventoDeportivo);
 
+    // Definir filtros según el rol del usuario
+    let filtroParticipacionesRegulares = {};
+    let filtroParticipacionesDeportivas = {};
+
+    if (rolUsuario === "directiva") {
+      // Directiva ve todas las participaciones (sin filtro)
+      filtroParticipacionesRegulares = {};
+      filtroParticipacionesDeportivas = {};
+    } else {
+      // RamaExterna solo ve sus propias participaciones
+      filtroParticipacionesRegulares = { rutRamaExterna: rutUsuario };
+      filtroParticipacionesDeportivas = { rutRamaExterna: rutUsuario };
+    }
+
     // Obtener participaciones en eventos regulares
     const participacionesRegulares = await participacionRepository.find({
-      where: { rutRamaExterna },
+      where: filtroParticipacionesRegulares,
       order: { eventoId: "ASC", categoria: "ASC" },
     });
 
     // Obtener participaciones en eventos deportivos
     const participacionesDeportivas = await participacionDeportivaRepository.find({
-      where: { rutRamaExterna },
+      where: filtroParticipacionesDeportivas,
       order: { categoria: "ASC" },
     });
 
@@ -403,19 +418,49 @@ export async function obtenerCategoriasRegistradas(req, res) {
     
     const participacionRepository = AppDataSource.getRepository(ParticipacionEvento);
     
-    const participaciones = await participacionRepository.find({
-      where: { eventoId: parseInt(eventoId), rutRamaExterna },
-      order: { categoria: "ASC" },
-    });
+    // Importar repositorios para eventos deportivos
+    const { AppDataSource: dataSource } = await import("../config/configDb.js");
+    const ParticipacionEventoDeportivo = (await import("../entity/participacionEventoDeportivo.entity.js")).default;
+    const participacionDeportivaRepository = dataSource.getRepository(ParticipacionEventoDeportivo);
+
+    // Función para verificar si es un UUID válido
+    const esUUID = (str) => {
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      return uuidRegex.test(str);
+    };
+
+    let participaciones = [];
+
+    if (esUUID(eventoId)) {
+      // Es un UUID, buscar en participaciones deportivas
+      participaciones = await participacionDeportivaRepository.find({
+        where: { eventoDeportivoId: eventoId, rutRamaExterna },
+        order: { categoria: "ASC" },
+      });
+    } else {
+      // Es un entero, buscar en participaciones regulares
+      participaciones = await participacionRepository.find({
+        where: { eventoId: parseInt(eventoId), rutRamaExterna },
+        order: { categoria: "ASC" },
+      });
+    }
 
     const categoriasRegistradas = participaciones.map(p => p.categoria);
-    const todasCategorias = ["sub-8", "sub-10", "sub-12", "sub-14", "sub-16", "sub-18"];
+    
+    // Lista completa de categorías disponibles incluyendo las nuevas
+    const todasCategorias = [
+      "sub-8", "sub-9", "sub-10", "sub-11", "sub-12", "sub-13",
+      "sub-14", "sub-15", "sub-16", "sub-17", "sub-18", "sub-19",
+      "senior", "veteranos"
+    ];
+    
     const categoriasDisponibles = todasCategorias.filter(cat => !categoriasRegistradas.includes(cat));
 
     handleSuccess(res, 200, "Categorías obtenidas exitosamente", {
       categoriasRegistradas,
       categoriasDisponibles,
-      participaciones
+      participaciones,
+      esEventoDeportivo: esUUID(eventoId)
     });
   } catch (error) {
     console.error("Error al obtener categorías registradas:", error);

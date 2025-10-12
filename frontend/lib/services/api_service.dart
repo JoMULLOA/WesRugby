@@ -28,6 +28,8 @@ class ApiService {
     final token = await TokenManager.getToken();
     return {
       'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
       if (token != null) 'Authorization': 'Bearer $token',
     };
   }

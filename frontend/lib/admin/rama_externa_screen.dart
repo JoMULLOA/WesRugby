@@ -70,9 +70,37 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
   Future<void> _cargarMisParticipaciones() async {
     try {
       final response = await ApiService.obtenerMisParticipacionesEvento();
-      setState(() => _misParticipaciones = response['eventosAgrupados'] ?? []);
+      print('🔧 DEBUG - Respuesta completa: $response');
+      print('🔧 DEBUG - Tipo de response: ${response.runtimeType}');
+      print('🔧 DEBUG - Keys en response: ${response.keys}');
+      
+      // ✅ CORREGIDO: Acceder a los datos dentro de 'data'
+      final data = response['data'];
+      print('🔧 DEBUG - data: $data');
+      print('🔧 DEBUG - Keys en data: ${data?.keys}');
+      
+      final eventosAgrupados = data?['eventosAgrupados'];
+      final participaciones = data?['participaciones'];
+      
+      print('🔧 DEBUG - eventosAgrupados: $eventosAgrupados');
+      print('🔧 DEBUG - Length eventosAgrupados: ${(eventosAgrupados as List?)?.length}');
+      print('🔧 DEBUG - participaciones: $participaciones');
+      
+      if (eventosAgrupados is List) {
+        print('🔧 DEBUG - eventosAgrupados es una Lista con ${eventosAgrupados.length} elementos');
+        for (int i = 0; i < eventosAgrupados.length; i++) {
+          print('🔧 DEBUG - Evento $i: ${eventosAgrupados[i]}');
+        }
+      } else {
+        print('🔧 DEBUG - eventosAgrupados NO es una Lista, es: ${eventosAgrupados.runtimeType}');
+      }
+      
+      setState(() => _misParticipaciones = eventosAgrupados ?? []);
+      print('🔧 DEBUG - _misParticipaciones después del setState: $_misParticipaciones');
+      print('🔧 DEBUG - _misParticipaciones.length: ${_misParticipaciones.length}');
     } catch (e) {
-      print('Error cargando participaciones: $e');
+      print('🔴 ERROR cargando participaciones: $e');
+      print('🔴 ERROR stackTrace: ${e.toString()}');
     }
   }
 
@@ -272,6 +300,10 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
   Widget _buildEventoCard(Map<String, dynamic> evento) {
     final fecha = DateTime.parse(evento['fecha']);
     final fechaFormateada = '${fecha.day}/${fecha.month}/${fecha.year}';
+    
+    // Verificar si ya estoy participando en este evento
+    final bool yaParticipando = _verificarParticipacionExistente(evento['id']);
+    final List<String> categoriasParticipando = _obtenerCategoriasParticipando(evento['id']);
 
     return Card(
       margin: EdgeInsets.only(bottom: 12),
@@ -429,29 +461,93 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
             
             SizedBox(height: 16),
             
-            // Botón de participar
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => _mostrarDialogoParticipacionEvento(evento),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: WessexColors.leafGreen,
-                  foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+            // Información de participación existente o botón para participar
+            if (yaParticipando) ...[
+              // Mostrar información de participación existente
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: WessexColors.leafGreen.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: WessexColors.leafGreen, width: 1.5),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.add_circle_outline),
-                    SizedBox(width: 8),
-                    Text('Participar en Evento'),
+                    Row(
+                      children: [
+                        Icon(Icons.check_circle, 
+                             color: WessexColors.leafGreen, size: 20),
+                        SizedBox(width: 8),
+                        Text(
+                          '¡Ya estás participando!',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: WessexColors.leafGreen,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Categorías registradas: ${categoriasParticipando.join(", ")}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: WessexColors.darkGrape,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: () => _mostrarDialogoParticipacionEvento(evento),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: WessexColors.leafGreen),
+                          padding: EdgeInsets.symmetric(vertical: 10),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.add, color: WessexColors.leafGreen),
+                            SizedBox(width: 8),
+                            Text(
+                              'Agregar más categorías',
+                              style: TextStyle(color: WessexColors.leafGreen),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
-            ),
+            ] else ...[
+              // Botón normal de participar
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => _mostrarDialogoParticipacionEvento(evento),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: WessexColors.leafGreen,
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.add_circle_outline),
+                      SizedBox(width: 8),
+                      Text('Participar en Evento'),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -462,163 +558,273 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
     final fecha = DateTime.parse(eventoAgrupado['fecha']);
     final fechaFormateada = '${fecha.day}/${fecha.month}/${fecha.year}';
     final participaciones = eventoAgrupado['participaciones'] as List;
-
+    
+    // Determinar el estado del evento basado en la fecha
+    final String estadoEvento = _determinarEstadoEvento(eventoAgrupado);
+    final Map<String, dynamic> estadoInfo = _getEstadoInfo(estadoEvento);
+    
     return Card(
       margin: EdgeInsets.only(bottom: 16),
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header del evento
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    eventoAgrupado['nombre'] ?? 'Evento sin nombre',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: WessexColors.darkGrape,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: estadoInfo['color'] as Color,
+            width: 2,
+          ),
+        ),
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header del evento con estado prominente
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      eventoAgrupado['nombre'] ?? 'Evento sin nombre',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: WessexColors.darkGrape,
+                      ),
                     ),
                   ),
-                ),
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: WessexColors.leafGreen.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: WessexColors.leafGreen, width: 1),
-                  ),
-                  child: Text(
-                    '${eventoAgrupado['totalNinos']} niños',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: WessexColors.leafGreen,
+                  // Indicador de estado del evento
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: (estadoInfo['color'] as Color).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: estadoInfo['color'] as Color, width: 1.5),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          estadoInfo['icon'] as IconData,
+                          size: 16,
+                          color: estadoInfo['color'] as Color,
+                        ),
+                        SizedBox(width: 6),
+                        Text(
+                          estadoInfo['texto'] as String,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: estadoInfo['color'] as Color,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ),
-              ],
-            ),
-            SizedBox(height: 12),
-            Row(
-              children: [
-                Icon(Icons.calendar_today, size: 16, color: WessexColors.midnightNavy),
-                SizedBox(width: 8),
-                Text(
-                  fechaFormateada,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: WessexColors.midnightNavy,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 16),
-            
-            // Lista de participaciones por categoría
-            Text(
-              'Participaciones por categoría:',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: WessexColors.darkGrape,
+                ],
               ),
-            ),
-            SizedBox(height: 8),
-            
-            ...participaciones.map((participacion) => Container(
-              margin: EdgeInsets.only(bottom: 8),
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: WessexColors.lightGray.withOpacity(0.5),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: WessexColors.darkGrape.withOpacity(0.2)),
+              SizedBox(height: 12),
+              
+              // Información del evento
+              Row(
+                children: [
+                  Icon(Icons.calendar_today, size: 16, color: WessexColors.midnightNavy),
+                  SizedBox(width: 8),
+                  Text(
+                    fechaFormateada,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: WessexColors.midnightNavy,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  SizedBox(width: 16),
+                  Icon(Icons.location_on, size: 16, color: WessexColors.midnightNavy),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      eventoAgrupado['lugar'] ?? 'Sin ubicación',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: WessexColors.midnightNavy,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              
+              // Mostrar horas si están disponibles
+              if (eventoAgrupado['horaInicio'] != null || eventoAgrupado['horaFin'] != null) ...[
+                SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.access_time, size: 16, color: WessexColors.midnightNavy),
+                    SizedBox(width: 8),
+                    Text(
+                      _formatearHorarios(eventoAgrupado['horaInicio'], eventoAgrupado['horaFin']),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: WessexColors.midnightNavy,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              
+              SizedBox(height: 16),
+              
+              // Resumen de participación
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: WessexColors.leafGreen.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: WessexColors.leafGreen.withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.groups, size: 20, color: WessexColors.leafGreen),
+                    SizedBox(width: 12),
+                    Text(
+                      'Total registrado: ${eventoAgrupado['totalNinos']} niños',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: WessexColors.leafGreen,
+                      ),
+                    ),
+                    Spacer(),
+                    Text(
+                      '${participaciones.length} categoría${participaciones.length != 1 ? 's' : ''}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: WessexColors.darkGrape,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              SizedBox(height: 16),
+              
+              // Lista detallada de participaciones por categoría
+              Text(
+                'Detalles de participación:',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: WessexColors.darkGrape,
+                ),
+              ),
+              SizedBox(height: 8),
+              
+              ...participaciones.map((participacion) => Container(
+                margin: EdgeInsets.only(bottom: 8),
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: WessexColors.lightGray.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: WessexColors.darkGrape.withOpacity(0.2)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.category, size: 14, color: WessexColors.darkGrape),
-                      SizedBox(width: 8),
-                      Text(
-                        participacion['categoria'].toString().toUpperCase(),
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: WessexColors.darkGrape,
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: WessexColors.darkGrape.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: WessexColors.darkGrape, width: 1),
+                        ),
+                        child: Text(
+                          participacion['categoria'].toString().toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: WessexColors.darkGrape,
+                          ),
                         ),
                       ),
                       Spacer(),
-                      Icon(Icons.group, size: 14, color: WessexColors.leafGreen),
-                      SizedBox(width: 4),
+                      Icon(Icons.groups, size: 16, color: WessexColors.leafGreen),
+                      SizedBox(width: 6),
                       Text(
                         '${participacion['cantidadNinos']} niños',
                         style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
                           color: WessexColors.leafGreen,
                         ),
                       ),
                     ],
                   ),
                   if (participacion['listaInvitados'] != null && participacion['listaInvitados'].toString().isNotEmpty) ...[
-                    SizedBox(height: 6),
-                    Row(
-                      children: [
-                        Icon(Icons.people_outline, size: 14, color: WessexColors.midnightNavy),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Invitados: ${participacion['listaInvitados']}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: WessexColors.midnightNavy.withOpacity(0.8),
+                    SizedBox(height: 8),
+                    Container(
+                      padding: EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: WessexColors.midnightNavy.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.people_outline, size: 14, color: WessexColors.midnightNavy),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Invitados: ${participacion['listaInvitados']}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: WessexColors.midnightNavy.withOpacity(0.8),
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ],
                 ],
               ),
             )).toList(),
             
-            SizedBox(height: 12),
+            SizedBox(height: 16),
             
-            // Botón para agregar más categorías
-            if (eventoAgrupado['estado'] == 'activo') ...[
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: () => _mostrarDialogoAgregarCategoria(eventoAgrupado),
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: WessexColors.darkGrape),
-                    padding: EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+            // Mensaje informativo basado en el estado
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: (estadoInfo['color'] as Color).withOpacity(0.05),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: (estadoInfo['color'] as Color).withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    estadoInfo['icon'] as IconData,
+                    size: 18,
+                    color: estadoInfo['color'] as Color,
+                  ),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      estadoInfo['mensaje'] as String,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: (estadoInfo['color'] as Color),
+                      ),
                     ),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.add, color: WessexColors.darkGrape),
-                      SizedBox(width: 8),
-                      Text(
-                        'Agregar otra categoría',
-                        style: TextStyle(color: WessexColors.darkGrape),
-                      ),
-                    ],
-                  ),
-                ),
+                ],
               ),
+            ),
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -854,135 +1060,6 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
     );
   }
 
-  void _mostrarDialogoAgregarCategoria(Map<String, dynamic> eventoAgrupado) async {
-    try {
-      // Obtener categorías disponibles del backend
-      final response = await ApiService.obtenerCategoriasRegistradas(eventoAgrupado['id']);
-      final categoriasDisponibles = response['categoriasDisponibles'] as List<dynamic>;
-      
-      if (categoriasDisponibles.isEmpty) {
-        _mostrarError('Ya tienes participaciones registradas en todas las categorías para este evento');
-        return;
-      }
-
-      final cantidadController = TextEditingController();
-      final invitadosController = TextEditingController();
-      String categoriaSeleccionada = categoriasDisponibles.first.toString();
-
-      showDialog(
-        context: context,
-        builder: (context) => StatefulBuilder(
-          builder: (context, setState) => Dialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            child: Container(
-              width: 500,
-              padding: EdgeInsets.all(24),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Agregar Categoría',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: WessexColors.darkGrape,
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      eventoAgrupado['nombre'] ?? 'Sin nombre',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: WessexColors.midnightNavy,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    SizedBox(height: 24),
-                    
-                    // Cantidad de niños
-                    TextFormField(
-                      controller: cantidadController,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        labelText: 'Cantidad de Niños Participantes',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        prefixIcon: Icon(Icons.group),
-                        hintText: 'Ej: 15',
-                      ),
-                    ),
-                    SizedBox(height: 16),
-                    
-                    // Categoría (solo categorías disponibles)
-                    DropdownButtonFormField<String>(
-                      value: categoriaSeleccionada,
-                      onChanged: (value) {
-                        setState(() {
-                          categoriaSeleccionada = value!;
-                        });
-                      },
-                      decoration: InputDecoration(
-                        labelText: 'Categoría Disponible',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        prefixIcon: Icon(Icons.category),
-                      ),
-                      items: categoriasDisponibles.map((categoria) => DropdownMenuItem<String>(
-                        value: categoria.toString(),
-                        child: Text(categoria.toString().toUpperCase()),
-                      )).toList(),
-                    ),
-                    SizedBox(height: 16),
-                    
-                    // Lista de invitados (opcional)
-                    TextFormField(
-                      controller: invitadosController,
-                      decoration: InputDecoration(
-                        labelText: 'Lista de Invitados (Opcional)',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        prefixIcon: Icon(Icons.people_outline),
-                        hintText: 'Nombres separados por comas',
-                      ),
-                      maxLines: 3,
-                    ),
-                    SizedBox(height: 24),
-                    
-                    // Botones
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: Text('Cancelar'),
-                        ),
-                        SizedBox(width: 16),
-                        ElevatedButton(
-                          onPressed: () => _participarEnEvento(
-                            eventoAgrupado['id'],
-                            cantidadController.text,
-                            categoriaSeleccionada,
-                            invitadosController.text,
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: WessexColors.leafGreen,
-                            foregroundColor: Colors.white,
-                            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                          ),
-                          child: Text('Agregar Participación'),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-    } catch (e) {
-      _mostrarError('Error al cargar categorías disponibles: $e');
-    }
-  }
 
   Widget _buildDetalleEventoDialog(Map<String, dynamic> evento) {
     return Column(
@@ -1147,47 +1224,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
     }
   }
 
-  Future<void> _participarEnEvento(int eventoId, String cantidad, String categoria, String invitados) async {
-    if (cantidad.trim().isEmpty) {
-      _mostrarError('La cantidad de niños es obligatoria');
-      return;
-    }
 
-    final cantidadNinos = int.tryParse(cantidad);
-    if (cantidadNinos == null || cantidadNinos <= 0) {
-      _mostrarError('Ingrese una cantidad válida de niños');
-      return;
-    }
-
-    try {
-      final datos = {
-        'eventoId': eventoId,
-        'cantidadNinos': cantidadNinos,
-        'categoria': categoria,
-        'listaInvitados': invitados.trim().isEmpty ? null : invitados.trim(),
-      };
-
-      await ApiService.participarEnEvento(datos);
-      
-      Navigator.pop(context);
-      
-      // Recargar tanto eventos disponibles como participaciones
-      await Future.wait([
-        _cargarEventos(),
-        _cargarMisParticipaciones(),
-      ]);
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Participación registrada exitosamente en categoría ${categoria.toUpperCase()}'),
-          backgroundColor: WessexColors.leafGreen,
-        ),
-      );
-    } catch (e) {
-      Navigator.pop(context);
-      _mostrarError('Error al registrar participación: $e');
-    }
-  }
 
   String _formatearHorarios(String? horaInicio, String? horaFin) {
     if (horaInicio == null && horaFin == null) {
@@ -1229,5 +1266,89 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
         ],
       ),
     );
+  }
+
+  // Determinar el estado del evento basado en fecha y hora
+  String _determinarEstadoEvento(Map<String, dynamic> evento) {
+    try {
+      final fechaEvento = DateTime.parse(evento['fecha']);
+      final ahora = DateTime.now();
+      
+      // Si hay fecha de fin, usar esa para determinar si ya terminó
+      DateTime? fechaFin;
+      if (evento['fechaFin'] != null) {
+        fechaFin = DateTime.parse(evento['fechaFin']);
+      }
+      
+      // Si ya pasó la fecha de fin o la fecha del evento, está "participado"
+      if (fechaFin != null && ahora.isAfter(fechaFin)) {
+        return 'participado';
+      } else if (fechaFin == null && ahora.isAfter(fechaEvento)) {
+        return 'participado';
+      }
+      
+      // Si es el día del evento o está en progreso, está "participando"
+      if (ahora.year == fechaEvento.year && 
+          ahora.month == fechaEvento.month && 
+          ahora.day == fechaEvento.day) {
+        return 'participando';
+      }
+      
+      // Si es en el futuro, está "confirmado"
+      if (ahora.isBefore(fechaEvento)) {
+        return 'confirmado';
+      }
+      
+      return 'participando'; // Fallback
+    } catch (e) {
+      return 'confirmado'; // Fallback en caso de error
+    }
+  }
+  
+  // Obtener información visual del estado
+  Map<String, dynamic> _getEstadoInfo(String estado) {
+    switch (estado) {
+      case 'participado':
+        return {
+          'texto': 'PARTICIPADO',
+          'color': WessexColors.midnightNavy,
+          'icon': Icons.check_circle,
+          'mensaje': 'Ya participaste en este evento. ¡Gracias por tu participación!',
+        };
+      case 'participando':
+        return {
+          'texto': 'PARTICIPANDO',
+          'color': WessexColors.leafGreen,
+          'icon': Icons.sports,
+          'mensaje': '¡Estás participando! El evento está en curso o es hoy.',
+        };
+      case 'confirmado':
+      default:
+        return {
+          'texto': 'CONFIRMADO',
+          'color': WessexColors.darkGrape,
+          'icon': Icons.calendar_today,
+          'mensaje': 'Tu participación está confirmada para este evento futuro.',
+        };
+    }
+  }
+
+  // Verificar si ya hay participación en un evento específico
+  bool _verificarParticipacionExistente(dynamic eventoId) {
+    return _misParticipaciones.any((participacion) => 
+        participacion['id'].toString() == eventoId.toString());
+  }
+
+  // Obtener las categorías en las que ya estoy participando para un evento
+  List<String> _obtenerCategoriasParticipando(dynamic eventoId) {
+    final participacion = _misParticipaciones.firstWhere(
+      (p) => p['id'].toString() == eventoId.toString(),
+      orElse: () => null,
+    );
+    
+    if (participacion == null) return [];
+    
+    final participaciones = participacion['participaciones'] as List? ?? [];
+    return participaciones.map((p) => p['categoria'].toString()).toList();
   }
 }

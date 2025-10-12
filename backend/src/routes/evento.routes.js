@@ -31,8 +31,11 @@ router
 router
   .get("/disponibles", authenticateJWT, isRamaExterna, obtenerEventosDisponibles)
   .post("/participar", authenticateJWT, isRamaExterna, participarEnEvento)
-  .get("/mis-participaciones", authenticateJWT, isRamaExterna, obtenerMisParticipacionesEvento)
   .get("/:eventoId/categorias-registradas", authenticateJWT, isRamaExterna, obtenerCategoriasRegistradas);
+
+// Rutas compartidas entre Directiva y RamaExterna
+router
+  .get("/mis-participaciones", authenticateJWT, isAuthenticated, obtenerMisParticipacionesEvento);
 
 // Rutas generales (todos los roles autenticados)
 router
