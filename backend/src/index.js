@@ -38,6 +38,12 @@ async function setupServer() {
       limit: "1mb",
     }));
 
+    // Configurar charset UTF-8 para evitar problemas con acentos
+    app.use((req, res, next) => {
+      res.set('Content-Type', 'application/json; charset=utf-8');
+      next();
+    });
+
     app.use(cookieParser());
     app.use(morgan("dev"));
 

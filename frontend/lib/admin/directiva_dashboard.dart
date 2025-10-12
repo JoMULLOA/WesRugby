@@ -7,6 +7,7 @@ import 'registro_datos_screen.dart';
 import 'gestion_usuarios_screen.dart';
 import 'base_datos_screen.dart';
 import 'gestion_eventos_screen.dart';
+import 'tipos_evento/admin_tipos_evento_screen.dart';
 
 class DirectivaDashboard extends StatelessWidget {
   const DirectivaDashboard({super.key});
@@ -222,6 +223,37 @@ class DirectivaDashboard extends StatelessWidget {
                         Icons.event,
                         WessexColors.deepRoyalBlue,
                         () => Navigator.push(context, MaterialPageRoute(builder: (context) => GestionEventosScreen())),
+                        isDesktop: isDesktop,
+                        isTablet: isTablet,
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 12),
+                
+                // Fila para tipos de evento y otras configuraciones
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildActionCard(
+                        'Tipos de Evento',
+                        'Administrar tipos de eventos deportivos/no deportivos',
+                        Icons.category,
+                        WessexColors.leafGreen,
+                        () => Navigator.push(context, MaterialPageRoute(builder: (context) => AdminTiposEventoScreen())),
+                        isDesktop: isDesktop,
+                        isTablet: isTablet,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildActionCard(
+                        'Configuración',
+                        'Ajustes generales del sistema',
+                        Icons.settings,
+                        WessexColors.darkGrape,
+                        () => _showComingSoon(context, 'Configuración del Sistema'),
                         isDesktop: isDesktop,
                         isTablet: isTablet,
                       ),

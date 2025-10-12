@@ -1,7 +1,9 @@
 "use strict";
 import EventoDeportivo from "../entity/eventoDeportivo.entity.js";
+import TipoEvento from "../entity/tipoEvento.entity.js";
 import User from "../entity/user.entity.js";
 import { AppDataSource } from "../config/configDb.js";
+import { In } from "typeorm";
 import {
   handleErrorClient,
   handleErrorServer,
@@ -9,6 +11,7 @@ import {
 } from "../handlers/responseHandlers.js";
 
 const eventoRepository = AppDataSource.getRepository(EventoDeportivo);
+const tipoEventoRepository = AppDataSource.getRepository(TipoEvento);
 const userRepository = AppDataSource.getRepository(User);
 
 // Crear evento deportivo (Entrenador, Directiva)
@@ -24,7 +27,7 @@ export async function crearEventoDeportivo(req, res) {
     const {
       titulo,
       descripcion,
-      tipoEvento,
+      tipoEventoId,
       categoria,
       fechaInicio,
       fechaFin,
@@ -41,8 +44,20 @@ export async function crearEventoDeportivo(req, res) {
       estado = "programado"
     } = req.body;
 
+    // Validar que el tipo de evento existe
+    if (tipoEventoId) {
+      const tipoEvento = await tipoEventoRepository.findOne({
+        where: { id: tipoEventoId, activo: true }
+      });
+
+      if (!tipoEvento) {
+        return handleErrorClient(res, 400, "Tipo de evento inválido", 
+          "El tipo de evento especificado no existe o no está activo");
+      }
+    }
+
     // Validaciones básicas
-    if (new Date(fechaInicio) > new Date(fechaFin)) {
+    if (fechaFin && new Date(fechaInicio) > new Date(fechaFin)) {
       return handleErrorClient(res, 400, "Fecha inválida", 
         "La fecha de inicio no puede ser posterior a la fecha de fin");
     }
@@ -54,10 +69,26 @@ export async function crearEventoDeportivo(req, res) {
       }
     }
 
+    // Validación para prevenir eventos duplicados
+    const eventoExistente = await eventoRepository.findOne({
+      where: {
+        titulo,
+        fechaInicio,
+        lugar,
+        tipoEventoId,
+        estado: In(["programado", "confirmado", "en_curso"])
+      }
+    });
+
+    if (eventoExistente) {
+      return handleErrorClient(res, 400, "Evento duplicado", 
+        "Ya existe un evento con el mismo título, fecha, lugar y tipo. Por favor, modifica alguno de estos campos.");
+    }
+
     const nuevoEvento = eventoRepository.create({
       titulo,
       descripcion,
-      tipoEvento,
+      tipoEventoId,
       categoria,
       fechaInicio,
       fechaFin,
@@ -79,7 +110,7 @@ export async function crearEventoDeportivo(req, res) {
 
     const eventoCompleto = await eventoRepository.findOne({
       where: { id: eventoGuardado.id },
-      relations: ["organizadoPor"]
+      relations: ["organizadoPor", "tipoEvento"]
     });
 
     handleSuccess(res, 201, "Evento deportivo creado exitosamente", eventoCompleto);
@@ -94,7 +125,7 @@ export async function crearEventoDeportivo(req, res) {
 export async function obtenerEventosDeportivos(req, res) {
   try {
     const {
-      tipoEvento,
+      tipoEventoId,
       categoria,
       estado,
       fechaInicio,
@@ -107,8 +138,8 @@ export async function obtenerEventosDeportivos(req, res) {
     let whereCondition = {};
 
     // Aplicar filtros
-    if (tipoEvento) {
-      whereCondition.tipoEvento = tipoEvento;
+    if (tipoEventoId) {
+      whereCondition.tipoEventoId = tipoEventoId;
     }
 
     if (categoria) {
@@ -137,7 +168,7 @@ export async function obtenerEventosDeportivos(req, res) {
 
     const [eventos, total] = await eventoRepository.findAndCount({
       where: whereCondition,
-      relations: ["organizadoPor"],
+      relations: ["organizadoPor", "tipoEvento"],
       order: { fechaInicio: "ASC" },
       take: parseInt(limite),
       skip: skip
@@ -208,20 +239,25 @@ export async function actualizarEventoDeportivo(req, res) {
       return handleErrorClient(res, 404, "Evento deportivo no encontrado");
     }
 
-    // Verificar si el evento ya finalizó
-    const ahora = new Date();
-    const fechaFinEvento = new Date(`${evento.fechaFin}T${evento.horaFin || '23:59'}`);
-    
-    if (fechaFinEvento < ahora && evento.estado === "finalizado") {
-      return handleErrorClient(res, 400, "Evento finalizado", 
-        "No se puede modificar un evento que ya finalizó");
+    // Verificar si el evento ya finalizó (solo si tiene fecha de fin)
+    if (evento.fechaFin && evento.estado === "finalizado") {
+      const ahora = new Date();
+      const fechaFinEvento = new Date(`${evento.fechaFin}T${evento.horaFin || '23:59'}`);
+      
+      if (fechaFinEvento < ahora) {
+        return handleErrorClient(res, 400, "Evento finalizado", 
+          "No se puede modificar un evento que ya finalizó");
+      }
     }
 
     const datosActualizacion = req.body;
 
     // Validar fechas si se actualizan
-    if (datosActualizacion.fechaInicio && datosActualizacion.fechaFin) {
-      if (new Date(datosActualizacion.fechaInicio) > new Date(datosActualizacion.fechaFin)) {
+    const fechaInicioActualizada = datosActualizacion.fechaInicio || evento.fechaInicio;
+    const fechaFinActualizada = datosActualizacion.fechaFin || evento.fechaFin;
+    
+    if (fechaInicioActualizada && fechaFinActualizada) {
+      if (new Date(fechaInicioActualizada) > new Date(fechaFinActualizada)) {
         return handleErrorClient(res, 400, "Fecha inválida", 
           "La fecha de inicio no puede ser posterior a la fecha de fin");
       }
@@ -229,7 +265,7 @@ export async function actualizarEventoDeportivo(req, res) {
 
     // Campos permitidos para actualización
     const camposPermitidos = [
-      'titulo', 'descripcion', 'tipoEvento', 'categoria', 'fechaInicio', 'fechaFin',
+      'titulo', 'descripcion', 'tipoEventoId', 'categoria', 'fechaInicio', 'fechaFin',
       'horaInicio', 'horaFin', 'lugar', 'equipoLocal', 'equipoVisitante',
       'requiereInscripcion', 'cupoMaximo', 'fechaLimiteInscripcion', 'costo',
       'observaciones', 'estado', 'resultadoLocal', 'resultadoVisitante'
@@ -247,7 +283,7 @@ export async function actualizarEventoDeportivo(req, res) {
 
     const eventoCompleto = await eventoRepository.findOne({
       where: { id: eventoActualizado.id },
-      relations: ["creadoPor"]
+      relations: ["organizadoPor", "tipoEvento"]
     });
 
     handleSuccess(res, 200, "Evento deportivo actualizado exitosamente", eventoCompleto);

@@ -347,6 +347,26 @@ class ApiService {
     }
   }
 
+  // Eliminar evento deportivo (solo directiva)
+  static Future<Map<String, dynamic>> eliminarEventoDeportivo(String eventoId) async {
+    final response = await delete('/eventos-deportivos/$eventoId');
+    if (response.success) {
+      return response.data;
+    } else {
+      throw Exception(response.message ?? 'Error al eliminar evento deportivo');
+    }
+  }
+
+  // Actualizar evento deportivo (solo directiva/entrenador)
+  static Future<Map<String, dynamic>> actualizarEventoDeportivo(String eventoId, Map<String, dynamic> eventoData) async {
+    final response = await put('/eventos-deportivos/$eventoId', eventoData);
+    if (response.success) {
+      return response.data;
+    } else {
+      throw Exception(response.message ?? 'Error al actualizar evento deportivo');
+    }
+  }
+
   // Obtener eventos deportivos (solo directiva/entrenador)
   static Future<Map<String, dynamic>> obtenerEventosDeportivos() async {
     final response = await get('/eventos-deportivos');
@@ -449,6 +469,82 @@ class ApiService {
       return response.data;
     } else {
       throw Exception(response.message ?? 'Error al obtener participaciones del evento');
+    }
+  }
+
+  // ===== GESTIÓN DE TIPOS DE EVENTO =====
+
+  // Obtener tipos de evento activos (todos los roles)
+  static Future<List<Map<String, dynamic>>> obtenerTiposEvento() async {
+    final response = await get('/tipos-evento');
+    if (response.success) {
+      // El backend devuelve {success: true, message: "...", data: [...]}
+      return List<Map<String, dynamic>>.from(response.data['data']);
+    } else {
+      throw Exception(response.message ?? 'Error al obtener tipos de evento');
+    }
+  }
+
+  // Obtener todos los tipos de evento incluyendo inactivos (solo directiva)
+  static Future<List<Map<String, dynamic>>> obtenerTodosTiposEvento() async {
+    final response = await get('/tipos-evento/todos');
+    if (response.success) {
+      // El backend devuelve {success: true, message: "...", data: [...]}
+      return List<Map<String, dynamic>>.from(response.data['data']);
+    } else {
+      throw Exception(response.message ?? 'Error al obtener todos los tipos de evento');
+    }
+  }
+
+  // Crear tipo de evento (solo directiva)
+  static Future<Map<String, dynamic>> crearTipoEvento(String nombre, bool esDeportivo) async {
+    final response = await post('/tipos-evento', {
+      'nombre': nombre,
+      'esDeportivo': esDeportivo,
+    });
+    if (response.success) {
+      return response.data;
+    } else {
+      throw Exception(response.message ?? 'Error al crear tipo de evento');
+    }
+  }
+
+  // Actualizar tipo de evento (solo directiva)
+  static Future<Map<String, dynamic>> actualizarTipoEvento(
+    String id,
+    String nombre,
+    bool esDeportivo,
+    bool activo,
+  ) async {
+    final response = await put('/tipos-evento/$id', {
+      'nombre': nombre,
+      'esDeportivo': esDeportivo,
+      'activo': activo,
+    });
+    if (response.success) {
+      return response.data;
+    } else {
+      throw Exception(response.message ?? 'Error al actualizar tipo de evento');
+    }
+  }
+
+  // Eliminar (desactivar) tipo de evento (solo directiva)
+  static Future<Map<String, dynamic>> eliminarTipoEvento(String id) async {
+    final response = await delete('/tipos-evento/$id');
+    if (response.success) {
+      return response.data;
+    } else {
+      throw Exception(response.message ?? 'Error al eliminar tipo de evento');
+    }
+  }
+
+  // Reactivar tipo de evento (solo directiva)
+  static Future<Map<String, dynamic>> reactivarTipoEvento(String id) async {
+    final response = await patch('/tipos-evento/$id/reactivar', {});
+    if (response.success) {
+      return response.data;
+    } else {
+      throw Exception(response.message ?? 'Error al reactivar tipo de evento');
     }
   }
 }

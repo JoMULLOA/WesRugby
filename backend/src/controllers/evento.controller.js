@@ -25,6 +25,24 @@ export async function crearEvento(req, res) {
 
     const eventoRepository = AppDataSource.getRepository(Evento);
 
+    // Validación para prevenir eventos duplicados
+    const eventoExistente = await eventoRepository.findOne({
+      where: {
+        nombre,
+        fecha: new Date(fecha),
+        estado: "activo"
+      }
+    });
+
+    if (eventoExistente) {
+      return handleErrorClient(
+        res,
+        400,
+        "Evento duplicado",
+        "Ya existe un evento activo con el mismo nombre y fecha. Por favor, modifica alguno de estos campos."
+      );
+    }
+
     const nuevoEvento = eventoRepository.create({
       nombre,
       fecha: new Date(fecha),
@@ -81,11 +99,11 @@ export async function obtenerEventosDisponibles(req, res) {
     const EventoDeportivo = (await import("../entity/eventoDeportivo.entity.js")).default;
     const eventoDeportivoRepository = dataSource.getRepository(EventoDeportivo);
 
-    // Obtener eventos regulares
-    const eventosRegulares = await eventoRepository.find({
-      where: { estado: "activo" },
-      order: { fecha: "ASC" },
-    });
+    const fechaActual = new Date();
+
+    // Los eventos regulares (como reuniones de directiva) NO están disponibles para participación de rama externa
+    // Solo los eventos deportivos pueden tener participación de ramas externas
+    const eventosRegularesActivos = [];
 
     // Obtener eventos deportivos activos y convertirlos al formato esperado
     const eventosDeportivos = await eventoDeportivoRepository.find({
@@ -94,27 +112,32 @@ export async function obtenerEventosDisponibles(req, res) {
       order: { fechaInicio: "ASC" },
     });
 
-    // Convertir eventos deportivos al formato de eventos regulares
-    const eventosDeportivosFormateados = eventosDeportivos.map(eventoDeportivo => ({
-      id: eventoDeportivo.id,
-      nombre: eventoDeportivo.titulo,
-      fecha: eventoDeportivo.fechaInicio,
-      fechaFin: eventoDeportivo.fechaFin,
-      horaInicio: eventoDeportivo.horaInicio,
-      horaFin: eventoDeportivo.horaFin,
-      descripcion: eventoDeportivo.descripcion,
-      estado: "activo",
-      lugar: eventoDeportivo.lugar,
-      categoria: eventoDeportivo.categoria,
-      tipoEvento: eventoDeportivo.tipoEvento,
-      // Marcar como evento deportivo para distinguirlo
-      esEventoDeportivo: true,
-      createdAt: eventoDeportivo.createdAt,
-      updatedAt: eventoDeportivo.updatedAt
-    }));
+    // Filtrar y convertir eventos deportivos que no hayan pasado
+    const eventosDeportivosFormateados = eventosDeportivos
+      .filter(eventoDeportivo => {
+        const fechaEvento = new Date(eventoDeportivo.fechaInicio);
+        return fechaEvento >= fechaActual;
+      })
+      .map(eventoDeportivo => ({
+        id: eventoDeportivo.id,
+        nombre: eventoDeportivo.titulo,
+        fecha: eventoDeportivo.fechaInicio,
+        fechaFin: eventoDeportivo.fechaFin,
+        horaInicio: eventoDeportivo.horaInicio,
+        horaFin: eventoDeportivo.horaFin,
+        descripcion: eventoDeportivo.descripcion,
+        estado: "activo",
+        lugar: eventoDeportivo.lugar,
+        categoria: eventoDeportivo.categoria,
+        tipoEvento: eventoDeportivo.tipoEvento,
+        // Marcar como evento deportivo para distinguirlo
+        esEventoDeportivo: true,
+        createdAt: eventoDeportivo.createdAt,
+        updatedAt: eventoDeportivo.updatedAt
+      }));
 
-    // Combinar ambos tipos de eventos
-    const todosLosEventos = [...eventosRegulares, ...eventosDeportivosFormateados];
+    // Combinar ambos tipos de eventos (solo los que no han pasado)
+    const todosLosEventos = [...eventosRegularesActivos, ...eventosDeportivosFormateados];
     
     // Ordenar por fecha
     todosLosEventos.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));

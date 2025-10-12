@@ -16,6 +16,34 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
   bool _isLoading = false;
   String _nombreUsuario = 'Usuario RamaExterna';
 
+  // Función para convertir hora UTC a hora de Chile (UTC-3)
+  String _convertirUTCaChile(String horaUTC) {
+    if (horaUTC.isEmpty) return horaUTC;
+    
+    try {
+      // Parsear la hora en formato HH:mm
+      final partes = horaUTC.split(':');
+      if (partes.length != 2) return horaUTC;
+      
+      int horas = int.parse(partes[0]);
+      int minutos = int.parse(partes[1]);
+      
+      // Restar 3 horas para convertir de UTC a Chile (UTC-3)
+      horas -= 3;
+      
+      // Manejar el caso donde las horas se vuelven negativas
+      if (horas < 0) {
+        horas += 24;
+      }
+      
+      // Formatear de vuelta a HH:mm
+      return '${horas.toString().padLeft(2, '0')}:${minutos.toString().padLeft(2, '0')}';
+    } catch (e) {
+      // Si hay error en el parseo, devolver la hora original
+      return horaUTC;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -1251,15 +1279,17 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
       return 'Hora no especificada';
     }
     
-    if (horaInicio != null && horaFin != null) {
-      return '$horaInicio - $horaFin';
-    }
-    
+    // Priorizar mostrar solo la hora de inicio convertida a hora de Chile
     if (horaInicio != null) {
-      return 'Inicio: $horaInicio';
+      return _convertirUTCaChile(horaInicio);
     }
     
-    return 'Fin: $horaFin';
+    // Fallback para horaFin (aunque ya no debería usarse)
+    if (horaFin != null) {
+      return _convertirUTCaChile(horaFin);
+    }
+    
+    return 'Hora no especificada';
   }
 
   void _cerrarSesion() {

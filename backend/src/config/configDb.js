@@ -13,6 +13,9 @@ export const AppDataSource = new DataSource({
   synchronize: true, // Activado para crear las tablas automáticamente
   dropSchema: true, // No eliminar el esquema para conservar los datos
   logging: false,
+  extra: {
+    charset: 'utf8mb4',
+  },
 });
 
 export async function connectDB() {

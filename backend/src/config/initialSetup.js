@@ -2,6 +2,7 @@
 import { AppDataSource } from "./configDb.js";
 import { encryptPassword } from "../helpers/bcrypt.helper.js";
 import User from "../entity/user.entity.js";
+import TipoEvento from "../entity/tipoEvento.entity.js";
 
 
 //Los ruts estan hasta un maximo de 29.999.999-9, por lo que no se pueden crear usuarios con ruts mayores a ese valor, se creara, 
@@ -75,6 +76,41 @@ async function createInitialData() {
 
     } else {
       console.log("Usuarios del sistema ya existen, cargando referencias...");
+    }
+
+
+
+    // Crear Tipos de Evento por defecto
+    const tipoEventoRepository = AppDataSource.getRepository(TipoEvento);
+    const tipoEventoCount = await tipoEventoRepository.count();
+
+    if (tipoEventoCount === 0) {
+      const tiposEventoDefecto = [
+        { nombre: "Entrenamiento", esDeportivo: true },
+        { nombre: "Partido", esDeportivo: true },
+        { nombre: "Torneo", esDeportivo: true },
+        { nombre: "Reunión", esDeportivo: false },
+        { nombre: "Evento Social", esDeportivo: false },
+        { nombre: "Viaje", esDeportivo: false },
+        { nombre: "Otro", esDeportivo: false }
+      ];
+
+      const tiposCreados = tiposEventoDefecto.map(tipo => 
+        tipoEventoRepository.create({
+          nombre: tipo.nombre,
+          esDeportivo: tipo.esDeportivo,
+          activo: true
+        })
+      );
+
+      await tipoEventoRepository.save(tiposCreados);
+      
+      console.log("✅ Tipos de evento creados exitosamente:");
+      tiposEventoDefecto.forEach(tipo => {
+        console.log(`   - ${tipo.nombre} (${tipo.esDeportivo ? 'Deportivo' : 'No deportivo'})`);
+      });
+    } else {
+      console.log("Tipos de evento ya existen...");
     }
 
   } catch (error) {

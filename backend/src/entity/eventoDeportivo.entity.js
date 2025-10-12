@@ -22,11 +22,10 @@ const EventoDeportivoSchema = new EntitySchema({
       nullable: true,
       comment: "Descripción detallada del evento",
     },
-    tipoEvento: {
-      type: "enum",
-      enum: ["entrenamiento", "partido", "torneo", "reunion", "evento_social", "viaje", "otro"],
+    tipoEventoId: {
+      type: "uuid",
       nullable: false,
-      comment: "Tipo de evento",
+      comment: "ID del tipo de evento",
     },
     categoria: {
       type: "varchar",
@@ -209,6 +208,11 @@ const EventoDeportivoSchema = new EntitySchema({
       joinColumn: { name: "responsableEquipamiento", referencedColumnName: "rut" },
       nullable: true,
     },
+    tipoEvento: {
+      type: "many-to-one",
+      target: "TipoEvento",
+      joinColumn: { name: "tipoEventoId" },
+    },
     asistencias: {
       type: "one-to-many",
       target: "Asistencia",
@@ -222,7 +226,7 @@ const EventoDeportivoSchema = new EntitySchema({
     },
     {
       name: "IDX_EVENTO_TIPO",
-      columns: ["tipoEvento"],
+      columns: ["tipoEventoId"],
     },
     {
       name: "IDX_EVENTO_CATEGORIA",
