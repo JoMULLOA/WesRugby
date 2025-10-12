@@ -230,19 +230,47 @@ export async function obtenerPromedioGlobal(req, res) {
 
 export async function deleteUser(req, res) {
   try {
+    console.log('🗑️ DeleteUser (VIEJO) - Params:', req.params);
+    console.log('🗑️ DeleteUser (VIEJO) - Query:', req.query);
+    
     // Obtener rut del parámetro de la URL o del query
     const rutFromParams = req.params.rut;
     const { rut: rutFromQuery, email } = req.query;
     
     const rut = rutFromParams || rutFromQuery;
+    console.log('🗑️ DeleteUser (VIEJO) - RUT final:', rut);
 
+    if (!rut && !email) {
+      return handleErrorClient(res, 400, "Debe proporcionar RUT o email del usuario a eliminar");
+    }
+
+    // Buscar el usuario a eliminar
+    const userToDelete = await userRepository.findOne({
+      where: [{ rut: rut }, { email: email }]
+    });
+
+    if (!userToDelete) {
+      return handleErrorClient(res, 404, "Usuario no encontrado");
+    }
+
+    // Protección especial: si el usuario a eliminar es directiva
+    if (userToDelete.rol === 'directiva') {
+      // Contar cuántas directivas hay en total
+      const directivasCount = await userRepository.count({ where: { rol: 'directiva' } });
+      
+      if (directivasCount <= 1) {
+        return handleErrorClient(res, 400, "No puedes eliminar este usuario porque debe existir al menos un usuario con rol de directiva en el sistema");
+      }
+    }
+
+    // Proceder con la eliminación usando el servicio existente
     const { error } = userQueryValidation.validate({ rut, email });
-
     if (error) return handleErrorClient(res, 400, error.message);
 
     const [user, errorUser] = await deleteUserService({ rut, email });
-
     if (errorUser) return handleErrorClient(res, 404, errorUser);
+
+    console.log(`✅ Usuario eliminado por directiva ${req.user.rut}: ${userToDelete.email} con rol ${userToDelete.rol}`);
 
     handleSuccess(res, 200, "Usuario y todas sus relaciones eliminadas exitosamente", user);
   } catch (error) {
@@ -532,6 +560,122 @@ export async function createUserByDirectiva(req, res) {
 
   } catch (error) {
     console.error("Error al crear usuario:", error);
+    handleErrorServer(res, 500, "Error interno del servidor");
+  }
+}
+
+// Nueva función para actualizar usuarios desde el dashboard de directiva
+export async function updateUserByDirectiva(req, res) {
+  try {
+    const { rut, nombreCompleto, email, rol } = req.body;
+
+    console.log('🔧 UpdateUserByDirectiva - Body received:', req.body);
+    console.log('🔧 UpdateUserByDirectiva - User making request:', req.user.rut);
+
+    // Validaciones básicas
+    if (!rut) {
+      return handleErrorClient(res, 400, "El RUT es requerido para actualizar el usuario");
+    }
+
+    if (!nombreCompleto || !email || !rol) {
+      return handleErrorClient(res, 400, "Todos los campos son requeridos: nombreCompleto, email, rol");
+    }
+
+    // Validar que el rol sea válido
+    if (!['directiva', 'tesorera', 'entrenador', 'apoderado'].includes(rol)) {
+      return handleErrorClient(res, 400, "Rol inválido. Debe ser 'directiva', 'tesorera', 'entrenador' o 'apoderado'");
+    }
+
+    // Buscar el usuario a actualizar
+    const usuario = await userRepository.findOne({ where: { rut } });
+    if (!usuario) {
+      return handleErrorClient(res, 404, "Usuario no encontrado");
+    }
+
+    // Protección especial: si el usuario actual es directiva y se quiere cambiar su rol
+    if (usuario.rol === 'directiva' && rol !== 'directiva') {
+      // Contar cuántas directivas hay en total
+      const directivasCount = await userRepository.count({ where: { rol: 'directiva' } });
+      
+      if (directivasCount <= 1) {
+        return handleErrorClient(res, 400, "No puedes cambiar este rol porque debe existir al menos un usuario con rol de directiva en el sistema");
+      }
+    }
+
+    // Verificar que el email no esté siendo usado por otro usuario
+    const existingUserByEmail = await userRepository.findOne({ 
+      where: { email: email.trim().toLowerCase() } 
+    });
+    if (existingUserByEmail && existingUserByEmail.rut !== rut) {
+      return handleErrorClient(res, 400, "Ya existe otro usuario con este email");
+    }
+
+    // Actualizar el usuario
+    usuario.nombreCompleto = nombreCompleto.trim();
+    usuario.email = email.trim().toLowerCase();
+    usuario.rol = rol;
+    usuario.updatedAt = new Date();
+
+    const updatedUser = await userRepository.save(usuario);
+
+    // Remover password del response
+    const { password: _, ...userResponse } = updatedUser;
+
+    console.log(`✅ Usuario actualizado por directiva ${req.user.rut}: ${updatedUser.email} con rol ${updatedUser.rol}`);
+
+    handleSuccess(res, 200, "Usuario actualizado exitosamente", userResponse);
+
+  } catch (error) {
+    console.error("Error al actualizar usuario:", error);
+    handleErrorServer(res, 500, "Error interno del servidor");
+  }
+}
+
+// Función para eliminar usuario (solo para directiva) con protección
+export const deleteUserByDirectiva = async (req, res) => {
+  try {
+    console.log('🗑️ DeleteUserByDirectiva - RUT a eliminar:', req.params.rut);
+    
+    const { rut } = req.params;
+
+    if (!rut) {
+      return handleErrorClient(res, 400, "RUT es requerido");
+    }
+
+    // Buscar el usuario a eliminar
+    const usuario = await userRepository.findOne({
+      where: { rut: rut.trim() },
+    });
+
+    if (!usuario) {
+      return handleErrorClient(res, 404, "Usuario no encontrado");
+    }
+
+    // Si el usuario es directiva, verificar que no sea el último
+    if (usuario.rol === 'directiva') {
+      const directivasCount = await userRepository.count({
+        where: { rol: 'directiva' }
+      });
+
+      if (directivasCount <= 1) {
+        console.log(`❌ Intento de eliminar último usuario directiva por ${req.user.rut}`);
+        return handleErrorClient(res, 400, "No se puede eliminar el último usuario con rol de directiva");
+      }
+    }
+
+    // Eliminar el usuario
+    await userRepository.delete({ rut: rut.trim() });
+
+    console.log(`✅ Usuario eliminado por directiva ${req.user.rut}: ${usuario.email} (${usuario.rol})`);
+
+    handleSuccess(res, 200, "Usuario eliminado exitosamente", {
+      rut: usuario.rut,
+      email: usuario.email,
+      nombreCompleto: usuario.nombreCompleto
+    });
+
+  } catch (error) {
+    console.error("Error al eliminar usuario:", error);
     handleErrorServer(res, 500, "Error interno del servidor");
   }
 }

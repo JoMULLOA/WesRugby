@@ -2,7 +2,7 @@
 import express from "express";
 import { isAdmin, isDirectiva, isAuthenticated } from "../middlewares/authorization.middleware.js";
 import { authenticateJwt } from "../middlewares/authentication.middleware.js";
-import { deleteUser, getUser, getUsers, updateUser, searchUser, buscarRut, getMisVehiculos, calcularCalificacion, obtenerPromedioGlobal, actualizarTokenFCM, getHistorialTransacciones, calificarUsuario, changeUserRole, createUserByDirectiva } from "../controllers/user.controller.js";
+import { deleteUser, getUser, getUsers, updateUser, searchUser, buscarRut, getMisVehiculos, calcularCalificacion, obtenerPromedioGlobal, actualizarTokenFCM, getHistorialTransacciones, calificarUsuario, changeUserRole, createUserByDirectiva, updateUserByDirectiva, deleteUserByDirectiva } from "../controllers/user.controller.js";
 import { AppDataSource } from "../config/configDb.js";
 import User from "../entity/user.entity.js";
 
@@ -35,8 +35,12 @@ router.patch("/fcm-token", isAuthenticated, actualizarTokenFCM); // Nueva ruta p
 router.get("/", isDirectiva, getUsers); // GET /user/ - obtener todos los usuarios
 router.get("/all", isDirectiva, getUsers); // GET /user/all - alias para obtener todos los usuarios (para el frontend)
 router.post("/create", isDirectiva, createUserByDirectiva); // Nueva ruta para crear usuarios (solo directiva)
+router.put("/update-by-directiva", isDirectiva, updateUserByDirectiva); // Nueva ruta para actualizar usuarios desde directiva
 router.put("/changeRole", isDirectiva, changeUserRole); // Nueva ruta para cambiar rol de usuario (solo directiva)
 router.delete("/detail/", isDirectiva, deleteUser); // Solo directiva puede eliminar usuarios
 router.delete("/delete/:rut", isDirectiva, deleteUser); // Alias para eliminar por RUT (para el frontend)
+
+// Endpoints específicos para directiva (con protección especial)
+router.delete("/delete-by-directiva/:rut", isDirectiva, deleteUserByDirectiva); // Eliminar con protección de último directiva
 
 export default router;

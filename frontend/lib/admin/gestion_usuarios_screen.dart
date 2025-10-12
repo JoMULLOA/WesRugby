@@ -682,7 +682,7 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
 
     if (confirmed == true) {
       try {
-        final response = await ApiService.deleteUserByRut(usuario['rut']);
+        final response = await ApiService.deleteUserByDirectiva(usuario['rut']);
         
         if (response.statusCode == 200) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -883,7 +883,7 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
     try {
       if (isEditing) {
         // Actualizar usuario existente
-        final response = await ApiService.updateUser({
+        final response = await ApiService.updateUserByDirectiva({
           'rut': rut,
           'nombreCompleto': nombre,
           'email': email,

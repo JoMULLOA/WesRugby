@@ -226,11 +226,20 @@ class ApiService {
   }
 
   static Future<ApiResponse> updateUser(Map<String, dynamic> userData) async {
-    return patch('/user/actualizar', userData);
+    return put('/user/update-by-directiva', userData);
+  }
+
+  // Nuevo método para actualizar usuarios desde el dashboard de directiva
+  static Future<ApiResponse> updateUserByDirectiva(Map<String, dynamic> userData) async {
+    return put('/user/update-by-directiva', userData);
   }
 
   static Future<ApiResponse> deleteUserByRut(String rut) async {
-    return delete('/user/delete/$rut');
+    return delete('/user/delete-by-directiva/$rut');
+  }
+
+  static Future<ApiResponse> deleteUserByDirectiva(String rut) async {
+    return delete('/user/delete-by-directiva/$rut');
   }
 
   static Future<ApiResponse> changeUserRole(String rut, String newRole) async {
