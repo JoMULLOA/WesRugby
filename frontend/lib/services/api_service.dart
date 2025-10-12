@@ -220,6 +220,11 @@ class ApiService {
     return post('/auth/register-apoderado', userData);
   }
 
+  // Nuevo método para crear usuarios desde el dashboard de directiva
+  static Future<ApiResponse> createUserByDirectiva(Map<String, dynamic> userData) async {
+    return post('/user/create', userData);
+  }
+
   static Future<ApiResponse> updateUser(Map<String, dynamic> userData) async {
     return patch('/user/actualizar', userData);
   }
@@ -231,7 +236,7 @@ class ApiService {
   static Future<ApiResponse> changeUserRole(String rut, String newRole) async {
     return put('/user/changeRole', {
       'rut': rut,
-      'rol': newRole,
+      'nuevoRol': newRole,
     });
   }
 

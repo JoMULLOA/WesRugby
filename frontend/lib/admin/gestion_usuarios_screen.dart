@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../config/colors.dart';
-import '../services/usuario_service.dart';
+import '../services/api_service.dart';
+import '../widgets/wessex_widgets.dart';
 
 class GestionUsuariosScreen extends StatefulWidget {
   const GestionUsuariosScreen({super.key});
@@ -10,204 +11,214 @@ class GestionUsuariosScreen extends StatefulWidget {
 }
 
 class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
-  final UsuarioService _usuarioService = UsuarioService();
   final TextEditingController _searchController = TextEditingController();
   
   String _selectedRol = 'Todos';
-  String _selectedEstado = 'Todos';
+  List<Map<String, dynamic>> _allUsuarios = [];
   List<Map<String, dynamic>> _filteredUsuarios = [];
   bool _isLoading = false;
+  String? _error;
 
-  final List<String> _roles = ['Todos', 'admin', 'directiva', 'tesoreria', 'entrenador', 'apoderado'];
-  final List<String> _estados = ['Todos', 'Activo', 'Pendiente activación', 'Inactivo', 'Suspendido'];
+  final List<String> _roles = ['Todos', 'directiva', 'tesorera', 'entrenador', 'apoderado'];
 
   @override
   void initState() {
     super.initState();
-    _usuarioService.addListener(_updateUsuarios);
-    _loadUsuariosFromDatabase();
+    _loadUsuarios();
   }
 
   @override
   void dispose() {
-    _usuarioService.removeListener(_updateUsuarios);
     _searchController.dispose();
     super.dispose();
   }
 
-  void _updateUsuarios() {
-    if (mounted) {
-      _loadUsuarios();
-    }
-  }
-
-  // Cargar usuarios desde la base de datos
-  Future<void> _loadUsuariosFromDatabase() async {
+  // Cargar usuarios desde la API
+  Future<void> _loadUsuarios() async {
     setState(() {
       _isLoading = true;
+      _error = null;
     });
 
     try {
-      await _usuarioService.loadUsuarios();
-      _loadUsuarios(); // Aplicar filtros después de cargar
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al cargar usuarios: $e'),
-            backgroundColor: WessexColors.crimsonAlert,
-          ),
-        );
+      final response = await ApiService.getAllUsers();
+      
+      if (response.statusCode == 200 && response.data != null) {
+        List<dynamic> usuariosData = response.data['data'] ?? response.data;
+        
+        setState(() {
+          _allUsuarios = usuariosData.map((usuario) => {
+            'rut': usuario['rut'] ?? '',
+            'nombreCompleto': usuario['nombreCompleto'] ?? '',
+            'email': usuario['email'] ?? '',
+            'rol': usuario['rol'] ?? '',
+            'fechaNacimiento': usuario['fechaNacimiento'],
+            'createdAt': usuario['createdAt'],
+            'updatedAt': usuario['updatedAt'],
+          }).toList();
+          _applyFilters();
+        });
+      } else {
+        setState(() {
+          _error = response.message ?? 'Error al cargar usuarios';
+        });
       }
+    } catch (e) {
+      setState(() {
+        _error = 'Error de conexión: $e';
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
-  void _loadUsuarios() {
-    List<Map<String, dynamic>> usuarios = _usuarioService.usuarios;
+  void _applyFilters() {
+    List<Map<String, dynamic>> usuarios = List.from(_allUsuarios);
     
-    // Aplicar filtros
+    // Aplicar filtro de rol
     if (_selectedRol != 'Todos') {
       usuarios = usuarios.where((u) => 
         u['rol']?.toString().toLowerCase() == _selectedRol.toLowerCase()
       ).toList();
     }
-    
-    if (_selectedEstado != 'Todos') {
-      usuarios = usuarios.where((u) => 
-        u['estado']?.toString().toLowerCase() == _selectedEstado.toLowerCase()
-      ).toList();
-    }
 
     // Aplicar búsqueda
-    String query = _searchController.text.trim();
+    String query = _searchController.text.trim().toLowerCase();
     if (query.isNotEmpty) {
-      usuarios = _usuarioService.searchUsuarios(query);
+      usuarios = usuarios.where((u) => 
+        (u['nombreCompleto']?.toString().toLowerCase().contains(query) ?? false) ||
+        (u['email']?.toString().toLowerCase().contains(query) ?? false) ||
+        (u['rut']?.toString().toLowerCase().contains(query) ?? false) ||
+        (u['rol']?.toString().toLowerCase().contains(query) ?? false)
+      ).toList();
     }
 
     setState(() {
       _filteredUsuarios = usuarios;
-      _isLoading = false;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final estadisticas = _usuarioService.estadisticas;
-    
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Gestión de Usuarios'),
-        backgroundColor: WessexColors.midnightNavy,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadUsuariosFromDatabase,
-            tooltip: 'Recargar usuarios',
-          ),
-        ],
+      extendBodyBehindAppBar: true,
+      appBar: const WessexAppBar(
+        title: 'Gestión de Usuarios - Directiva',
+        elevation: 2,
       ),
-      backgroundColor: WessexColors.mistyRoseGray,
-      body: _usuarioService.isLoading && _filteredUsuarios.isEmpty
-          ? const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(
-                    color: WessexColors.deepRoyalBlue,
-                  ),
-                  SizedBox(height: 16),
-                  Text(
-                    'Cargando usuarios desde la base de datos...',
-                    style: TextStyle(
-                      color: WessexColors.darkGrape,
-                      fontSize: 16,
-                    ),
-                  ),
-                ],
-              ),
-            )
-          : _usuarioService.error != null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.error_outline,
-                          size: 64,
-                          color: WessexColors.crimsonAlert,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Error al cargar usuarios',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: WessexColors.darkGrape,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _usuarioService.error!,
-                          style: TextStyle(
-                            color: WessexColors.maximumGrayMint,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: _loadUsuariosFromDatabase,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: WessexColors.deepRoyalBlue,
-                            foregroundColor: Colors.white,
-                          ),
-                          child: const Text('Reintentar'),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
+      body: WessexBackground(
+        child: SafeArea(
+          child: _isLoading
+              ? const Center(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Header con estadísticas
-                      _buildStatsCards(estadisticas),
-                      
-                      const SizedBox(height: 32),
-                      
-                      // Controles de búsqueda y filtros
-                      _buildSearchAndFilters(),
-                      
-                      const SizedBox(height: 24),
-                      
-                      // Lista de usuarios
-                      _buildUsuariosList(),
+                      CircularProgressIndicator(
+                        color: WessexColors.deepRoyalBlue,
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        'Cargando usuarios...',
+                        style: TextStyle(
+                          color: WessexColors.white,
+                          fontSize: 16,
+                        ),
+                      ),
                     ],
                   ),
-                ),
+                )
+              : _error != null
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: WessexCard(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.error_outline,
+                                size: 64,
+                                color: WessexColors.crimsonAlert,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Error al cargar usuarios',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: WessexColors.darkGrape,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                _error!,
+                                style: TextStyle(
+                                  color: WessexColors.maximumGrayMint,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 16),
+                              ElevatedButton(
+                                onPressed: _loadUsuarios,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: WessexColors.deepRoyalBlue,
+                                  foregroundColor: Colors.white,
+                                ),
+                                child: const Text('Reintentar'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    )
+                  : SingleChildScrollView(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Header con estadísticas
+                          _buildStatsCards(),
+                          
+                          const SizedBox(height: 32),
+                          
+                          // Controles de búsqueda y filtros
+                          _buildSearchAndFilters(),
+                          
+                          const SizedBox(height: 24),
+                          
+                          // Lista de usuarios
+                          _buildUsuariosList(),
+                        ],
+                      ),
+                    ),
+        ),
+      ),
     );
   }
 
-  Widget _buildStatsCards(Map<String, dynamic> stats) {
+  Widget _buildStatsCards() {
+    // Calcular estadísticas de usuarios
+    int totalUsuarios = _allUsuarios.length;
+    int directivas = _allUsuarios.where((u) => u['rol'] == 'directiva').length;
+    int tesoreras = _allUsuarios.where((u) => u['rol'] == 'tesorera').length;
+    int entrenadores = _allUsuarios.where((u) => u['rol'] == 'entrenador').length;
+    int apoderados = _allUsuarios.where((u) => u['rol'] == 'apoderado').length;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Resumen de Usuarios',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            color: WessexColors.darkGrape,
-            fontWeight: FontWeight.bold,
-          ),
+        const WessexSectionTitle(
+          title: 'Gestión de Usuarios',
+          subtitle: 'Administre usuarios del sistema Wessex Rugby',
+          titleColor: WessexColors.white,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
         
         LayoutBuilder(
           builder: (context, constraints) {
-            int crossAxisCount = constraints.maxWidth > 1200 ? 4 : 
+            int crossAxisCount = constraints.maxWidth > 1200 ? 5 : 
                                 constraints.maxWidth > 800 ? 3 : 
                                 constraints.maxWidth > 600 ? 2 : 1;
             
@@ -217,31 +228,37 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
               crossAxisCount: crossAxisCount,
               mainAxisSpacing: 16,
               crossAxisSpacing: 16,
-              childAspectRatio: 3.5,
+              childAspectRatio: 2.5,
               children: [
                 _buildStatCard(
                   'Total Usuarios',
-                  '${stats['total']}',
+                  '$totalUsuarios',
                   Icons.people,
                   WessexColors.deepRoyalBlue,
                 ),
                 _buildStatCard(
-                  'Activos',
-                  '${stats['activos']}',
-                  Icons.check_circle,
+                  'Directiva',
+                  '$directivas',
+                  Icons.admin_panel_settings,
+                  WessexColors.crimsonAlert,
+                ),
+                _buildStatCard(
+                  'Tesorera',
+                  '$tesoreras',
+                  Icons.account_balance_wallet,
+                  WessexColors.midnightNavy,
+                ),
+                _buildStatCard(
+                  'Entrenadores',
+                  '$entrenadores',
+                  Icons.sports_rugby,
                   WessexColors.leafGreen,
                 ),
                 _buildStatCard(
-                  'Pendientes',
-                  '${stats['pendientes']}',
-                  Icons.pending,
+                  'Apoderados',
+                  '$apoderados',
+                  Icons.family_restroom,
                   WessexColors.maximumGrayMint,
-                ),
-                _buildStatCard(
-                  'Inactivos',
-                  '${stats['inactivos']}',
-                  Icons.cancel,
-                  WessexColors.crimsonAlert,
                 ),
               ],
             );
@@ -333,13 +350,13 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
               if (isDesktop) {
                 return Row(
                   children: [
-                    Expanded(flex: 2, child: _buildSearchField()),
+                    Expanded(flex: 3, child: _buildSearchField()),
                     const SizedBox(width: 16),
                     Expanded(child: _buildRolDropdown()),
                     const SizedBox(width: 16),
-                    Expanded(child: _buildEstadoDropdown()),
-                    const SizedBox(width: 16),
                     _buildRefreshButton(),
+                    const SizedBox(width: 16),
+                    _buildCreateUserButton(),
                   ],
                 );
               } else {
@@ -347,15 +364,15 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
                   children: [
                     _buildSearchField(),
                     const SizedBox(height: 16),
+                    _buildRolDropdown(),
+                    const SizedBox(height: 16),
                     Row(
                       children: [
-                        Expanded(child: _buildRolDropdown()),
+                        Expanded(child: _buildRefreshButton()),
                         const SizedBox(width: 16),
-                        Expanded(child: _buildEstadoDropdown()),
+                        Expanded(child: _buildCreateUserButton()),
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    _buildRefreshButton(),
                   ],
                 );
               }
@@ -369,7 +386,7 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
   Widget _buildSearchField() {
     return TextField(
       controller: _searchController,
-      onChanged: (value) => _loadUsuarios(),
+      onChanged: (value) => _applyFilters(),
       decoration: InputDecoration(
         labelText: 'Buscar usuarios...',
         hintText: 'Nombre, email, RUT o rol',
@@ -389,7 +406,7 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
         setState(() {
           _selectedRol = value!;
         });
-        _loadUsuarios();
+        _applyFilters();
       },
       decoration: InputDecoration(
         labelText: 'Filtrar por Rol',
@@ -407,30 +424,7 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
     );
   }
 
-  Widget _buildEstadoDropdown() {
-    return DropdownButtonFormField<String>(
-      value: _selectedEstado,
-      onChanged: (value) {
-        setState(() {
-          _selectedEstado = value!;
-        });
-        _loadUsuarios();
-      },
-      decoration: InputDecoration(
-        labelText: 'Filtrar por Estado',
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      ),
-      items: _estados.map((estado) {
-        return DropdownMenuItem(
-          value: estado,
-          child: Text(estado),
-        );
-      }).toList(),
-    );
-  }
+
 
   Widget _buildRefreshButton() {
     return ElevatedButton.icon(
@@ -439,6 +433,22 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
       label: const Text('Actualizar'),
       style: ElevatedButton.styleFrom(
         backgroundColor: WessexColors.deepRoyalBlue,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCreateUserButton() {
+    return ElevatedButton.icon(
+      onPressed: _showCreateUserDialog,
+      icon: const Icon(Icons.person_add),
+      label: const Text('Crear Usuario'),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: WessexColors.leafGreen,
         foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         shape: RoundedRectangleBorder(
@@ -534,8 +544,6 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
                 DataColumn(label: Text('NOMBRE', style: TextStyle(fontWeight: FontWeight.bold))),
                 DataColumn(label: Text('EMAIL', style: TextStyle(fontWeight: FontWeight.bold))),
                 DataColumn(label: Text('ROL', style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('ESTADO', style: TextStyle(fontWeight: FontWeight.bold))),
-                DataColumn(label: Text('ESTUDIANTE', style: TextStyle(fontWeight: FontWeight.bold))),
                 DataColumn(label: Text('FECHA CREACIÓN', style: TextStyle(fontWeight: FontWeight.bold))),
                 DataColumn(label: Text('ACCIONES', style: TextStyle(fontWeight: FontWeight.bold))),
               ],
@@ -543,12 +551,10 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
                 return DataRow(
                   cells: [
                     DataCell(Text(usuario['rut'] ?? '')),
-                    DataCell(Text(usuario['nombre'] ?? '')),
+                    DataCell(Text(usuario['nombreCompleto'] ?? '')),
                     DataCell(Text(usuario['email'] ?? '')),
                     DataCell(_buildRolChip(usuario['rol'] ?? '')),
-                    DataCell(_buildEstadoChip(usuario['estado'] ?? '')),
-                    DataCell(Text(usuario['estudiante'] ?? 'N/A')),
-                    DataCell(Text(_formatDate(usuario['fechaCreacion']))),
+                    DataCell(Text(_formatDate(usuario['createdAt']))),
                     DataCell(_buildActionButtons(usuario)),
                   ],
                 );
@@ -563,20 +569,17 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
   Widget _buildRolChip(String rol) {
     Color color;
     switch (rol.toLowerCase()) {
-      case 'admin':
+      case 'directiva':
         color = WessexColors.crimsonAlert;
         break;
-      case 'directiva':
-        color = WessexColors.deepRoyalBlue;
-        break;
-      case 'tesoreria':
+      case 'tesorera':
         color = WessexColors.midnightNavy;
         break;
       case 'entrenador':
         color = WessexColors.leafGreen;
         break;
       case 'apoderado':
-        color = WessexColors.maximumGrayMint;
+        color = WessexColors.deepRoyalBlue;
         break;
       default:
         color = WessexColors.mistyRoseGray;
@@ -600,39 +603,7 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
     );
   }
 
-  Widget _buildEstadoChip(String estado) {
-    Color color;
-    switch (estado.toLowerCase()) {
-      case 'activo':
-        color = WessexColors.leafGreen;
-        break;
-      case 'pendiente activación':
-        color = WessexColors.maximumGrayMint;
-        break;
-      case 'inactivo':
-      case 'suspendido':
-        color = WessexColors.crimsonAlert;
-        break;
-      default:
-        color = WessexColors.mistyRoseGray;
-    }
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Text(
-        estado.toUpperCase(),
-        style: TextStyle(
-          color: color,
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
 
   Widget _buildActionButtons(Map<String, dynamic> usuario) {
     return Row(
@@ -669,60 +640,36 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
   }
 
   void _showCreateUserDialog() {
-    // TODO: Implementar diálogo de creación de usuario
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Funcionalidad de creación manual próximamente'),
-        backgroundColor: Colors.orange,
-      ),
-    );
+    _showUserFormDialog();
   }
 
   void _showEditUserDialog(Map<String, dynamic> usuario) {
-    // TODO: Implementar diálogo de edición
+    _showUserFormDialog(usuario: usuario);
+  }
+
+  void _resetPassword(Map<String, dynamic> usuario) {
+    // TODO: Implementar reset de contraseña via API
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Editar: ${usuario['nombre']}'),
-        backgroundColor: WessexColors.deepRoyalBlue,
+        content: Text('Funcionalidad de reset de contraseña en desarrollo'),
+        backgroundColor: WessexColors.maximumGrayMint,
       ),
     );
   }
 
-  void _resetPassword(Map<String, dynamic> usuario) {
-    String newPassword = _usuarioService.resetPassword(usuario['id']);
-    if (newPassword.isNotEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Contraseña reseteada para ${usuario['nombre']}. Nueva contraseña: $newPassword'),
-          backgroundColor: WessexColors.leafGreen,
-          duration: const Duration(seconds: 5),
-        ),
-      );
-    }
-  }
-
-  void _deleteUser(Map<String, dynamic> usuario) {
-    showDialog(
+  Future<void> _deleteUser(Map<String, dynamic> usuario) async {
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Confirmar eliminación'),
-        content: Text('¿Estás seguro de que quieres eliminar a ${usuario['nombre']}?'),
+        content: Text('¿Está seguro que desea eliminar al usuario ${usuario['nombreCompleto']}?\n\nEsta acción no se puede deshacer.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancelar'),
           ),
           ElevatedButton(
-            onPressed: () {
-              _usuarioService.deleteUsuario(usuario['id']);
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Usuario ${usuario['nombre']} eliminado'),
-                  backgroundColor: WessexColors.crimsonAlert,
-                ),
-              );
-            },
+            onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
               backgroundColor: WessexColors.crimsonAlert,
               foregroundColor: Colors.white,
@@ -732,5 +679,259 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
         ],
       ),
     );
+
+    if (confirmed == true) {
+      try {
+        final response = await ApiService.deleteUserByRut(usuario['rut']);
+        
+        if (response.statusCode == 200) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Usuario ${usuario['nombreCompleto']} eliminado exitosamente'),
+              backgroundColor: WessexColors.leafGreen,
+            ),
+          );
+          _loadUsuarios(); // Recargar la lista
+        } else {
+          throw Exception(response.message ?? 'Error al eliminar usuario');
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al eliminar usuario: $e'),
+            backgroundColor: WessexColors.crimsonAlert,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showUserFormDialog({Map<String, dynamic>? usuario}) {
+    final isEditing = usuario != null;
+    final formKey = GlobalKey<FormState>();
+    
+    final rutController = TextEditingController(text: usuario?['rut'] ?? '');
+    final nombreController = TextEditingController(text: usuario?['nombreCompleto'] ?? '');
+    final emailController = TextEditingController(text: usuario?['email'] ?? '');
+    final passwordController = TextEditingController();
+    String selectedRol = usuario?['rol'] ?? 'apoderado';
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Container(
+          width: 500,
+          padding: const EdgeInsets.all(24),
+          child: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isEditing ? 'Editar Usuario' : 'Crear Nuevo Usuario',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: WessexColors.darkGrape,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                
+                // RUT
+                TextFormField(
+                  controller: rutController,
+                  enabled: !isEditing, // No editable en modo edición
+                  decoration: InputDecoration(
+                    labelText: 'RUT',
+                    hintText: '12.345.678-9',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'El RUT es obligatorio';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                
+                // Nombre Completo
+                TextFormField(
+                  controller: nombreController,
+                  decoration: InputDecoration(
+                    labelText: 'Nombre Completo',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'El nombre es obligatorio';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                
+                // Email
+                TextFormField(
+                  controller: emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: InputDecoration(
+                    labelText: 'Correo Electrónico',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'El email es obligatorio';
+                    }
+                    if (!value.contains('@')) {
+                      return 'Ingrese un email válido';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                
+                // Contraseña (solo para crear)
+                if (!isEditing) ...[
+                  TextFormField(
+                    controller: passwordController,
+                    obscureText: true,
+                    decoration: InputDecoration(
+                      labelText: 'Contraseña',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'La contraseña es obligatoria';
+                      }
+                      if (value.length < 6) {
+                        return 'La contraseña debe tener al menos 6 caracteres';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                
+                // Rol
+                DropdownButtonFormField<String>(
+                  value: selectedRol,
+                  onChanged: (value) => selectedRol = value!,
+                  decoration: InputDecoration(
+                    labelText: 'Rol',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  items: ['directiva', 'tesorera', 'entrenador', 'apoderado']
+                      .map((rol) => DropdownMenuItem(value: rol, child: Text(rol.toUpperCase())))
+                      .toList(),
+                ),
+                const SizedBox(height: 24),
+                
+                // Botones
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Cancelar'),
+                    ),
+                    const SizedBox(width: 16),
+                    ElevatedButton(
+                      onPressed: () => _submitUserForm(
+                        context,
+                        formKey,
+                        isEditing,
+                        rutController.text,
+                        nombreController.text,
+                        emailController.text,
+                        passwordController.text,
+                        selectedRol,
+                        usuario,
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isEditing ? WessexColors.deepRoyalBlue : WessexColors.leafGreen,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      ),
+                      child: Text(isEditing ? 'Actualizar' : 'Crear'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _submitUserForm(
+    BuildContext context,
+    GlobalKey<FormState> formKey,
+    bool isEditing,
+    String rut,
+    String nombre,
+    String email,
+    String password,
+    String rol,
+    Map<String, dynamic>? usuario,
+  ) async {
+    if (!formKey.currentState!.validate()) return;
+
+    try {
+      if (isEditing) {
+        // Actualizar usuario existente
+        final response = await ApiService.updateUser({
+          'rut': rut,
+          'nombreCompleto': nombre,
+          'email': email,
+          'rol': rol,
+        });
+        
+        if (response.statusCode == 200) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Usuario actualizado exitosamente'),
+              backgroundColor: WessexColors.leafGreen,
+            ),
+          );
+          _loadUsuarios();
+        } else {
+          throw Exception(response.message ?? 'Error al actualizar usuario');
+        }
+      } else {
+        // Crear nuevo usuario
+        final response = await ApiService.createUserByDirectiva({
+          'rut': rut.trim(),
+          'nombreCompleto': nombre.trim(),
+          'email': email.trim().toLowerCase(),
+          'password': password,
+          'rol': rol,
+        });
+        
+        if (response.statusCode == 201) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Usuario creado exitosamente'),
+              backgroundColor: WessexColors.leafGreen,
+            ),
+          );
+          _loadUsuarios();
+        } else {
+          throw Exception(response.message ?? 'Error al crear usuario');
+        }
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: WessexColors.crimsonAlert,
+        ),
+      );
+    }
   }
 }

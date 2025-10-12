@@ -453,8 +453,9 @@ export async function changeUserRole(req, res) {
       return handleErrorClient(res, 400, "RUT y nuevo rol son requeridos");
     }
 
-    if (!['estudiante', 'administrador'].includes(nuevoRol)) {
-      return handleErrorClient(res, 400, "Rol inválido. Debe ser 'estudiante' o 'administrador'");
+    // Actualizar roles válidos según la entidad User
+    if (!['directiva', 'tesorera', 'entrenador', 'apoderado'].includes(nuevoRol)) {
+      return handleErrorClient(res, 400, "Rol inválido. Debe ser 'directiva', 'tesorera', 'entrenador' o 'apoderado'");
     }
 
     // Buscar el usuario por RUT
@@ -477,6 +478,60 @@ export async function changeUserRole(req, res) {
 
   } catch (error) {
     console.error("Error al cambiar rol de usuario:", error);
+    handleErrorServer(res, 500, "Error interno del servidor");
+  }
+}
+
+// Nueva función para crear usuarios desde el dashboard de directiva
+export async function createUserByDirectiva(req, res) {
+  try {
+    const { rut, nombreCompleto, email, password, rol, fechaNacimiento } = req.body;
+
+    // Validaciones básicas
+    if (!rut || !nombreCompleto || !email || !password || !rol) {
+      return handleErrorClient(res, 400, "Todos los campos son requeridos: rut, nombreCompleto, email, password, rol");
+    }
+
+    // Validar que el rol sea válido
+    if (!['directiva', 'tesorera', 'entrenador', 'apoderado'].includes(rol)) {
+      return handleErrorClient(res, 400, "Rol inválido. Debe ser 'directiva', 'tesorera', 'entrenador' o 'apoderado'");
+    }
+
+    // Verificar que el usuario no exista
+    const existingUserByRut = await userRepository.findOne({ where: { rut } });
+    if (existingUserByRut) {
+      return handleErrorClient(res, 400, "Ya existe un usuario con este RUT");
+    }
+
+    const existingUserByEmail = await userRepository.findOne({ where: { email } });
+    if (existingUserByEmail) {
+      return handleErrorClient(res, 400, "Ya existe un usuario con este email");
+    }
+
+    // Importar helper de encriptación
+    const { encryptPassword } = await import("../helpers/bcrypt.helper.js");
+
+    // Crear nuevo usuario
+    const newUser = userRepository.create({
+      rut: rut.trim(),
+      nombreCompleto: nombreCompleto.trim(),
+      email: email.trim().toLowerCase(),
+      password: await encryptPassword(password),
+      rol,
+      fechaNacimiento: fechaNacimiento || null,
+    });
+
+    const savedUser = await userRepository.save(newUser);
+
+    // Remover password del response
+    const { password: _, ...userResponse } = savedUser;
+
+    console.log(`✅ Usuario creado por directiva ${req.user.rut}: ${savedUser.email} con rol ${savedUser.rol}`);
+
+    handleSuccess(res, 201, "Usuario creado exitosamente", userResponse);
+
+  } catch (error) {
+    console.error("Error al crear usuario:", error);
     handleErrorServer(res, 500, "Error interno del servidor");
   }
 }
