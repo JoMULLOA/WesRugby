@@ -2,7 +2,7 @@
 import Joi from "joi";
 
 const domainEmailValidator = (value, helper) => {
-  const allowedDomains = ["@alumnos.ubiobio.cl", "@ubiobio.cl", "wessex.cl"]; // Lista de dominios permitidos
+  const allowedDomains = ["@alumnos.ubiobio.cl", "@ubiobio.cl", "@wessex.cl"]; // Lista de dominios permitidos
 
   const isValidDomain = allowedDomains.some(domain => value.endsWith(domain));
   if (!isValidDomain) {
@@ -30,7 +30,6 @@ export const authValidation = Joi.object({
   password: Joi.string()
     .min(8)
     .max(26)
-    .pattern(/^[a-zA-Z0-9]+$/)
     .required()
     .messages({
       "string.empty": "La contraseña no puede estar vacía.",
@@ -38,7 +37,6 @@ export const authValidation = Joi.object({
       "string.base": "La contraseña debe ser de tipo texto.",
       "string.min": "La contraseña debe tener al menos 8 caracteres.",
       "string.max": "La contraseña debe tener como máximo 26 caracteres.",
-      "string.pattern.base": "La contraseña solo puede contener letras y números.",
     }),
 }).unknown(false).messages({
   "object.unknown": "No se permiten propiedades adicionales.",

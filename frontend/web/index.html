@@ -29,6 +29,30 @@
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
+  <!-- Material Icons con fallback -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" onerror="console.log('Error loading Material Icons from Google Fonts')">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+  
+  <style>
+    /* Asegurar que los iconos de Material Design carguen correctamente */
+    .material-icons {
+      font-family: 'Material Icons';
+      font-weight: normal;
+      font-style: normal;
+      font-size: 24px;
+      line-height: 1;
+      letter-spacing: normal;
+      text-transform: none;
+      display: inline-block;
+      white-space: nowrap;
+      word-wrap: normal;
+      direction: ltr;
+      -webkit-font-feature-settings: 'liga';
+      font-feature-settings: 'liga';
+      -webkit-font-smoothing: antialiased;
+    }
+  </style>
+  
   <title>WesRugby - Club de Rugby Wessex</title>
   <link rel="manifest" href="manifest.json">
 </head>

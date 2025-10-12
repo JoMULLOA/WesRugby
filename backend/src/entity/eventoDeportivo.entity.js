@@ -30,9 +30,9 @@ const EventoDeportivoSchema = new EntitySchema({
     },
     categoria: {
       type: "varchar",
-      length: 50,
+      length: 255,
       nullable: true,
-      comment: "Categoría participante (infantil, juvenil, senior, mixto)",
+      comment: "Categoría participante (puede ser múltiples separadas por comas)",
     },
     // Fechas y Horarios
     fechaInicio: {

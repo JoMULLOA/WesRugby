@@ -335,6 +335,26 @@ class ApiService {
     }
   }
 
+  // Crear evento deportivo (solo directiva/entrenador)
+  static Future<Map<String, dynamic>> crearEventoDeportivo(Map<String, dynamic> eventoData) async {
+    final response = await post('/eventos-deportivos', eventoData);
+    if (response.success) {
+      return response.data;
+    } else {
+      throw Exception(response.message ?? 'Error al crear evento deportivo');
+    }
+  }
+
+  // Obtener eventos deportivos (solo directiva/entrenador)
+  static Future<Map<String, dynamic>> obtenerEventosDeportivos() async {
+    final response = await get('/eventos-deportivos');
+    if (response.success) {
+      return response.data;
+    } else {
+      throw Exception(response.message ?? 'Error al obtener eventos deportivos');
+    }
+  }
+
   // Obtener todos los eventos (directiva)
   static Future<Map<String, dynamic>> obtenerEventos() async {
     final response = await get('/eventos/todos');
@@ -375,6 +395,16 @@ class ApiService {
     }
   }
 
+  // Obtener categorías ya registradas en un evento (RamaExterna)
+  static Future<Map<String, dynamic>> obtenerCategoriasRegistradas(int eventoId) async {
+    final response = await get('/eventos/$eventoId/categorias-registradas');
+    if (response.success) {
+      return response.data;
+    } else {
+      throw Exception(response.message ?? 'Error al obtener categorías registradas');
+    }
+  }
+
   // Actualizar evento (directiva)
   static Future<Map<String, dynamic>> actualizarEvento(int eventoId, Map<String, dynamic> datos) async {
     final response = await put('/eventos/$eventoId', datos);
@@ -396,7 +426,7 @@ class ApiService {
   }
 
   // Obtener participaciones de un evento (directiva)
-  static Future<Map<String, dynamic>> obtenerParticipacionesEvento(int eventoId) async {
+  static Future<Map<String, dynamic>> obtenerParticipacionesEvento(dynamic eventoId) async {
     final response = await get('/eventos/$eventoId/participaciones');
     if (response.success) {
       return response.data;

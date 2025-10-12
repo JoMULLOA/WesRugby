@@ -36,20 +36,11 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
 
     try {
       final response = await ApiService.obtenerEventosDeportivos();
-      print('DEBUG: Respuesta completa del backend: $response'); // Debug
       setState(() {
-        // El backend ahora devuelve directamente la lista de eventos
-        final data = response['data'];
-        print('DEBUG: Tipo de data: ${data.runtimeType}'); // Debug
-        print('DEBUG: Data recibida: $data'); // Debug
-        
-        _eventos = data is List ? List<dynamic>.from(data) : [];
-        print('DEBUG: Total eventos cargados: ${_eventos.length}'); // Debug
+        _eventos = response['data'] ?? [];
         _isLoading = false;
       });
     } catch (e) {
-      print('DEBUG: Error completo al cargar eventos: $e'); // Debug
-      print('DEBUG: Tipo de error: ${e.runtimeType}'); // Debug
       setState(() {
         _isLoading = false;
       });
@@ -319,14 +310,9 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
         builder: (context, setDialogState) => Dialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           child: Container(
-            width: MediaQuery.of(context).size.width > 600 ? 500 : MediaQuery.of(context).size.width * 0.9,
-            height: MediaQuery.of(context).size.height > 700 ? 600 : MediaQuery.of(context).size.height * 0.8,
-            constraints: BoxConstraints(
-              maxWidth: 600,
-              maxHeight: MediaQuery.of(context).size.height * 0.9,
-              minHeight: 400,
-            ),
-            padding: EdgeInsets.all(MediaQuery.of(context).size.width > 600 ? 24 : 16),
+            width: 500,
+            height: 600,
+            padding: EdgeInsets.all(24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -498,19 +484,14 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
         builder: (context, setDialogState) => Dialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           child: Container(
-            width: MediaQuery.of(context).size.width > 600 ? 500 : MediaQuery.of(context).size.width * 0.9,
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.9,
-              maxWidth: 600,
-            ),
-            padding: EdgeInsets.all(MediaQuery.of(context).size.width > 600 ? 24 : 16),
+            width: 500,
+            padding: EdgeInsets.all(24),
             child: Form(
               key: _formKey,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Row(
                     children: [
                       Expanded(
@@ -601,7 +582,7 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
                           ),
                         ),
                         Container(
-                          height: MediaQuery.of(context).size.height > 600 ? 300 : 250,
+                          height: 120,
                           child: SingleChildScrollView(
                             child: Column(
                               children: _categorias.map((categoria) => CheckboxListTile(
@@ -888,7 +869,6 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
                     ],
                   ),
                 ],
-                ),
               ),
             ),
           ),

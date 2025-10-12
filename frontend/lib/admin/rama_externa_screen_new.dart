@@ -315,42 +315,21 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
             ),
             SizedBox(height: 12),
             
-            // Fecha y hora
+            // Fecha
             Row(
               children: [
                 Icon(Icons.calendar_today, size: 16, color: WessexColors.midnightNavy),
                 SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    fechaFormateada,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: WessexColors.midnightNavy,
-                      fontWeight: FontWeight.w500,
-                    ),
+                Text(
+                  fechaFormateada,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: WessexColors.midnightNavy,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
             ),
-            
-            // Horas (si están disponibles)
-            if (evento['horaInicio'] != null || evento['horaFin'] != null) ...[
-              SizedBox(height: 8),
-              Row(
-                children: [
-                  Icon(Icons.access_time, size: 16, color: WessexColors.midnightNavy),
-                  SizedBox(width: 8),
-                  Text(
-                    _formatearHorarios(evento['horaInicio'], evento['horaFin']),
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: WessexColors.midnightNavy,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ],
             
             // Lugar (si está disponible)
             if (evento['lugar'] != null && evento['lugar'].toString().isNotEmpty) ...[
@@ -625,29 +604,16 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
   }
 
   void _mostrarDialogoParticipacionEvento(Map<String, dynamic> evento) {
-    // Extraer las categorías disponibles del evento
-    List<String> categoriasDisponibles = [];
-    if (evento['categoria'] != null && evento['categoria'].toString().isNotEmpty) {
-      // Las categorías vienen separadas por comas: "sub-8,sub-10"
-      categoriasDisponibles = evento['categoria'].toString().split(',')
-          .map((cat) => cat.trim())
-          .where((cat) => cat.isNotEmpty)
-          .toList();
-    }
-    
-    // Si no hay categorías especificadas, usar todas como fallback
-    final categorias = categoriasDisponibles.isNotEmpty 
-        ? categoriasDisponibles 
-        : ['sub-8', 'sub-10', 'sub-12', 'sub-14', 'sub-16', 'sub-18'];
-    
     // Lista para almacenar múltiples participaciones
     List<Map<String, dynamic>> participaciones = [
       {
-        'categoria': categorias.first, // Usar la primera categoría disponible
+        'categoria': 'sub-12',
         'cantidad': TextEditingController(),
         'invitados': TextEditingController(),
       }
     ];
+    
+    final categorias = ['sub-8', 'sub-10', 'sub-12', 'sub-14', 'sub-16', 'sub-18'];
 
     showDialog(
       context: context,
@@ -800,7 +766,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                       onPressed: () {
                         setStateDialog(() {
                           participaciones.add({
-                            'categoria': categorias.first, // Usar la primera categoría disponible
+                            'categoria': 'sub-12',
                             'cantidad': TextEditingController(),
                             'invitados': TextEditingController(),
                           });
@@ -1010,21 +976,6 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
           ],
         ),
         
-        // Horas (si están disponibles)
-        if (evento['horaInicio'] != null || evento['horaFin'] != null) ...[
-          SizedBox(height: 4),
-          Row(
-            children: [
-              Icon(Icons.access_time, size: 14, color: WessexColors.midnightNavy),
-              SizedBox(width: 8),
-              Text(
-                _formatearHorarios(evento['horaInicio'], evento['horaFin']),
-                style: TextStyle(fontSize: 13, color: WessexColors.midnightNavy),
-              ),
-            ],
-          ),
-        ],
-        
         // Lugar
         if (evento['lugar'] != null && evento['lugar'].toString().isNotEmpty) ...[
           SizedBox(height: 4),
@@ -1187,22 +1138,6 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
       Navigator.pop(context);
       _mostrarError('Error al registrar participación: $e');
     }
-  }
-
-  String _formatearHorarios(String? horaInicio, String? horaFin) {
-    if (horaInicio == null && horaFin == null) {
-      return 'Hora no especificada';
-    }
-    
-    if (horaInicio != null && horaFin != null) {
-      return '$horaInicio - $horaFin';
-    }
-    
-    if (horaInicio != null) {
-      return 'Inicio: $horaInicio';
-    }
-    
-    return 'Fin: $horaFin';
   }
 
   void _cerrarSesion() {

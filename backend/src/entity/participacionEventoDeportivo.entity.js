@@ -1,9 +1,9 @@
 "use strict";
 import { EntitySchema } from "typeorm";
 
-const ParticipacionEventoSchema = new EntitySchema({
-  name: "ParticipacionEvento",
-  tableName: "participaciones_evento",
+const ParticipacionEventoDeportivoSchema = new EntitySchema({
+  name: "ParticipacionEventoDeportivo",
+  tableName: "participaciones_evento_deportivo",
   columns: {
     id: {
       type: "int",
@@ -15,8 +15,8 @@ const ParticipacionEventoSchema = new EntitySchema({
       length: 12,
       nullable: false,
     },
-    eventoId: {
-      type: "int",
+    eventoDeportivoId: {
+      type: "uuid",
       nullable: false,
     },
     cantidadNinos: {
@@ -46,11 +46,11 @@ const ParticipacionEventoSchema = new EntitySchema({
     },
   },
   relations: {
-    evento: {
+    eventoDeportivo: {
       type: "many-to-one",
-      target: "Evento",
+      target: "EventoDeportivo",
       joinColumn: {
-        name: "eventoId",
+        name: "eventoDeportivoId",
       },
     },
     ramaExterna: {
@@ -64,4 +64,4 @@ const ParticipacionEventoSchema = new EntitySchema({
   },
 });
 
-export default ParticipacionEventoSchema;
+export default ParticipacionEventoDeportivoSchema;

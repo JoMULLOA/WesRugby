@@ -72,14 +72,14 @@ export async function crearEventoDeportivo(req, res) {
       costo: costo || 0,
       observaciones,
       estado,
-      creadoPorRut: req.user.rut
+      organizadoPorRut: req.user.rut
     });
 
     const eventoGuardado = await eventoRepository.save(nuevoEvento);
 
     const eventoCompleto = await eventoRepository.findOne({
       where: { id: eventoGuardado.id },
-      relations: ["creadoPor"]
+      relations: ["organizadoPor"]
     });
 
     handleSuccess(res, 201, "Evento deportivo creado exitosamente", eventoCompleto);
@@ -137,23 +137,32 @@ export async function obtenerEventosDeportivos(req, res) {
 
     const [eventos, total] = await eventoRepository.findAndCount({
       where: whereCondition,
-      relations: ["creadoPor"],
-      order: { fechaInicio: "ASC", horaInicio: "ASC" },
+      relations: ["organizadoPor"],
+      order: { fechaInicio: "ASC" },
       take: parseInt(limite),
       skip: skip
     });
 
-    const resultado = {
-      eventos,
-      paginacion: {
-        total,
-        pagina: parseInt(pagina),
-        limite: parseInt(limite),
-        totalPaginas: Math.ceil(total / parseInt(limite))
-      }
-    };
+    // Simplificar la respuesta para evitar problemas de serialización
+    const eventosSimplificados = eventos.map(evento => ({
+      id: evento.id,
+      titulo: evento.titulo,
+      descripcion: evento.descripcion,
+      tipoEvento: evento.tipoEvento,
+      categoria: evento.categoria,
+      fechaInicio: evento.fechaInicio,
+      fechaFin: evento.fechaFin,
+      lugar: evento.lugar,
+      estado: evento.estado,
+      inscripcionRequerida: evento.inscripcionRequerida,
+      notificarParticipantes: evento.notificarParticipantes,
+      costo: evento.costo,
+      observaciones: evento.observaciones,
+      createdAt: evento.createdAt,
+      updatedAt: evento.updatedAt
+    }));
 
-    handleSuccess(res, 200, "Eventos deportivos obtenidos exitosamente", resultado);
+    handleSuccess(res, 200, "Eventos deportivos obtenidos exitosamente", eventosSimplificados);
 
   } catch (error) {
     console.error("Error obteniendo eventos:", error);

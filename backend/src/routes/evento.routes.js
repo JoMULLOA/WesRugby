@@ -7,6 +7,7 @@ import {
   obtenerEventosDisponibles,
   participarEnEvento,
   obtenerMisParticipacionesEvento,
+  obtenerCategoriasRegistradas,
   actualizarEvento,
   eliminarEvento,
   obtenerParticipacionesEvento
@@ -30,7 +31,8 @@ router
 router
   .get("/disponibles", authenticateJWT, isRamaExterna, obtenerEventosDisponibles)
   .post("/participar", authenticateJWT, isRamaExterna, participarEnEvento)
-  .get("/mis-participaciones", authenticateJWT, isRamaExterna, obtenerMisParticipacionesEvento);
+  .get("/mis-participaciones", authenticateJWT, isRamaExterna, obtenerMisParticipacionesEvento)
+  .get("/:eventoId/categorias-registradas", authenticateJWT, isRamaExterna, obtenerCategoriasRegistradas);
 
 // Rutas generales (todos los roles autenticados)
 router
