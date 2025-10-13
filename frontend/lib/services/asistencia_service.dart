@@ -387,4 +387,66 @@ class AsistenciaService {
       throw Exception('Error al guardar la sesión de asistencia');
     }
   }
+
+  /// Obtiene las sesiones del entrenador autenticado
+  Future<List<Map<String, dynamic>>> getMisSesiones() async {
+    try {
+      final token = await TokenManager.getToken();
+      if (token == null) {
+        throw Exception('No hay token de autenticación');
+      }
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/sesiones-asistencia/mis-sesiones'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['data'] is List) {
+          return List<Map<String, dynamic>>.from(data['data']);
+        }
+        throw Exception('Formato de respuesta inválido');
+      } else {
+        throw Exception('Error al obtener sesiones: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error al obtener mis sesiones: $e');
+      throw Exception('Error al obtener las sesiones');
+    }
+  }
+
+  /// Obtiene los detalles de una sesión específica
+  Future<Map<String, dynamic>> getDetalleSesion(int sesionId) async {
+    try {
+      final token = await TokenManager.getToken();
+      if (token == null) {
+        throw Exception('No hay token de autenticación');
+      }
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/sesiones-asistencia/$sesionId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['data'] is Map) {
+          return Map<String, dynamic>.from(data['data']);
+        }
+        throw Exception('Formato de respuesta inválido');
+      } else {
+        throw Exception('Error al obtener detalles: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error al obtener detalle de sesión: $e');
+      throw Exception('Error al obtener los detalles de la sesión');
+    }
+  }
 }

@@ -6,6 +6,7 @@ import 'gestion_asistencia_screen_wessex.dart';
 import 'historial_asistencia_screen_wessex.dart';
 import 'entrenador_justificantes_screen.dart';
 import 'tomar_asistencia_screen.dart';
+import 'historial_sesiones_screen.dart';
 
 class EntrenadorDashboard extends StatelessWidget {
   const EntrenadorDashboard({super.key});
@@ -554,7 +555,7 @@ class EntrenadorDashboard extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const HistorialAsistenciaScreen(),
+        builder: (context) => const HistorialSesionesScreen(),
       ),
     );
   }
