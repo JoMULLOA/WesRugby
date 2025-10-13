@@ -12,6 +12,7 @@ import eventoDeportivoRoutes from "./eventoDeportivo.routes.js";
 import directivaRoutes from "./directiva.routes.js";
 import estudianteRoutes from "./estudiante.routes.js";
 import importacionRoutes from "./importacion.routes.js";
+import sesionAsistenciaRoutes from "./sesionAsistencia.routes.js";
 import torneoRoutes from "./torneo.routes.js";
 import eventoRoutes from "./evento.routes.js";
 import tipoEventoRoutes from "./tipoEvento.routes.js";
@@ -30,6 +31,7 @@ router
     .use("/directiva", directivaRoutes)
     .use("/estudiantes", estudianteRoutes)
     .use("/importacion", importacionRoutes)
+    .use("/sesiones-asistencia", sesionAsistenciaRoutes)
     .use("/torneos", torneoRoutes)
     .use("/eventos", eventoRoutes)
     .use("/tipos-evento", tipoEventoRoutes);

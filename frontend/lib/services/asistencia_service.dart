@@ -358,4 +358,33 @@ class AsistenciaService {
       fechaInicio: DateTime.now(),
     );
   }
+
+  /// Guarda una nueva sesión de asistencia
+  Future<Map<String, dynamic>> guardarSesionAsistencia(Map<String, dynamic> sesionData) async {
+    try {
+      final token = await TokenManager.getToken();
+      if (token == null) {
+        throw Exception('No hay token de autenticación');
+      }
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/sesiones-asistencia'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(sesionData),
+      );
+
+      if (response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        return data;
+      } else {
+        throw Exception('Error al guardar sesión: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error al guardar sesión de asistencia: $e');
+      throw Exception('Error al guardar la sesión de asistencia');
+    }
+  }
 }

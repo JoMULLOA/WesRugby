@@ -5,6 +5,7 @@ import '../config/colors.dart';
 import 'gestion_asistencia_screen_wessex.dart';
 import 'historial_asistencia_screen_wessex.dart';
 import 'entrenador_justificantes_screen.dart';
+import 'tomar_asistencia_screen.dart';
 
 class EntrenadorDashboard extends StatelessWidget {
   const EntrenadorDashboard({super.key});
@@ -544,7 +545,7 @@ class EntrenadorDashboard extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const GestionAsistenciaScreen(),
+        builder: (context) => const TomarAsistenciaScreen(),
       ),
     );
   }

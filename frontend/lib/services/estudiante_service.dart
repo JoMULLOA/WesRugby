@@ -38,6 +38,40 @@ class EstudianteService extends ChangeNotifier {
     };
   }
 
+  // Obtener todos los estudiantes (para entrenadores/directiva)
+  Future<List<Map<String, dynamic>>> getAllStudentsFromAPI() async {
+    try {
+      final response = await ApiService.getAllEstudiantes();
+      
+      if (kDebugMode) {
+        print('🔍 Response status code: ${response.statusCode}');
+        print('🔍 Response data type: ${response.data.runtimeType}');
+      }
+      
+      if (response.statusCode == 200 && response.data != null) {
+        if (response.data is Map<String, dynamic> && response.data['success'] == true) {
+          final estudiantes = List<Map<String, dynamic>>.from(response.data['data']);
+          if (kDebugMode) {
+            print('✅ Todos los estudiantes obtenidos: ${estudiantes.length}');
+          }
+          return estudiantes;
+        } else if (response.data is List) {
+          final estudiantes = List<Map<String, dynamic>>.from(response.data);
+          if (kDebugMode) {
+            print('✅ Estudiantes obtenidos directamente: ${estudiantes.length}');
+          }
+          return estudiantes;
+        }
+      }
+      throw Exception(response.message ?? 'Error al obtener estudiantes');
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error al obtener todos los estudiantes: $e');
+      }
+      throw Exception('Error al obtener estudiantes');
+    }
+  }
+
   // Obtener estudiantes asignados a un apoderado
   Future<List<Map<String, dynamic>>> getMisEstudiantes() async {
     try {

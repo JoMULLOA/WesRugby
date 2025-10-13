@@ -19,7 +19,17 @@ const router = express.Router();
 router.use(authenticateJwt);
 
 // Rutas para estudiantes
-router.get("/", isAuthenticated, getEstudiantes); // GET /estudiantes - obtener todos los estudiantes (cualquier usuario autenticado)
+router.get("/", (req, res, next) => {
+  // Permitir entrenadores, directiva y admin ver todos los estudiantes
+  if (['entrenador', 'directiva', 'admin', 'tesorera'].includes(req.user.rol)) {
+    next();
+  } else {
+    res.status(403).json({
+      success: false,
+      message: 'No tienes permisos para ver todos los estudiantes'
+    });
+  }
+}, getEstudiantes); // GET /estudiantes - obtener todos los estudiantes
 router.get("/mis-estudiantes", isApoderado, getMisEstudiantes); // GET /estudiantes/mis-estudiantes - obtener estudiantes del apoderado logueado
 router.get("/por-apoderado", isApoderado, getEstudiantesByApoderado); // GET /estudiantes/por-apoderado?rut=xxx - obtener estudiantes por apoderado
 router.get("/:rut", isAuthenticated, getEstudiante); // GET /estudiantes/:rut - obtener estudiante por RUT

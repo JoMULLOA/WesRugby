@@ -37,16 +37,20 @@ export async function createEstudiante(req, res) {
 
 export async function getEstudiantes(req, res) {
   try {
+    console.log('📚 Controlador getEstudiantes llamado por:', req.user.email);
     const [estudiantes, error] = await getEstudiantesService();
 
     if (error) {
+      console.log('❌ Error en servicio:', error);
       return handleErrorClient(res, 404, error);
     }
 
+    console.log('✅ Estudiantes obtenidos:', estudiantes.length);
     estudiantes.length === 0
       ? handleSuccess(res, 204)
       : handleSuccess(res, 200, "Estudiantes encontrados", estudiantes);
   } catch (error) {
+    console.error('❌ Error en controlador:', error);
     handleErrorServer(res, 500, error.message);
   }
 }

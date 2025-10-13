@@ -28,6 +28,7 @@ export async function createEstudianteService(estudianteData) {
 
 export async function getEstudiantesService() {
   try {
+    console.log('🔍 Obteniendo todos los estudiantes...');
     const estudianteRepository = AppDataSource.getRepository(Estudiante);
 
     const estudiantes = await estudianteRepository.find({
@@ -35,6 +36,8 @@ export async function getEstudiantesService() {
         nombre: "ASC",
       },
     });
+    
+    console.log('✅ Estudiantes encontrados en DB:', estudiantes.length);
 
     if (!estudiantes || estudiantes.length === 0) {
       return [null, "No hay estudiantes registrados"];
@@ -218,3 +221,21 @@ export async function updateEstudianteFotoService(rut, fotoUrl) {
     return [null, "Error interno del servidor"];
   }
 }
+
+export const getEstudiantesByRutListService = async (rutList) => {
+  try {
+    console.log('🔍 Buscando estudiantes por lista de RUTs:', rutList.length);
+    
+    const estudianteRepository = AppDataSource.getRepository(Estudiante);
+    
+    const estudiantes = await estudianteRepository.find({
+      where: rutList.map(rut => ({ rut }))
+    });
+
+    console.log('✅ Estudiantes encontrados por RUT list:', estudiantes.length);
+    return [estudiantes, null];
+  } catch (error) {
+    console.error('Error obtener estudiantes por lista:', error);
+    return [null, error];
+  }
+};
