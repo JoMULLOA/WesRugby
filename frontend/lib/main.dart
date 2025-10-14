@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'auth/simple_login.dart';
+import 'home/home_screen.dart';
 import 'admin/directiva_dashboard.dart';
 import 'admin/tesorera_dashboard.dart';
 import 'admin/entrenador_dashboard.dart';
@@ -32,8 +33,9 @@ class MyApp extends StatelessWidget {
       ],
       locale: const Locale('es', 'ES'),
       theme: WessexColors.lightTheme,
-      initialRoute: '/login',
+      initialRoute: '/',
       routes: {
+        '/': (context) => const HomeScreen(),
         '/login': (context) => const LoginPage(),
         '/dashboard/directiva': (context) => const DirectivaDashboard(),
         '/dashboard/tesorera': (context) => const TesoreraDashboard(),

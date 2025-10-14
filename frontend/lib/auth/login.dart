@@ -402,25 +402,6 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       SizedBox(height: isDesktop ? 24 : 20),
                       
-                      // Title
-                      Text(
-                        "Wessex Rugby Club",
-                        style: TextStyle(
-                          color: WessexColors.white,
-                          fontSize: isDesktop ? 32 : (isTablet ? 28 : 24),
-                          fontWeight: FontWeight.bold,
-                          shadows: [
-                            Shadow(
-                              color: WessexColors.darkGrape.withOpacity(0.5),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      SizedBox(height: 8),
-                      
                       Text(
                         "Sistema de Gestión",
                         style: TextStyle(
