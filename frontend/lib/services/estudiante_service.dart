@@ -123,33 +123,30 @@ class EstudianteService extends ChangeNotifier {
 
       for (var row in excelData) {
         if (_validateStudentData(row)) {
-          // Extraer datos del estudiante
-          String rut = _cleanString(row['rut']);
-          String nombre = _cleanString(row['nombre']);
-          String curso = _cleanString(row['curso']);
-          String telefono = _cleanString(row['telefono'] ?? '');
-          String direccion = _cleanString(row['direccion'] ?? '');
-          String contactoEmergencia = _cleanString(row['contactoEmergencia'] ?? '');
-          String telefonoEmergencia = _cleanString(row['telefonoEmergencia'] ?? '');
-          String rutResponsable = _cleanString(row['rutResponsable']);
-          String nombreResponsable = _cleanString(row['responsable']);
+          // Extraer datos del estudiante (dos campos separados: nombreCompleto y run)
+          String nombreCompleto = _cleanString(row['nombreCompleto'] ?? row['Nombre Completo'] ?? '');
+          String run = _cleanString(row['run'] ?? row['RUN'] ?? '');
+          String curso = _cleanString(row['curso'] ?? row['Curso'] ?? '');
+          String nombreMadre = _cleanString(row['nombreMadre'] ?? row['Nombre Madre'] ?? '');
+          String telefonoMadre = _cleanString(row['telefonoMadre'] ?? row['Telefono Madre'] ?? '');
+          String nombrePadre = _cleanString(row['nombrePadre'] ?? row['Nombre Padre'] ?? '');
+          String telefonoPadre = _cleanString(row['telefonoPadre'] ?? row['Telefono Padre'] ?? '');
+          String validez = _cleanString(row['validez'] ?? row['Validez'] ?? '');
+          String responsable = _cleanString(row['responsable'] ?? row['Responsable'] ?? '');
+          String runResponsable = _cleanString(row['runResponsable'] ?? row['RUN Responsable'] ?? '');
 
-          // Generar email único para el responsable con formato nombre.apellido0@wessex.cl
-          String emailResponsable = _generateResponsableEmail(nombreResponsable, rutResponsable);
-
-          // Preparar datos del estudiante para el backend
+          // Preparar datos del estudiante para el backend (campos separados)
           Map<String, dynamic> estudianteData = {
-            'rut': rut,
-            'nombre': nombre,
+            'nombreCompleto': nombreCompleto,
+            'run': run,
             'curso': curso,
-            'telefono': telefono.isNotEmpty ? telefono : null,
-            'direccion': direccion.isNotEmpty ? direccion : null,
-            'contactoEmergencia': contactoEmergencia.isNotEmpty ? contactoEmergencia : null,
-            'telefonoEmergencia': telefonoEmergencia.isNotEmpty ? telefonoEmergencia : null,
-            'rutResponsable': rutResponsable,
-            'nombreResponsable': nombreResponsable,
-            'emailResponsable': emailResponsable,
-            'observaciones': null,
+            'nombreMadre': nombreMadre.isNotEmpty ? nombreMadre : null,
+            'telefonoMadre': telefonoMadre.isNotEmpty ? telefonoMadre : null,
+            'nombrePadre': nombrePadre.isNotEmpty ? nombrePadre : null,
+            'telefonoPadre': telefonoPadre.isNotEmpty ? telefonoPadre : null,
+            'validez': validez,
+            'responsable': responsable,
+            'runResponsable': runResponsable,
           };
 
           estudiantesParaImportar.add(estudianteData);
@@ -217,81 +214,120 @@ class EstudianteService extends ChangeNotifier {
       'telefonoEmergencia': backendEstudiante['telefonoEmergencia'] ?? '',
       'rutResponsable': backendEstudiante['rutResponsable'] ?? '',
       'responsable': backendEstudiante['nombreResponsable'] ?? '',
-      'validez': 'Válido',
+      'nombreMadre': _extractFromObservaciones(backendEstudiante['observaciones'], 'Madre'),
+      'nombrePadre': _extractFromObservaciones(backendEstudiante['observaciones'], 'Padre'),
+      'validez': backendEstudiante['estado'] == 'activo' ? 'Activo' : 'Inactivo',
       'estado': 'Registrado',
       'fechaRegistro': DateTime.now(),
     };
   }
 
-  // Generar email para el responsable con formato nombre.apellido0@wessex.cl
-  String _generateResponsableEmail(String nombreCompleto, String rut) {
-    // Limpiar nombre (solo letras y espacios)
-    String cleanName = nombreCompleto
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-záéíóúñ\s]'), '')
-        .trim();
-
-    // Tomar primer nombre y primer apellido
-    List<String> words = cleanName.split(' ').where((w) => w.isNotEmpty).toList();
-    String firstName = words.isNotEmpty ? words[0] : 'usuario';
-    String lastName = words.length > 1 ? words[1] : '';
-
-    // Generar email base
-    String email = lastName.isNotEmpty 
-        ? '${firstName}.${lastName}0@wessex.cl'
-        : '${firstName}0@wessex.cl';
-
-    return email;
+  // Extraer información de las observaciones
+  String _extractFromObservaciones(String? observaciones, String tipo) {
+    if (observaciones == null) return '';
+    
+    final regex = RegExp('$tipo: ([^,]+)', caseSensitive: false);
+    final match = regex.firstMatch(observaciones);
+    
+    if (match != null) {
+      String value = match.group(1)?.trim() ?? '';
+      return value != 'No especificada' && value != 'No especificado' ? value : '';
+    }
+    
+    return '';
   }
+
+
 
   // Limpiar cadenas de texto
   String _cleanString(dynamic value) {
     if (value == null) return '';
     return value.toString().trim();
   }
-  // Validar datos de un estudiante
+  // Validar datos de un estudiante (campos separados: nombreCompleto y run)
   bool _validateStudentData(Map<String, dynamic> data) {
-    // Verificar campos obligatorios
-    List<String> requiredFields = ['rut', 'nombre', 'padre', 'madre', 'curso', 'validez', 'responsable', 'rutResponsable'];
+    // Verificar campos obligatorios (dos campos separados)
+    List<String> requiredFields = ['nombreCompleto', 'run', 'curso', 'validez', 'responsable', 'runResponsable'];
+    
+    // También verificar variantes de nombres de columnas
+    Map<String, List<String>> fieldVariants = {
+      'nombreCompleto': ['nombreCompleto', 'Nombre Completo', 'nombrecompeto'],
+      'run': ['run', 'RUN', 'rut'],
+      'curso': ['curso', 'Curso'],
+      'validez': ['validez', 'Validez'],
+      'responsable': ['responsable', 'Responsable'],
+      'runResponsable': ['runResponsable', 'RUN Responsable', 'rutResponsable'],
+    };
     
     for (String field in requiredFields) {
-      if (data[field] == null || data[field].toString().trim().isEmpty) {
+      bool fieldFound = false;
+      List<String> variants = fieldVariants[field] ?? [field];
+      
+      for (String variant in variants) {
+        if (data[variant] != null && data[variant].toString().trim().isNotEmpty) {
+          fieldFound = true;
+          break;
+        }
+      }
+      
+      if (!fieldFound) {
+        if (kDebugMode) {
+          print('❌ Campo obligatorio faltante: $field (variantes: $variants)');
+        }
         return false;
       }
     }
     
-    // Validar formato de RUT del estudiante (básico)
-    String rut = data['rut'].toString();
-    if (!rut.contains('-') || rut.length < 9) {
-      return false;
+    // Validar formato de RUN del responsable (básico)
+    String? runResponsable;
+    for (String variant in fieldVariants['runResponsable']!) {
+      if (data[variant] != null && data[variant].toString().trim().isNotEmpty) {
+        runResponsable = data[variant].toString();
+        break;
+      }
     }
     
-    // Validar formato de RUT del responsable (básico)
-    String rutResponsable = data['rutResponsable'].toString();
-    if (!rutResponsable.contains('-') || rutResponsable.length < 9) {
+    if (runResponsable != null && (!runResponsable.contains('-') || runResponsable.length < 9)) {
+      if (kDebugMode) {
+        print('❌ Formato de RUN inválido: $runResponsable');
+      }
       return false;
     }
     
     // Validar validez
-    String validez = data['validez'].toString().toLowerCase();
-    List<String> validValidez = ['activo', 'inactivo', 'vigente', 'no vigente', 'válido', 'vencido', 'valido'];
-    if (!validValidez.contains(validez)) {
-      return false;
+    String? validez;
+    for (String variant in fieldVariants['validez']!) {
+      if (data[variant] != null && data[variant].toString().trim().isNotEmpty) {
+        validez = data[variant].toString().toLowerCase();
+        break;
+      }
+    }
+    
+    if (validez != null) {
+      List<String> validValidez = ['activo', 'inactivo', 'vigente', 'no vigente', 'válido', 'vencido', 'valido'];
+      if (!validValidez.contains(validez)) {
+        if (kDebugMode) {
+          print('❌ Validez inválida: $validez');
+        }
+        return false;
+      }
     }
     
     return true;
   }
 
-  // Agregar estudiante individual
+  // Agregar estudiante individual (mantiene compatibilidad con formato anterior)
   String addStudent({
     required String rut,
     required String nombre,
-    required String padre,
-    required String madre,
+    String? padre,
+    String? madre,
     required String curso,
     required String validez,
     required String responsable,
     required String rutResponsable,
+    String? telefonoMadre,
+    String? telefonoPadre,
   }) {
     try {
       // Verificar si el RUT ya existe
@@ -310,8 +346,12 @@ class EstudianteService extends ChangeNotifier {
         'id': newId,
         'rut': rut,
         'nombre': nombre,
-        'padre': padre,
-        'madre': madre,
+        'padre': padre ?? '',
+        'madre': madre ?? '',
+        'nombrePadre': padre ?? '',  // Nuevo campo
+        'nombreMadre': madre ?? '',  // Nuevo campo
+        'telefonoPadre': telefonoPadre ?? '', // Nuevo campo
+        'telefonoMadre': telefonoMadre ?? '', // Nuevo campo
         'curso': curso,
         'validez': validez,
         'responsable': responsable,

@@ -26,23 +26,36 @@ class ApiService {
 
   static Future<Map<String, String>> _getAuthHeaders() async {
     final token = await TokenManager.getToken();
-    return {
+    print('🔍 DEBUG - Token obtenido: ${token != null ? "SÍ (${token.substring(0, 20)}...)" : "NO"}');
+    
+    final headers = {
       'Content-Type': 'application/json',
       'Cache-Control': 'no-cache',
       'Pragma': 'no-cache',
       if (token != null) 'Authorization': 'Bearer $token',
     };
+    
+    print('🔍 DEBUG - Headers enviados: ${headers.keys.join(', ')}');
+    if (headers.containsKey('Authorization')) {
+      print('🔍 DEBUG - Authorization header: ${headers['Authorization']!.substring(0, 30)}...');
+    }
+    
+    return headers;
   }
 
   // GET request
   static Future<ApiResponse> get(String endpoint) async {
     try {
       final headers = await _getAuthHeaders();
+      print('🔍 DEBUG ApiService GET - Endpoint: $endpoint');
+      print('🔍 DEBUG ApiService GET - URL completa: $baseUrl$endpoint');
+      
       final response = await http.get(
         Uri.parse('$baseUrl$endpoint'),
         headers: headers,
       );
       
+      print('🔍 DEBUG ApiService GET - Status code respuesta: ${response.statusCode}');
       return _handleResponse(response);
     } catch (e) {
       return ApiResponse(

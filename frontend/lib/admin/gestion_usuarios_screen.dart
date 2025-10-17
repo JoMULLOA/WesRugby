@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import '../config/colors.dart';
 import '../services/api_service.dart';
+import '../services/refresh_service.dart';
+import '../services/tokenManager.dart';
 import '../widgets/wessex_widgets.dart';
 
 class GestionUsuariosScreen extends StatefulWidget {
@@ -12,6 +15,7 @@ class GestionUsuariosScreen extends StatefulWidget {
 
 class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
   final TextEditingController _searchController = TextEditingController();
+  late StreamSubscription _refreshSubscription;
   
   String _selectedRol = 'Todos';
   List<Map<String, dynamic>> _allUsuarios = [];
@@ -24,26 +28,44 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
   @override
   void initState() {
     super.initState();
+    _checkTokenOnInit();
     _loadUsuarios();
+    // Escuchar cambios en los usuarios
+    _refreshSubscription = RefreshService().usuariosStream.listen((_) {
+      _loadUsuarios();
+    });
+  }
+  
+  Future<void> _checkTokenOnInit() async {
+    final token = await TokenManager.getToken();
+    print('🔍 DEBUG GestionUsuarios initState - Token disponible: ${token != null ? "SÍ" : "NO"}');
+    if (token != null) {
+      print('🔍 DEBUG GestionUsuarios initState - Token (primeros 30 chars): ${token.substring(0, 30)}...');
+    }
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _refreshSubscription.cancel();
     super.dispose();
   }
 
   // Cargar usuarios desde la API
   Future<void> _loadUsuarios() async {
+    print('🔍 DEBUG GestionUsuarios - Iniciando carga de usuarios');
     setState(() {
       _isLoading = true;
       _error = null;
     });
 
     try {
+      print('🔍 DEBUG GestionUsuarios - Llamando a ApiService.getAllUsers()');
       final response = await ApiService.getAllUsers();
+      print('🔍 DEBUG GestionUsuarios - Respuesta recibida: Status ${response.statusCode}');
       
       if (response.statusCode == 200 && response.data != null) {
+        print('🔍 DEBUG GestionUsuarios - Respuesta exitosa, procesando datos');
         List<dynamic> usuariosData = response.data['data'] ?? response.data;
         
         setState(() {
@@ -58,12 +80,15 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
           }).toList();
           _applyFilters();
         });
+        print('🔍 DEBUG GestionUsuarios - ${_allUsuarios.length} usuarios cargados exitosamente');
       } else {
+        print('🔍 DEBUG GestionUsuarios - Error en respuesta: ${response.statusCode} - ${response.message}');
         setState(() {
           _error = response.message ?? 'Error al cargar usuarios';
         });
       }
     } catch (e) {
+      print('🔍 DEBUG GestionUsuarios - Excepción capturada: $e');
       setState(() {
         _error = 'Error de conexión: $e';
       });

@@ -64,6 +64,7 @@ class _LoginPageState extends State<LoginPage> {
       print('🔍 DEBUG Login - Token extraído: $token');
       print('🔍 DEBUG Login - User extraído: $user');
       print('🔍 DEBUG Login - Condición completa: ${response.statusCode == 200 && token != null}');
+      print('🔍 DEBUG Login - Evaluando condiciones: StatusCode=${response.statusCode}, TokenNotNull=${token != null}');
 
       if (response.statusCode == 200 && token != null) {
         print('🟢 DEBUG - Entrando al bloque de login exitoso');
@@ -72,6 +73,13 @@ class _LoginPageState extends State<LoginPage> {
         await TokenManager.saveToken(token);
         await TokenManager.saveUserInfo(user);
         print('🟢 DEBUG - Token y user info guardados');
+        
+        // Verificar inmediatamente que el token se guardó correctamente
+        final tokenVerification = await TokenManager.getToken();
+        print('🔍 DEBUG Login - Verificación inmediata del token: ${tokenVerification != null ? "ENCONTRADO" : "NO ENCONTRADO"}');
+        if (tokenVerification != null) {
+          print('🔍 DEBUG Login - Token verificado (primeros 30 chars): ${tokenVerification.substring(0, 30)}...');
+        }
 
         // Verificar información del usuario
         print('🔍 DEBUG User Info completo: $user');
@@ -85,7 +93,11 @@ class _LoginPageState extends State<LoginPage> {
         
         // Pequeña pausa para asegurar que el contexto esté listo
         print('🟢 DEBUG - Programando navegación...');
-        Future.delayed(Duration(milliseconds: 100), () {
+        Future.delayed(Duration(milliseconds: 100), () async {
+          // Verificar token antes de navegar
+          final tokenAntesNavegacion = await TokenManager.getToken();
+          print('🔍 DEBUG Login - Token antes de navegación: ${tokenAntesNavegacion != null ? "ENCONTRADO" : "NO ENCONTRADO"}');
+          
           print('🟢 DEBUG - Ejecutando navegación para rol: $rol');
           _navigateToRoleDashboard(rol);
         });

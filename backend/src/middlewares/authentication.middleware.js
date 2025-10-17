@@ -9,6 +9,8 @@ import jwt from "jsonwebtoken"; // Aunque no lo uses directamente en authenticat
 export function authenticateJwt(req, res, next) {
   // --- ¡LOGS CRUCIALES AQUÍ! ---
   console.log("BACKEND DEBUG: authenticateJwt middleware llamado.");
+  console.log("BACKEND DEBUG: URL solicitada:", req.method, req.originalUrl);
+  console.log("BACKEND DEBUG: Todos los headers:", Object.keys(req.headers).join(', '));
   console.log("BACKEND DEBUG: Header Authorization COMPLETO recibido por authenticateJwt:", req.headers.authorization);
 
   // Passport.js se encarga de la extracción y verificación del token

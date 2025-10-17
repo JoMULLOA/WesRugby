@@ -4,6 +4,7 @@ import 'package:excel/excel.dart' as ExcelLib;
 import '../widgets/wessex_widgets.dart';
 import '../config/colors.dart';
 import '../services/estudiante_service.dart';
+import '../services/refresh_service.dart';
 import 'dart:typed_data';
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html' as html;
@@ -181,14 +182,16 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
             ),
             child: Column(
               children: [
-                _buildColumnRow('RUT', 'RUT del estudiante (ej: 12345678-9)', true),
-                _buildColumnRow('NOMBRE', 'Nombre completo del estudiante', true),
-                _buildColumnRow('PADRE', 'Nombre del padre o tutor', true),
-                _buildColumnRow('MADRE', 'Nombre de la madre o tutora', true),
-                _buildColumnRow('CURSO', 'Categoría deportiva (ej: Sub-16, Sub-18)', true),
-                _buildColumnRow('VALIDEZ', 'Estado del registro (Activo/Inactivo)', true),
-                _buildColumnRow('RESPONSABLE', 'Nombre del responsable del registro', true),
-                _buildColumnRow('RUT RESPONSABLE', 'RUT del apoderado (ej: 12345678-9)', true),
+                _buildColumnRow('Nombre Completo', 'Nombre completo del estudiante', true),
+                _buildColumnRow('RUN', 'RUN del estudiante (ej: 12345678-9)', true),
+                _buildColumnRow('Curso', 'Categoría deportiva (ej: Sub-16, Sub-18)', true),
+                _buildColumnRow('Nombre Madre', 'Nombre completo de la madre o tutora', false),
+                _buildColumnRow('Telefono Madre', 'Número de teléfono de la madre', false),
+                _buildColumnRow('Nombre Padre', 'Nombre completo del padre o tutor', false),
+                _buildColumnRow('Telefono Padre', 'Número de teléfono del padre', false),
+                _buildColumnRow('Validez', 'Estado del registro (Vigente/No Vigente)', true),
+                _buildColumnRow('Responsable', 'Nombre del responsable del registro', true),
+                _buildColumnRow('RUN Responsable', 'RUN del apoderado (ej: 12345678-9)', true),
               ],
             ),
           ),
@@ -487,23 +490,54 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
               child: DataTable(
                 headingRowColor: MaterialStateProperty.all(WessexColors.deepRoyalBlue.withOpacity(0.1)),
                 columns: [
-                  DataColumn(label: Text('RUT', style: TextStyle(fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text('NOMBRE', style: TextStyle(fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text('PADRE', style: TextStyle(fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text('MADRE', style: TextStyle(fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text('CURSO', style: TextStyle(fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text('VALIDEZ', style: TextStyle(fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text('RESPONSABLE', style: TextStyle(fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text('RUT RESP.', style: TextStyle(fontWeight: FontWeight.bold))),
+                  DataColumn(label: Text('NOMBRE COMPLETO', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+                  DataColumn(label: Text('RUN', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+                  DataColumn(label: Text('CURSO', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+                  DataColumn(label: Text('MADRE', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+                  DataColumn(label: Text('TEL. MADRE', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+                  DataColumn(label: Text('PADRE', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+                  DataColumn(label: Text('TEL. PADRE', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+                  DataColumn(label: Text('VALIDEZ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+                  DataColumn(label: Text('RESPONSABLE', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+                  DataColumn(label: Text('RUN RESP.', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
                 ],
                 rows: _previewData.take(10).map((student) {
                   return DataRow(
                     cells: [
-                      DataCell(Text(student['rut'] ?? '')),
-                      DataCell(Text(student['nombre'] ?? '')),
-                      DataCell(Text(student['padre'] ?? '')),
-                      DataCell(Text(student['madre'] ?? '')),
-                      DataCell(Text(student['curso'] ?? '')),
+                      DataCell(
+                        Container(
+                          width: 120,
+                          child: Text(
+                            student['nombreCompleto'] ?? student['nombrecompleto'] ?? '',
+                            style: TextStyle(fontSize: 11),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                      DataCell(Text(student['run'] ?? '', style: TextStyle(fontSize: 11))),
+                      DataCell(Text(student['curso'] ?? '', style: TextStyle(fontSize: 11))),
+                      DataCell(
+                        Container(
+                          width: 100,
+                          child: Text(
+                            student['nombreMadre'] ?? student['nombremadre'] ?? '',
+                            style: TextStyle(fontSize: 11),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                      DataCell(Text(student['telefonoMadre'] ?? student['telefonomadre'] ?? '', style: TextStyle(fontSize: 11))),
+                      DataCell(
+                        Container(
+                          width: 100,
+                          child: Text(
+                            student['nombrePadre'] ?? student['nombrepadre'] ?? '',
+                            style: TextStyle(fontSize: 11),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                      DataCell(Text(student['telefonoPadre'] ?? student['telefonopadre'] ?? '', style: TextStyle(fontSize: 11))),
                       DataCell(
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -515,14 +549,23 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
                             student['validez'] ?? '',
                             style: TextStyle(
                               color: _getValidezColor(student['validez']),
-                              fontSize: 12,
+                              fontSize: 10,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
                       ),
-                      DataCell(Text(student['responsable'] ?? '')),
-                      DataCell(Text(student['rutResponsable'] ?? '')),
+                      DataCell(
+                        Container(
+                          width: 100,
+                          child: Text(
+                            student['responsable'] ?? '',
+                            style: TextStyle(fontSize: 11),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                      DataCell(Text(student['runResponsable'] ?? student['runresponsable'] ?? '', style: TextStyle(fontSize: 11))),
                     ],
                   );
                 }).toList(),
@@ -784,33 +827,76 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
       
       print('📋 Encabezados encontrados: $headers');
       
-      // Mapear encabezados a campos esperados
+      // Mapear encabezados EXACTAMENTE como aparecen en tu Excel (dos columnas separadas)
       Map<String, String> headerMapping = {
-        'rut': 'rut',
-        'nombre': 'nombre', 
-        'padre': 'padre',
-        'madre': 'madre',
-        'curso': 'curso',
-        'validez': 'validez',
-        'responsable': 'responsable',
-        'rutresponsable': 'rutResponsable',
+        'nombre completo': 'nombreCompleto',              // Columna A del Excel
+        'run': 'run',                                     // Columna B del Excel  
+        'curso': 'curso',                                 // Columna C del Excel
+        'nombre madre': 'nombreMadre',                    // Columna D del Excel
+        'telefono madre': 'telefonoMadre',                // Columna E del Excel
+        'nombre padre': 'nombrePadre',                    // Columna F del Excel
+        'telefono padre': 'telefonoPadre',                // Columna G del Excel
+        'validez': 'validez',                             // Columna H del Excel
+        'responsable': 'responsable',                     // Columna I del Excel
+        'run responsable': 'runResponsable',              // Columna J del Excel
+        // Variantes adicionales por compatibilidad
+        'nombrecompleto': 'nombreCompleto',
+        'nombremadre': 'nombreMadre',
+        'telefonomadre': 'telefonoMadre',
+        'nombrepadre': 'nombrePadre', 
+        'telefonopadre': 'telefonoPadre',
+        'runresponsable': 'runResponsable',
+        'rutresponsable': 'runResponsable',
       };
       
-      // Verificar que todos los campos requeridos estén presentes
+      // Debug: imprimir todos los headers encontrados
+      if (kDebugMode) {
+        print('🔍 Headers encontrados en Excel:');
+        for (int i = 0; i < headers.length; i++) {
+          print('  $i: "${headers[i]}"');
+        }
+      }
+      
+      // Verificar que todos los campos obligatorios estén presentes
+      // Mapeamos desde los nombres del Excel a los campos internos (DOS columnas separadas)
+      Map<String, String> requiredFieldsMapping = {
+        'nombre completo': 'nombreCompleto',              // Columna A
+        'run': 'run',                                     // Columna B
+        'curso': 'curso',                                 // Columna C
+        'validez': 'validez',                             // Columna H
+        'responsable': 'responsable',                     // Columna I
+        'run responsable': 'runResponsable'               // Columna J
+      };
+      
       List<String> missingHeaders = [];
-      for (String requiredField in headerMapping.keys) {
-        bool found = headers.any((h) => 
-          h.contains(requiredField) || 
-          requiredField.contains(h) ||
-          _normalizeHeaderName(h) == requiredField
+      
+      for (String excelHeader in requiredFieldsMapping.keys) {
+        String internalField = requiredFieldsMapping[excelHeader]!;
+        
+        bool headerExists = headers.any((h) => 
+          h.toLowerCase().trim() == excelHeader
         );
-        if (!found) {
-          missingHeaders.add(requiredField);
+        
+        if (!headerExists) {
+          missingHeaders.add(excelHeader);
+          if (kDebugMode) {
+            print('❌ Header obligatorio faltante en Excel: "$excelHeader"');
+          }
+        } else {
+          if (kDebugMode) {
+            print('✅ Header obligatorio encontrado: "$excelHeader" -> $internalField');
+          }
         }
       }
       
       if (missingHeaders.isNotEmpty) {
-        throw Exception('Faltan las siguientes columnas: ${missingHeaders.join(', ')}');
+        String expectedHeaders = requiredFieldsMapping.keys.join(', ');
+        String foundHeaders = headers.join(', ');
+        throw Exception(
+          'Faltan las siguientes columnas: ${missingHeaders.join(', ')}\n\n'
+          'Columnas esperadas: $expectedHeaders\n'
+          'Columnas encontradas: $foundHeaders'
+        );
       }
       
       // Procesar cada fila de datos (saltando la primera que son encabezados)
@@ -826,14 +912,30 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
         
         // Mapear datos de la fila actual
         for (int j = 0; j < headers.length && j < row.length; j++) {
-          String header = _normalizeHeaderName(headers[j]);
+          String originalHeader = headers[j];
+          String normalizedHeader = originalHeader.toLowerCase().trim();
           var cellValue = row[j]?.value;
           
           if (cellValue != null) {
             String value = cellValue.toString().trim();
             if (value.isNotEmpty) {
-              studentData[header] = value;
-              hasValidData = true;
+              // Buscar el campo mapeado correspondiente
+              String? mappedField = headerMapping[normalizedHeader];
+              if (mappedField != null) {
+                studentData[mappedField] = value;
+                hasValidData = true;
+                if (kDebugMode) {
+                  print('📋 Mapeado: "$originalHeader" -> $mappedField = "$value"');
+                }
+              } else {
+                // Si no hay mapeo directo, usar el header normalizado
+                String normalizedField = _normalizeHeaderName(originalHeader);
+                studentData[normalizedField] = value;
+                hasValidData = true;
+                if (kDebugMode) {
+                  print('📋 Sin mapeo directo: "$originalHeader" -> $normalizedField = "$value"');
+                }
+              }
             }
           }
         }
@@ -871,32 +973,60 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
   }
   
   String _normalizeHeaderName(String header) {
+    // Solo normalizar a minúsculas y quitar espacios extra
     String normalized = header.toLowerCase().trim();
     
-    // Mapear variaciones de nombres de columnas
-    if (normalized.contains('rut') && !normalized.contains('responsable')) return 'rut';
-    if (normalized.contains('nombre') || normalized.contains('name')) return 'nombre';
-    if (normalized.contains('padre') || normalized.contains('father')) return 'padre';
-    if (normalized.contains('madre') || normalized.contains('mother')) return 'madre';
-    if (normalized.contains('curso') || normalized.contains('course') || normalized.contains('grade')) return 'curso';
-    if (normalized.contains('validez') || normalized.contains('validity') || normalized.contains('valid')) return 'validez';
-    if (normalized.contains('responsable') && !normalized.contains('rut')) return 'responsable';
-    if (normalized.contains('rut') && normalized.contains('responsable')) return 'rutResponsable';
+    if (kDebugMode) {
+      print('🔍 Header original: "$header" -> normalizado: "$normalized"');
+    }
     
     return normalized;
   }
   
   bool _isValidStudentRow(Map<String, dynamic> data) {
-    List<String> requiredFields = ['rut', 'nombre', 'padre', 'madre', 'curso', 'validez', 'responsable', 'rutResponsable'];
+    // Debug: imprimir los datos de la fila para diagnóstico
+    if (kDebugMode) {
+      print('🔍 Validando fila con datos: ${data.keys.join(', ')}');
+      data.forEach((key, value) {
+        print('  $key: "$value"');
+      });
+    }
+    
+    // Campos obligatorios (dos columnas separadas: nombreCompleto y run)
+    List<String> requiredFields = ['nombreCompleto', 'run', 'curso', 'validez', 'responsable', 'runResponsable'];
     
     for (String field in requiredFields) {
       if (!data.containsKey(field) || 
           data[field] == null || 
           data[field].toString().trim().isEmpty) {
+        if (kDebugMode) {
+          print('❌ Campo obligatorio faltante o vacío: $field');
+        }
         return false;
       }
     }
     
+    // Validación básica de RUN del estudiante
+    String runEstudiante = data['run']?.toString() ?? '';
+    if (!runEstudiante.contains('-') || runEstudiante.length < 9) {
+      if (kDebugMode) {
+        print('❌ RUN estudiante inválido: "$runEstudiante"');
+      }
+      return false;
+    }
+    
+    // Validación básica de RUN del responsable
+    String runResponsable = data['runResponsable']?.toString() ?? '';
+    if (!runResponsable.contains('-') || runResponsable.length < 9) {
+      if (kDebugMode) {
+        print('❌ RUN responsable inválido: "$runResponsable"');
+      }
+      return false;
+    }
+    
+    if (kDebugMode) {
+      print('✅ Fila válida');
+    }
     return true;
   }
 
@@ -919,6 +1049,9 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
         List<dynamic> errores = result['errores'] ?? [];
         
         _showSuccessDialog(estudiantesCreados, apoderadosCreados, errores);
+        
+        // Notificar que se han actualizado los usuarios
+        RefreshService().notifyUsuariosChanged();
         
         // Limpiar después de importar exitosamente
         setState(() {

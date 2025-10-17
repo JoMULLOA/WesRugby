@@ -160,6 +160,19 @@ class _LoginPageState extends State<LoginPage> {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         
+        // PRIMERO: Limpiar cualquier token anterior para evitar conflictos
+        print('🧹 Limpiando tokens anteriores...');
+        await _storage.delete(key: 'jwt_token');
+        await _storage.delete(key: 'user_id');
+        await _storage.delete(key: 'user_email');
+        await _storage.delete(key: 'user_role');
+        
+        final prefsClean = await SharedPreferences.getInstance();
+        await prefsClean.remove('isLogged');
+        await prefsClean.remove('email');
+        await prefsClean.remove('userId');
+        await prefsClean.remove('userRole');
+        
         // Extraer datos de la respuesta - estructura correcta del backend
         final token = data["data"]["token"];
         
@@ -170,6 +183,7 @@ class _LoginPageState extends State<LoginPage> {
         final userId = decodedToken['id'].toString();
         
         // Guardar token y datos de usuario
+        print('💾 Guardando nuevo token para usuario: $userEmail ($userRole)');
         await _storage.write(key: 'jwt_token', value: token);
         await _storage.write(key: 'user_id', value: userId);
         await _storage.write(key: 'user_email', value: userEmail);
@@ -181,6 +195,14 @@ class _LoginPageState extends State<LoginPage> {
         await prefs.setString('email', userEmail);
         await prefs.setString('userId', userId);
         await prefs.setString('userRole', userRole);
+        
+        // Verificar que se guardó correctamente
+        final tokenVerificacion = await _storage.read(key: 'jwt_token');
+        print('✅ Token guardado correctamente: ${tokenVerificacion != null ? "SÍ" : "NO"}');
+        if (tokenVerificacion != null) {
+          Map<String, dynamic> decodedVerification = JwtDecoder.decode(tokenVerificacion);
+          print('📋 Token verificado - Usuario: ${decodedVerification["email"]}, RUT: ${decodedVerification["rut"]}');
+        }
 
         // Inicializar servicios WebSocket después del login exitoso
         await _initializeWebSocketServices();

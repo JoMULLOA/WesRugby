@@ -1,29 +1,71 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:convert';
 
 class TokenManager {
-  static const String _tokenKey = 'auth_token';
+  static const String _tokenKey = 'jwt_token'; // Cambiar para coincidir con login.dart
   static const String _userInfoKey = 'user_info';
   static const String _isLoggedInKey = 'is_logged_in';
+  static const FlutterSecureStorage _storage = FlutterSecureStorage();
 
   static Future<void> saveToken(String token) async {
     try {
+      print('🔍 DEBUG - Intentando guardar token: ${token.length} caracteres');
+      
+      // Guardar en flutter_secure_storage (sistema principal)
+      await _storage.write(key: _tokenKey, value: token);
+      
+      // También guardar en SharedPreferences para compatibilidad
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_tokenKey, token);
       await prefs.setBool(_isLoggedInKey, true);
-      print('Token guardado exitosamente');
+      
+      print('🔍 DEBUG - Token guardado en ambos storages');
+      
+      // Verificar inmediatamente que se guardó
+      final savedSecureToken = await _storage.read(key: _tokenKey);
+      final savedPrefsToken = prefs.getString(_tokenKey);
+      print('🔍 DEBUG - Verificación - Secure Storage: ${savedSecureToken != null ? "SÍ" : "NO"}, SharedPrefs: ${savedPrefsToken != null ? "SÍ" : "NO"}');
+      
+      if (savedSecureToken != null || savedPrefsToken != null) {
+        print('✅ Token guardado exitosamente');
+      } else {
+        print('❌ ERROR: Token no se guardó correctamente');
+      }
     } catch (e) {
-      print('Error guardando token: $e');
+      print('❌ Error guardando token: $e');
       throw Exception('Error guardando token: $e');
     }
   }
 
   static Future<String?> getToken() async {
     try {
+      // Primero intentar obtener el token de flutter_secure_storage (sistema actual)
+      final secureToken = await _storage.read(key: 'jwt_token');
+      if (secureToken != null) {
+        print('🔍 DEBUG - Token encontrado en secure storage: SÍ');
+        print('🔍 DEBUG - Token (primeros 50 chars): ${secureToken.length > 50 ? secureToken.substring(0, 50) : secureToken}...');
+        return secureToken;
+      }
+      
+      // Fallback: intentar obtener de SharedPreferences (sistema anterior)
       final prefs = await SharedPreferences.getInstance();
-      return prefs.getString(_tokenKey);
+      
+      // Verificar todas las keys disponibles para debug
+      final allKeys = prefs.getKeys();
+      print('🔍 DEBUG - Keys disponibles en SharedPreferences: ${allKeys.join(", ")}');
+      
+      final token = prefs.getString(_tokenKey);
+      print('🔍 DEBUG - Token recuperado de SharedPreferences: ${token != null ? "SÍ" : "NO"}');
+      if (token != null) {
+        print('🔍 DEBUG - Token (primeros 50 chars): ${token.length > 50 ? token.substring(0, 50) : token}...');
+      } else {
+        print('🔍 DEBUG - Buscando token con key: $_tokenKey');
+        print('🔍 DEBUG - Keys que contienen "token": ${allKeys.where((k) => k.contains("token")).join(", ")}');
+      }
+      return token;
     } catch (e) {
-      print('Error obteniendo token: $e');
+      print('❌ Error obteniendo token: $e');
       return null;
     }
   }

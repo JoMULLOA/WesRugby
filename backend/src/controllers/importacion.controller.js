@@ -1,6 +1,6 @@
 "use strict";
 import { registerService } from "../services/auth.service.js";
-import { createEstudianteService } from "../services/estudiante.service.js";
+import { createEstudianteService, getEstudianteService, updateEstudianteService } from "../services/estudiante.service.js";
 import {
   handleErrorClient,
   handleErrorServer,
@@ -26,21 +26,23 @@ export async function importEstudiantesFromExcel(req, res) {
       const estudianteData = estudiantes[i];
       
       try {
-        // Función para generar email con formato nombre.apellido0@wessex.cl
+        // Función para generar email único con formato nombre.apellido@wessex.cl
         const generateEmail = (nombreCompleto, tipo = 'apoderado') => {
           const nombres = nombreCompleto.toLowerCase().split(' ');
           const primerNombre = nombres[0];
           const primerApellido = nombres[nombres.length - 2] || nombres[nombres.length - 1];
-          return `${primerNombre}.${primerApellido}0@wessex.cl`;
+          // Usar un número aleatorio pequeño en lugar del timestamp para emails más limpios
+          const numero = Math.floor(Math.random() * 99) + 1;
+          return `${primerNombre}.${primerApellido}${numero}@wessex.cl`;
         };
 
         // 1. PRIMERO crear cuenta del apoderado principal si es necesario
-        if (estudianteData.rutResponsable && estudianteData.nombreResponsable) {
-          const emailResponsable = generateEmail(estudianteData.nombreResponsable);
+        if (estudianteData.runResponsable && estudianteData.responsable) {
+          const emailResponsable = generateEmail(estudianteData.responsable);
           
           const [apoderado, apoderadoError] = await registerService({
-            rut: estudianteData.rutResponsable,
-            nombreCompleto: estudianteData.nombreResponsable,
+            rut: estudianteData.runResponsable,
+            nombreCompleto: estudianteData.responsable,
             email: emailResponsable,
             password: "wessex123", // Password temporal
             rol: "apoderado",
@@ -54,91 +56,107 @@ export async function importEstudiantesFromExcel(req, res) {
                                 String(apoderadoError);
             
             if (errorMessage.includes("ya asociado") || errorMessage.includes("ya existe")) {
-              console.log(`ℹ️ Apoderado principal ya existe: ${estudianteData.rutResponsable}`);
+              console.log(`ℹ️ Apoderado principal ya existe: ${estudianteData.runResponsable}`);
             } else {
               console.log(`⚠️ Error creando apoderado principal: ${errorMessage}`);
             }
           } else {
             results.apoderadosCreados.push({
               ...apoderado,
-              estudianteAsignado: estudianteData.nombre,
+              estudianteAsignado: estudianteData.nombreCompleto,
               tipoResponsable: "principal",
             });
-            console.log(`✅ Apoderado principal creado: ${estudianteData.nombreResponsable} (${estudianteData.rutResponsable})`);
+            console.log(`✅ Apoderado principal creado: ${estudianteData.responsable} (${estudianteData.runResponsable})`);
           }
         }
 
-        // 2. SEGUNDO crear cuenta del apoderado secundario si es necesario
-        if (estudianteData.rutResponsable2 && estudianteData.nombreResponsable2) {
-          const emailResponsable2 = generateEmail(estudianteData.nombreResponsable2);
-          
-          const [apoderado2, apoderado2Error] = await registerService({
-            rut: estudianteData.rutResponsable2,
-            nombreCompleto: estudianteData.nombreResponsable2,
-            email: emailResponsable2,
-            password: "wessex123", // Password temporal
-            rol: "apoderado",
-            fechaNacimiento: null,
-          });
+        // 2. NO crear cuentas separadas para madre y padre
+        // Solo guardamos esta información como datos del estudiante
+        console.log(`ℹ️ Información familiar registrada - Madre: ${estudianteData.nombreMadre || 'No especificada'}, Padre: ${estudianteData.nombrePadre || 'No especificado'}`);
 
-          if (apoderado2Error) {
-            // Si el error es que ya existe, no es un problema crítico
-            const errorMessage2 = typeof apoderado2Error === 'string' ? apoderado2Error : 
-                                 typeof apoderado2Error === 'object' ? apoderado2Error.message || JSON.stringify(apoderado2Error) : 
-                                 String(apoderado2Error);
-            
-            if (errorMessage2.includes("ya asociado") || errorMessage2.includes("ya existe")) {
-              console.log(`ℹ️ Apoderado secundario ya existe: ${estudianteData.rutResponsable2}`);
-            } else {
-              console.log(`⚠️ Error creando apoderado secundario: ${errorMessage2}`);
-            }
-          } else {
-            results.apoderadosCreados.push({
-              ...apoderado2,
-              estudianteAsignado: estudianteData.nombre,
-              tipoResponsable: "secundario",
-            });
-            console.log(`✅ Apoderado secundario creado: ${estudianteData.nombreResponsable2} (${estudianteData.rutResponsable2})`);
-          }
+        // 3. FINALMENTE crear el estudiante con los campos separados
+        // Ahora tenemos nombreCompleto y run como campos separados
+        let rutEstudiante = estudianteData.run || '';
+        let nombreEstudiante = estudianteData.nombreCompleto || '';
+        
+        // Validar que ambos campos estén presentes
+        if (!rutEstudiante || !nombreEstudiante) {
+          throw new Error(`Faltan datos obligatorios: nombre="${nombreEstudiante}", run="${rutEstudiante}"`);
         }
 
-        // 3. FINALMENTE crear el estudiante (ahora los apoderados ya existen)
         const [estudiante, estudianteError] = await createEstudianteService({
-          rut: estudianteData.rut,
-          nombre: estudianteData.nombre,
+          rut: rutEstudiante,
+          nombre: nombreEstudiante,
           curso: estudianteData.curso,
-          fechaNacimiento: estudianteData.fechaNacimiento,
-          telefono: estudianteData.telefono,
-          direccion: estudianteData.direccion,
-          email: estudianteData.email,
-          contactoEmergencia: estudianteData.contactoEmergencia,
-          telefonoEmergencia: estudianteData.telefonoEmergencia,
-          rutResponsable: estudianteData.rutResponsable,
-          nombreResponsable: estudianteData.nombreResponsable,
-          rutResponsable2: estudianteData.rutResponsable2,
-          nombreResponsable2: estudianteData.nombreResponsable2,
-          observaciones: estudianteData.observaciones,
-          estado: "activo",
+          fechaNacimiento: null, // No se proporciona en el nuevo formato
+          telefono: estudianteData.telefonoMadre || estudianteData.telefonoPadre, // Usar teléfono de contacto disponible
+          direccion: null, // No se proporciona en el nuevo formato
+          email: null, // Se generará automáticamente si es necesario
+          contactoEmergencia: estudianteData.nombreMadre || estudianteData.nombrePadre,
+          telefonoEmergencia: estudianteData.telefonoMadre || estudianteData.telefonoPadre,
+          rutResponsable: estudianteData.runResponsable,
+          nombreResponsable: estudianteData.responsable,
+          rutResponsable2: null, // Campo adicional para el segundo responsable si es necesario
+          nombreResponsable2: null,
+          observaciones: `Madre: ${estudianteData.nombreMadre || 'No especificada'}${estudianteData.telefonoMadre ? ` (${estudianteData.telefonoMadre})` : ''}, Padre: ${estudianteData.nombrePadre || 'No especificado'}${estudianteData.telefonoPadre ? ` (${estudianteData.telefonoPadre})` : ''}, Validez: ${estudianteData.validez}`,
+          estado: estudianteData.validez?.toLowerCase() === 'activo' || estudianteData.validez?.toLowerCase() === 'válido' ? 'activo' : 'inactivo',
         });
 
         if (estudianteError) {
+          // Si el estudiante ya existe, intentar actualizar sus responsables
+          if (typeof estudianteError === 'string' && estudianteError.includes('ya existe')) {
+            console.log(`ℹ️ El estudiante ${rutEstudiante} ya existe, actualizando responsables si es necesario`);
+            const [existingEstudiante, getErr] = await getEstudianteService(rutEstudiante);
+            if (getErr || !existingEstudiante) {
+              results.errores.push({ estudiante: nombreEstudiante, error: `Error obteniendo estudiante existente: ${getErr || 'No encontrado'}` });
+              continue;
+            }
+
+            // Preparar datos de actualización: si rutResponsable no está presente en DB, asignarlo; si está ocupado, asignar a rutResponsable2
+            const updateData = {};
+            if (!existingEstudiante.rutResponsable) {
+              updateData.rutResponsable = estudianteData.runResponsable || existingEstudiante.rutResponsable;
+              updateData.nombreResponsable = estudianteData.responsable || existingEstudiante.nombreResponsable;
+            } else if (existingEstudiante.rutResponsable !== estudianteData.runResponsable && !existingEstudiante.rutResponsable2) {
+              updateData.rutResponsable2 = estudianteData.runResponsable || existingEstudiante.rutResponsable2;
+              updateData.nombreResponsable2 = estudianteData.responsable || existingEstudiante.nombreResponsable2;
+            } else {
+              // Ya está asociado con este responsable o ambos campos están ocupados
+              console.log(`ℹ️ El estudiante ${rutEstudiante} ya tiene responsables asignados`);
+            }
+
+            if (Object.keys(updateData).length > 0) {
+              const [updatedEstudiante, updateErr] = await updateEstudianteService(rutEstudiante, updateData);
+              if (updateErr) {
+                results.errores.push({ estudiante: nombreEstudiante, error: `Error actualizando estudiante existente: ${updateErr}` });
+                continue;
+              }
+              results.estudiantesCreados.push(updatedEstudiante);
+              console.log(`🔄 Estudiante actualizado con responsable: ${nombreEstudiante} (${rutEstudiante})`);
+            } else {
+              results.estudiantesCreados.push(existingEstudiante);
+            }
+
+            continue;
+          }
+
           results.errores.push({
-            estudiante: estudianteData.nombre,
+            estudiante: nombreEstudiante,
             error: `Error creando estudiante: ${estudianteError}`,
           });
-          console.log(`❌ Error creando estudiante ${estudianteData.nombre}: ${estudianteError}`);
+          console.log(`❌ Error creando estudiante ${nombreEstudiante}: ${estudianteError}`);
           continue;
         }
 
         results.estudiantesCreados.push(estudiante);
-        console.log(`✅ Estudiante creado: ${estudianteData.nombre} (${estudianteData.rut})`);
+        console.log(`✅ Estudiante creado: ${nombreEstudiante} (${rutEstudiante})`);
 
       } catch (error) {
         results.errores.push({
-          estudiante: estudianteData.nombre || `Registro ${i + 1}`,
+          estudiante: estudianteData.nombreCompleto || `Registro ${i + 1}`,
           error: `Error inesperado: ${error.message}`,
         });
-        console.log(`💥 Error inesperado con ${estudianteData.nombre || `Registro ${i + 1}`}: ${error.message}`);
+        console.log(`💥 Error inesperado con ${estudianteData.nombreCompleto || `Registro ${i + 1}`}: ${error.message}`);
       }
     }
 
