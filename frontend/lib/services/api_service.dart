@@ -56,6 +56,7 @@ class ApiService {
       );
       
       print('🔍 DEBUG ApiService GET - Status code respuesta: ${response.statusCode}');
+      print('🔍 DEBUG ApiService GET - Response Body: ${response.body}');
       return _handleResponse(response);
     } catch (e) {
       return ApiResponse(
@@ -69,14 +70,23 @@ class ApiService {
   static Future<ApiResponse> post(String endpoint, Map<String, dynamic> data) async {
     try {
       final headers = await _getAuthHeaders();
+      final url = '$baseUrl$endpoint';
+      print('🔍 DEBUG ApiService POST - URL completa: $url');
+      print('🔍 DEBUG ApiService POST - Data: ${jsonEncode(data)}');
+      print('🔍 DEBUG ApiService POST - Headers: $headers');
+      
       final response = await http.post(
-        Uri.parse('$baseUrl$endpoint'),
+        Uri.parse(url),
         headers: headers,
         body: jsonEncode(data),
       );
       
+      print('🔍 DEBUG ApiService POST - Response Status: ${response.statusCode}');
+      print('🔍 DEBUG ApiService POST - Response Body: ${response.body}');
+      
       return _handleResponse(response);
     } catch (e) {
+      print('❌ ERROR ApiService POST - Exception: $e');
       return ApiResponse(
         statusCode: 500,
         message: 'Error de conexión: $e',
@@ -160,14 +170,21 @@ class ApiService {
 
   static ApiResponse _handleResponse(http.Response response) {
     try {
+      print('🔍 DEBUG _handleResponse - Status: ${response.statusCode}');
+      print('🔍 DEBUG _handleResponse - Body length: ${response.body.length}');
+      
       final data = response.body.isNotEmpty ? jsonDecode(response.body) : null;
       
-      return ApiResponse(
+      final apiResponse = ApiResponse(
         statusCode: response.statusCode,
         data: data,
         message: data is Map<String, dynamic> ? data['message'] : null,
       );
+      
+      print('🔍 DEBUG _handleResponse - Success: ${apiResponse.success}');
+      return apiResponse;
     } catch (e) {
+      print('❌ ERROR _handleResponse - Exception: $e');
       return ApiResponse(
         statusCode: response.statusCode,
         message: 'Error procesando respuesta: $e',
@@ -559,5 +576,50 @@ class ApiService {
     } else {
       throw Exception(response.message ?? 'Error al reactivar tipo de evento');
     }
+  }
+
+  // ============================================================================
+  // MÉTODOS PARA ACTAS DE REUNIÓN
+  // ============================================================================
+
+  // Crear acta de reunión (solo directiva)
+  static Future<ApiResponse> crearActaReunion(Map<String, dynamic> actaData) async {
+    return post('/actas-reunion', actaData);
+  }
+
+  // Obtener todas las actas de reunión
+  static Future<ApiResponse> obtenerActasReunion({String? estado, String? fechaDesde, String? fechaHasta}) async {
+    String endpoint = '/actas-reunion';
+    List<String> params = [];
+    
+    if (estado != null) params.add('estado=$estado');
+    if (fechaDesde != null) params.add('fechaDesde=$fechaDesde');
+    if (fechaHasta != null) params.add('fechaHasta=$fechaHasta');
+    
+    if (params.isNotEmpty) {
+      endpoint += '?${params.join('&')}';
+    }
+    
+    return get(endpoint);
+  }
+
+  // Obtener acta específica por ID
+  static Future<ApiResponse> obtenerActaReunion(String id) async {
+    return get('/actas-reunion/$id');
+  }
+
+  // Actualizar acta de reunión (solo directiva)
+  static Future<ApiResponse> actualizarActaReunion(String id, Map<String, dynamic> actaData) async {
+    return put('/actas-reunion/$id', actaData);
+  }
+
+  // Eliminar acta de reunión (solo directiva)
+  static Future<ApiResponse> eliminarActaReunion(String id) async {
+    return delete('/actas-reunion/$id');
+  }
+
+  // Cambiar estado del acta (solo directiva)
+  static Future<ApiResponse> cambiarEstadoActa(String id, String nuevoEstado) async {
+    return patch('/actas-reunion/$id/estado', {'estado': nuevoEstado});
   }
 }

@@ -6,6 +6,7 @@ import 'voucher_pago_screen.dart';
 import 'historial_vouchers_screen.dart';
 import 'justificante_screen.dart';
 import 'historial_justificantes_screen.dart';
+import '../widgets/visualizar_actas_reunion_screen.dart';
 
 class ApoderadoDashboard extends StatelessWidget {
   const ApoderadoDashboard({super.key});
@@ -268,6 +269,29 @@ class ApoderadoDashboard extends StatelessWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: _buildModuleCard(
+                        'Actas de Reunión',
+                        'Ver actas publicadas',
+                        Icons.description,
+                        WessexColors.deepRoyalBlue,
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const VisualizarActasReunionScreen(),
+                          ),
+                        ),
+                        isDesktop: isDesktop,
+                        isTablet: isTablet,
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 20),
+                
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildModuleCard(
                         'Calendario',
                         'Próximas actividades',
                         Icons.event,
@@ -277,6 +301,8 @@ class ApoderadoDashboard extends StatelessWidget {
                         isTablet: isTablet,
                       ),
                     ),
+                    const SizedBox(width: 12),
+                    Expanded(child: Container()), // Espacio vacío
                   ],
                 ),
                 

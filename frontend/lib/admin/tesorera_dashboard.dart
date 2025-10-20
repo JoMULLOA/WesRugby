@@ -3,6 +3,7 @@ import '../widgets/custom_drawer.dart';
 import '../widgets/wessex_widgets.dart';
 import '../config/colors.dart';
 import 'gestion_vouchers_screen.dart';
+import '../widgets/visualizar_actas_reunion_screen.dart';
 
 class TesoreraDashboard extends StatelessWidget {
   const TesoreraDashboard({super.key});
@@ -204,6 +205,29 @@ class TesoreraDashboard extends StatelessWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: _buildModuleCard(
+                        'Actas de Reunión',
+                        'Ver actas del club',
+                        Icons.description,
+                        WessexColors.deepRoyalBlue,
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const VisualizarActasReunionScreen(),
+                          ),
+                        ),
+                        isDesktop: isDesktop,
+                        isTablet: isTablet,
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 20),
+                
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildModuleCard(
                         'Comprobantes',
                         'Gestión de documentos',
                         Icons.receipt,
@@ -213,6 +237,8 @@ class TesoreraDashboard extends StatelessWidget {
                         isTablet: isTablet,
                       ),
                     ),
+                    const SizedBox(width: 12),
+                    Expanded(child: Container()), // Espacio vacío
                   ],
                 ),
                 

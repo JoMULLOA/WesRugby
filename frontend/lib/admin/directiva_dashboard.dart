@@ -8,6 +8,8 @@ import 'gestion_usuarios_screen.dart';
 import 'base_datos_screen.dart';
 import 'gestion_eventos_screen.dart';
 import 'tipos_evento/admin_tipos_evento_screen.dart';
+import 'gestion_actas_reunion_screen.dart';
+import 'gestion_informacion_publica_screen.dart';
 
 class DirectivaDashboard extends StatelessWidget {
   const DirectivaDashboard({super.key});
@@ -232,7 +234,7 @@ class DirectivaDashboard extends StatelessWidget {
                 
                 const SizedBox(height: 12),
                 
-                // Fila para tipos de evento y otras configuraciones
+                // Fila para tipos de evento y actas de reunión
                 Row(
                   children: [
                     Expanded(
@@ -249,6 +251,46 @@ class DirectivaDashboard extends StatelessWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: _buildActionCard(
+                        'Actas de Reunión',
+                        'Gestionar actas y minutas de reuniones',
+                        Icons.description,
+                        WessexColors.deepRoyalBlue,
+                        () => Navigator.push(context, MaterialPageRoute(builder: (context) => const GestionActasReunionScreen())),
+                        isDesktop: isDesktop,
+                        isTablet: isTablet,
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 12),
+                
+                // Fila para información pública
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildActionCard(
+                        'Información Pública',
+                        'Gestionar noticias, auspiciadores y merchandising',
+                        Icons.public,
+                        WessexColors.leafGreen,
+                        () => Navigator.push(context, MaterialPageRoute(builder: (context) => const GestionInformacionPublicaScreen())),
+                        isDesktop: isDesktop,
+                        isTablet: isTablet,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(child: Container()), // Espacio vacío
+                  ],
+                ),
+                
+                const SizedBox(height: 12),
+                
+                // Fila para configuración
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildActionCard(
                         'Configuración',
                         'Ajustes generales del sistema',
                         Icons.settings,
@@ -258,6 +300,8 @@ class DirectivaDashboard extends StatelessWidget {
                         isTablet: isTablet,
                       ),
                     ),
+                    const SizedBox(width: 12),
+                    Expanded(child: Container()), // Espacio vacío
                   ],
                 ),
                 

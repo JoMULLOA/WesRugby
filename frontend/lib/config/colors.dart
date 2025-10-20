@@ -38,6 +38,18 @@ class WessexColors {
   
   /// Gris claro para divisores
   static const Color lightGray = Color(0xFFE5E5E5);
+  
+  /// Gris carbón para textos secundarios
+  static const Color charcoalGray = Color(0xFF424242);
+  
+  /// Gris ceniza para elementos deshabilitados
+  static const Color ashGray = Color(0xFF9E9E9E);
+  
+  /// Amarillo dorado para destacar elementos
+  static const Color goldenYellow = Color(0xFFFFD700);
+  
+  /// Azul marino profundo para fondos alternativos
+  static const Color deepNavyBlue = Color(0xFF1A237E);
 
   // ========== TEMA PERSONALIZADO ==========
   

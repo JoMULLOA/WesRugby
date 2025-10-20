@@ -16,6 +16,14 @@ import sesionAsistenciaRoutes from "./sesionAsistencia.routes.js";
 import torneoRoutes from "./torneo.routes.js";
 import eventoRoutes from "./evento.routes.js";
 import tipoEventoRoutes from "./tipoEvento.routes.js";
+import actaReunionRoutes from "./actaReunion.routes.js";
+
+// Rutas para información pública
+import noticiaRoutes from "./noticia.routes.js";
+import auspiciadorRoutes from "./auspiciador.routes.js";
+import merchandisingRoutes from "./merchandising.routes.js";
+import homepageRoutes from "./homepage.routes.js";
+import uploadRoutes from "./upload.routes.js";
 
 const router = Router();
 
@@ -34,6 +42,13 @@ router
     .use("/sesiones-asistencia", sesionAsistenciaRoutes)
     .use("/torneos", torneoRoutes)
     .use("/eventos", eventoRoutes)
-    .use("/tipos-evento", tipoEventoRoutes);
+    .use("/tipos-evento", tipoEventoRoutes)
+    .use("/actas-reunion", actaReunionRoutes)
+    // Rutas información pública
+    .use("/noticias", noticiaRoutes)
+    .use("/auspiciadores", auspiciadorRoutes)
+    .use("/merchandising", merchandisingRoutes)
+    .use("/homepage", homepageRoutes)
+    .use("/upload", uploadRoutes);
 
 export default router;
