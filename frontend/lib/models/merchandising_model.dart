@@ -30,7 +30,7 @@ class MerchandisingModel {
       id: json['id']?.toString() ?? '',
       titulo: json['titulo']?.toString() ?? '',
       imagen: json['imagen']?.toString() ?? '',
-      precio: (json['precio'] ?? 0.0).toDouble(),
+      precio: _parsePrice(json['precio']),
       descripcion: json['descripcion']?.toString(),
       estado: json['estado']?.toString() ?? 'activo',
       orden: json['orden'] ?? 0,
@@ -39,6 +39,17 @@ class MerchandisingModel {
       fechaCreacion: DateTime.parse(json['createdAt'] ?? json['fechaCreacion'] ?? DateTime.now().toIso8601String()),
       fechaActualizacion: DateTime.parse(json['updatedAt'] ?? json['fechaActualizacion'] ?? DateTime.now().toIso8601String()),
     );
+  }
+
+  // Método helper para parsear el precio que puede venir como String o double
+  static double _parsePrice(dynamic precio) {
+    if (precio == null) return 0.0;
+    if (precio is double) return precio;
+    if (precio is int) return precio.toDouble();
+    if (precio is String) {
+      return double.tryParse(precio) ?? 0.0;
+    }
+    return 0.0;
   }
 
   Map<String, dynamic> toJson() {

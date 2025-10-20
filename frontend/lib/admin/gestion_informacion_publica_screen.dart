@@ -811,32 +811,47 @@ class _AuspiciadoresTabState extends State<_AuspiciadoresTab> {
                           final auspiciador = _auspiciadores[index];
                           return Card(
                             margin: const EdgeInsets.only(bottom: 8),
-                            child: ListTile(
-                              leading: auspiciador.imagen.isNotEmpty
-                                  ? Image.network(
-                                      auspiciador.imagen,
-                                      width: 40,
-                                      height: 40,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (context, error, stackTrace) =>
-                                          const Icon(Icons.business),
-                                    )
-                                  : const Icon(Icons.business),
-                              title: Text(auspiciador.titulo),
-                              subtitle: Text(auspiciador.enlace ?? 'Sin enlace'),
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.edit),
-                                    onPressed: () => _showEditDialog(auspiciador),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Imagen del auspiciador
+                                if (auspiciador.imagen.isNotEmpty && !auspiciador.imagen.contains('placeholder'))
+                                  Container(
+                                    height: 150,
+                                    width: double.infinity,
+                                    decoration: BoxDecoration(
+                                      borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                                      image: DecorationImage(
+                                        image: NetworkImage(auspiciador.imagen),
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
                                   ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete, color: Colors.red),
-                                    onPressed: () => _deleteAuspiciador(auspiciador.id),
+                                // Información del auspiciador
+                                ListTile(
+                                  leading: auspiciador.imagen.isEmpty || auspiciador.imagen.contains('placeholder')
+                                      ? const Icon(Icons.business, size: 40)
+                                      : null,
+                                  title: Text(
+                                    auspiciador.titulo,
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
                                   ),
-                                ],
-                              ),
+                                  subtitle: Text(auspiciador.enlace ?? 'Sin enlace'),
+                                  trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(Icons.edit),
+                                        onPressed: () => _showEditDialog(auspiciador),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.delete, color: Colors.red),
+                                        onPressed: () => _deleteAuspiciador(auspiciador.id),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                           );
                         },
@@ -932,6 +947,68 @@ class _AuspiciadorDialogState extends State<_AuspiciadorDialog> {
     }
   }
 
+  Future<String?> _uploadImage(Uint8List imageBytes, String fileName) async {
+    try {
+      print('🔍 DEBUG _uploadImage Auspiciador - Iniciando subida de imagen: $fileName');
+      
+      // Convertir bytes a base64
+      final base64Image = base64Encode(imageBytes);
+      
+      // Determinar MIME type basado en la extensión
+      final extension = fileName.split('.').last.toLowerCase();
+      String mimeType;
+      switch (extension) {
+        case 'jpg':
+        case 'jpeg':
+          mimeType = 'image/jpeg';
+          break;
+        case 'png':
+          mimeType = 'image/png';
+          break;
+        case 'gif':
+          mimeType = 'image/gif';
+          break;
+        case 'webp':
+          mimeType = 'image/webp';
+          break;
+        default:
+          mimeType = 'image/jpeg'; // por defecto
+      }
+      
+      // Preparar datos para el backend
+      final uploadData = {
+        'filename': fileName,
+        'fileData': base64Image,
+        'mimeType': mimeType,
+      };
+      
+      print('🔍 DEBUG _uploadImage Auspiciador - Enviando POST a /upload/imagen');
+      
+      final response = await ApiService.post('/upload/imagen', uploadData);
+      
+      print('🔍 DEBUG _uploadImage Auspiciador - Response success: ${response.success}');
+      
+      if (response.success && response.data != null) {
+        final responseData = response.data;
+        if (responseData is Map && responseData['data'] != null) {
+          final dataMap = responseData['data'] as Map<String, dynamic>;
+          final imageUrl = dataMap['url'] as String?;
+          if (imageUrl != null) {
+            // Convertir URL relativa a absoluta
+            final fullUrl = '${ApiService.baseUrl.replaceAll('/api', '')}$imageUrl';
+            print('✅ DEBUG _uploadImage Auspiciador - URL completa: $fullUrl');
+            return fullUrl;
+          }
+        }
+      }
+      
+      return null;
+    } catch (e) {
+      print('❌ ERROR _uploadImage Auspiciador - Exception: $e');
+      return null;
+    }
+  }
+
   Future<void> _seleccionarImagen() async {
     try {
       if (kIsWeb) {
@@ -982,21 +1059,25 @@ class _AuspiciadorDialogState extends State<_AuspiciadorDialog> {
     setState(() => _isLoading = true);
     
     try {
-      // Determinar URL de imagen
-      String imagenUrl = 'https://via.placeholder.com/200x200?text=Logo';
+      String imagenUrl = widget.auspiciador?.imagen ?? 'https://via.placeholder.com/200x200?text=Logo';
       
-      if (_imagenBytes != null) {
-        // TODO: Implementar upload de imagen cuando esté listo en el backend
-        imagenUrl = 'https://via.placeholder.com/200x200?text=Nuevo+Logo';
-      } else if (widget.auspiciador != null && widget.auspiciador!.imagen.isNotEmpty) {
-        imagenUrl = widget.auspiciador!.imagen;
+      // Si hay una imagen seleccionada, subirla primero
+      if (_imagenBytes != null && _imagenNombre != null) {
+        print('🔍 DEBUG - Subiendo imagen auspiciador: $_imagenNombre');
+        final uploadResponse = await _uploadImage(_imagenBytes!, _imagenNombre!);
+        if (uploadResponse != null) {
+          imagenUrl = uploadResponse;
+          print('✅ DEBUG - Imagen auspiciador subida exitosamente: $imagenUrl');
+        } else {
+          print('❌ DEBUG - Error subiendo imagen auspiciador, usando placeholder');
+        }
       }
 
       final auspiciadorData = {
         'titulo': _tituloController.text.trim(),
         'imagen': imagenUrl,
         'enlace': _enlaceController.text.isEmpty ? null : _enlaceController.text.trim(),
-        'estado': 'publicado',
+        'estado': 'activo', // Usar 'activo' en lugar de 'publicado'
         // No agregamos orden, el backend usará el valor por defecto (0)
       };
 
@@ -1258,20 +1339,34 @@ class _MerchandisingTabState extends State<_MerchandisingTab> {
   Future<void> _loadProductos() async {
     setState(() => _isLoading = true);
     try {
+      print('🔍 DEBUG _loadProductos - Cargando merchandising');
       final response = await ApiService.get('/merchandising');
+      print('🔍 DEBUG _loadProductos - Response success: ${response.success}');
+      
       if (response.success && response.data != null) {
         // El backend devuelve {success: true, message: "...", data: [...]}
         final List<dynamic> productosData = response.data is Map 
             ? (response.data['data'] as List? ?? [])
             : (response.data is List ? response.data as List : []);
         
+        print('🔍 DEBUG _loadProductos - Productos count: ${productosData.length}');
+        
         setState(() {
-          _productos = productosData
-              .map((json) => MerchandisingModel.fromJson(json))
-              .toList();
+          _productos = productosData.map((json) {
+            try {
+              print('🔍 DEBUG _loadProductos - Parseando producto: ${json['titulo']}, precio: ${json['precio']} (${json['precio'].runtimeType})');
+              return MerchandisingModel.fromJson(json);
+            } catch (e) {
+              print('❌ ERROR _loadProductos - Error parseando producto ${json['titulo']}: $e');
+              rethrow;
+            }
+          }).toList();
         });
+        
+        print('✅ DEBUG _loadProductos - _productos final count: ${_productos.length}');
       }
     } catch (e) {
+      print('❌ ERROR _loadProductos - Exception: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error al cargar productos: $e')),
@@ -1326,39 +1421,61 @@ class _MerchandisingTabState extends State<_MerchandisingTab> {
                           final producto = _productos[index];
                           return Card(
                             margin: const EdgeInsets.only(bottom: 8),
-                            child: ListTile(
-                              leading: producto.imagen.isNotEmpty
-                                  ? Image.network(
-                                      producto.imagen,
-                                      width: 40,
-                                      height: 40,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (context, error, stackTrace) =>
-                                          const Icon(Icons.shopping_bag),
-                                    )
-                                  : const Icon(Icons.shopping_bag),
-                              title: Text(producto.titulo),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (producto.descripcion?.isNotEmpty == true)
-                                    Text(producto.descripcion!),
-                                  Text('\$${producto.precio.toStringAsFixed(2)}'),
-                                ],
-                              ),
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.edit),
-                                    onPressed: () => _showEditDialog(producto),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Imagen del producto
+                                if (producto.imagen.isNotEmpty && !producto.imagen.contains('placeholder'))
+                                  Container(
+                                    height: 200,
+                                    width: double.infinity,
+                                    decoration: BoxDecoration(
+                                      borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                                      image: DecorationImage(
+                                        image: NetworkImage(producto.imagen),
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
                                   ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete, color: Colors.red),
-                                    onPressed: () => _deleteProducto(producto.id),
+                                // Información del producto
+                                ListTile(
+                                  leading: producto.imagen.isEmpty || producto.imagen.contains('placeholder')
+                                      ? const Icon(Icons.shopping_bag, size: 40)
+                                      : null,
+                                  title: Text(
+                                    producto.titulo,
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
                                   ),
-                                ],
-                              ),
+                                  subtitle: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      if (producto.descripcion?.isNotEmpty == true)
+                                        Text(producto.descripcion!),
+                                      Text(
+                                        '\$${producto.precio.toStringAsFixed(2)}',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.green,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(Icons.edit),
+                                        onPressed: () => _showEditDialog(producto),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.delete, color: Colors.red),
+                                        onPressed: () => _deleteProducto(producto.id),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                           );
                         },
@@ -1456,6 +1573,68 @@ class _MerchandisingDialogState extends State<_MerchandisingDialog> {
     }
   }
 
+  Future<String?> _uploadImage(Uint8List imageBytes, String fileName) async {
+    try {
+      print('🔍 DEBUG _uploadImage Merchandising - Iniciando subida de imagen: $fileName');
+      
+      // Convertir bytes a base64
+      final base64Image = base64Encode(imageBytes);
+      
+      // Determinar MIME type basado en la extensión
+      final extension = fileName.split('.').last.toLowerCase();
+      String mimeType;
+      switch (extension) {
+        case 'jpg':
+        case 'jpeg':
+          mimeType = 'image/jpeg';
+          break;
+        case 'png':
+          mimeType = 'image/png';
+          break;
+        case 'gif':
+          mimeType = 'image/gif';
+          break;
+        case 'webp':
+          mimeType = 'image/webp';
+          break;
+        default:
+          mimeType = 'image/jpeg'; // por defecto
+      }
+      
+      // Preparar datos para el backend
+      final uploadData = {
+        'filename': fileName,
+        'fileData': base64Image,
+        'mimeType': mimeType,
+      };
+      
+      print('🔍 DEBUG _uploadImage Merchandising - Enviando POST a /upload/imagen');
+      
+      final response = await ApiService.post('/upload/imagen', uploadData);
+      
+      print('🔍 DEBUG _uploadImage Merchandising - Response success: ${response.success}');
+      
+      if (response.success && response.data != null) {
+        final responseData = response.data;
+        if (responseData is Map && responseData['data'] != null) {
+          final dataMap = responseData['data'] as Map<String, dynamic>;
+          final imageUrl = dataMap['url'] as String?;
+          if (imageUrl != null) {
+            // Convertir URL relativa a absoluta
+            final fullUrl = '${ApiService.baseUrl.replaceAll('/api', '')}$imageUrl';
+            print('✅ DEBUG _uploadImage Merchandising - URL completa: $fullUrl');
+            return fullUrl;
+          }
+        }
+      }
+      
+      return null;
+    } catch (e) {
+      print('❌ ERROR _uploadImage Merchandising - Exception: $e');
+      return null;
+    }
+  }
+
   Future<void> _seleccionarImagen() async {
     try {
       if (kIsWeb) {
@@ -1508,39 +1687,18 @@ class _MerchandisingDialogState extends State<_MerchandisingDialog> {
     try {
       final precio = double.tryParse(_precioController.text);
       
-      String imagenUrl = 'https://via.placeholder.com/300x300?text=Producto';
+      String imagenUrl = widget.producto?.imagen ?? 'https://via.placeholder.com/300x300?text=Producto';
       
       // Si hay una imagen seleccionada, subirla primero
       if (_imagenBytes != null && _imagenNombre != null) {
-        try {
-          // Convertir bytes a base64
-          final base64String = base64Encode(_imagenBytes!);
-          final dataUrl = 'data:image/${_imagenNombre!.split('.').last};base64,$base64String';
-
-          final uploadResponse = await ApiService.post('/uploads/imagen', {
-            'filename': _imagenNombre!,
-            'fileData': dataUrl,
-            'mimeType': 'image/${_imagenNombre!.split('.').last}',
-          });
-
-          if (uploadResponse.success && uploadResponse.data != null) {
-            // Construir URL completa de la imagen
-            final baseUrl = ApiService.baseUrl.replaceAll('/api', '');
-            imagenUrl = '$baseUrl${uploadResponse.data['url']}';
-          } else {
-            throw Exception('Error al subir imagen: ${uploadResponse.message}');
-          }
-        } catch (e) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Error al subir imagen: $e')),
-            );
-          }
-          setState(() => _isLoading = false);
-          return;
+        print('🔍 DEBUG - Subiendo imagen merchandising: $_imagenNombre');
+        final uploadResponse = await _uploadImage(_imagenBytes!, _imagenNombre!);
+        if (uploadResponse != null) {
+          imagenUrl = uploadResponse;
+          print('✅ DEBUG - Imagen merchandising subida exitosamente: $imagenUrl');
+        } else {
+          print('❌ DEBUG - Error subiendo imagen merchandising, usando placeholder');
         }
-      } else if (widget.producto != null && widget.producto!.imagen.isNotEmpty) {
-        imagenUrl = widget.producto!.imagen;
       }
       
       final productoData = {
@@ -1548,7 +1706,7 @@ class _MerchandisingDialogState extends State<_MerchandisingDialog> {
         'descripcion': _descripcionController.text.isEmpty ? null : _descripcionController.text.trim(),
         'precio': precio,
         'imagen': imagenUrl,
-        'estado': 'publicado',
+        'estado': 'activo', // Usar 'activo' en lugar de 'publicado'
         // No agregamos orden, el backend usará el valor por defecto (0)
       };
 
