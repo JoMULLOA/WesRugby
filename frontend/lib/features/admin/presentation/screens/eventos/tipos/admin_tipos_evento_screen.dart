@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:wesrugby/data/services/api_service.dart';
 import 'package:wesrugby/data/models/tipo_evento_model.dart';
+import 'package:wesrugby/core/config/colors.dart';
+import 'package:wesrugby/shared/widgets/layout/wessex_widgets.dart';
 
 class AdminTiposEventoScreen extends StatefulWidget {
   const AdminTiposEventoScreen({Key? key}) : super(key: key);
@@ -38,7 +40,7 @@ class _AdminTiposEventoScreenState extends State<AdminTiposEventoScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(mensaje),
-        backgroundColor: Colors.red,
+        backgroundColor: WessexColors.crimsonAlert,
         duration: const Duration(seconds: 3),
       ),
     );
@@ -48,7 +50,7 @@ class _AdminTiposEventoScreenState extends State<AdminTiposEventoScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(mensaje),
-        backgroundColor: Colors.green,
+        backgroundColor: WessexColors.leafGreen,
         duration: const Duration(seconds: 2),
       ),
     );
@@ -244,11 +246,7 @@ class _AdminTiposEventoScreenState extends State<AdminTiposEventoScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Administrar Tipos de Evento'),
-        backgroundColor: Colors.blue[800],
-        foregroundColor: Colors.white,
-      ),
+      appBar: const WessexAppBar(title: 'Administrar Tipos de Evento'),
       body:
           _isLoading
               ? const Center(child: CircularProgressIndicator())
@@ -294,8 +292,8 @@ class _AdminTiposEventoScreenState extends State<AdminTiposEventoScreen> {
                               leading: CircleAvatar(
                                 backgroundColor:
                                     tipo.esDeportivo
-                                        ? Colors.green
-                                        : Colors.orange,
+                                        ? WessexColors.leafGreen
+                                        : WessexColors.goldenYellow,
                                 child: Icon(
                                   tipo.esDeportivo
                                       ? Icons.sports_soccer
@@ -326,8 +324,8 @@ class _AdminTiposEventoScreenState extends State<AdminTiposEventoScreen> {
                                     style: TextStyle(
                                       color:
                                           tipo.activo
-                                              ? Colors.green
-                                              : Colors.red,
+                                              ? WessexColors.leafGreen
+                                              : WessexColors.crimsonAlert,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -341,7 +339,7 @@ class _AdminTiposEventoScreenState extends State<AdminTiposEventoScreen> {
                                         () => _mostrarDialogoEditarTipo(tipo),
                                     icon: const Icon(
                                       Icons.edit,
-                                      color: Colors.blue,
+                                      color: WessexColors.deepRoyalBlue,
                                     ),
                                   ),
                                   IconButton(
@@ -352,8 +350,8 @@ class _AdminTiposEventoScreenState extends State<AdminTiposEventoScreen> {
                                           : Icons.visibility,
                                       color:
                                           tipo.activo
-                                              ? Colors.red
-                                              : Colors.green,
+                                              ? WessexColors.crimsonAlert
+                                              : WessexColors.leafGreen,
                                     ),
                                   ),
                                 ],

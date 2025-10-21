@@ -59,6 +59,7 @@ class WessexAppBar extends StatelessWidget implements PreferredSizeWidget {
   final double elevation;
   final Widget? leading;
   final bool automaticallyImplyLeading;
+  final PreferredSizeWidget? bottom;
 
   const WessexAppBar({
     super.key,
@@ -68,6 +69,7 @@ class WessexAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.elevation = 0,
     this.leading,
     this.automaticallyImplyLeading = true,
+    this.bottom,
   });
 
   @override
@@ -106,12 +108,16 @@ class WessexAppBar extends StatelessWidget implements PreferredSizeWidget {
         actions: actions,
         leading: leading,
         automaticallyImplyLeading: automaticallyImplyLeading,
+        bottom: bottom,
       ),
     );
   }
 
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+  Size get preferredSize {
+    final bottomHeight = bottom?.preferredSize.height ?? 0;
+    return Size.fromHeight(kToolbarHeight + bottomHeight);
+  }
 }
 
 /// Card personalizada para Wessex Rugby con design system

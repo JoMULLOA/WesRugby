@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:wesrugby/features/auth/presentation/screens/login/login.dart';
 import 'package:wesrugby/shared/widgets/layout/wessex_widgets.dart';
 import 'package:wesrugby/core/config/colors.dart';
 import 'package:wesrugby/features/home/presentation/screens/noticias/noticias_screen.dart';
@@ -467,9 +466,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _navigateToLogin(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const LoginPage()),
-    );
+    Navigator.pushNamed(context, '/login');
   }
 }

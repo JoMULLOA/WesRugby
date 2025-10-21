@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:wesrugby/data/services/api_service.dart';
 import 'package:wesrugby/core/config/colors.dart';
 import 'package:wesrugby/features/admin/presentation/screens/eventos/tipos/admin_tipos_evento_screen.dart';
+import 'package:wesrugby/shared/widgets/layout/wessex_widgets.dart';
 // Versión 2.0 - Con gestión de categorías mejorada
 
 class GestionEventosScreen extends StatefulWidget {
@@ -1952,16 +1953,11 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
   Widget build(BuildContext context) {
     // Gestión de eventos con menú de categorías y formulario mejorado - v2.0
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Gestión de Eventos',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: WessexColors.darkGrape,
-        iconTheme: IconThemeData(color: Colors.white),
+      appBar: WessexAppBar(
+        title: 'Gestión de Eventos',
         actions: [
           PopupMenuButton<String>(
-            icon: Icon(Icons.more_vert, color: Colors.white),
+            icon: const Icon(Icons.more_vert, color: WessexColors.white),
             onSelected: (value) {
               print('DEBUG: Menu seleccionado: $value'); // Debug
               if (value == 'categorias') {
