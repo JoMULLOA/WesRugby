@@ -547,9 +547,18 @@ class ApiService {
 
   // Obtener participaciones de un evento (directiva)
   static Future<Map<String, dynamic>> obtenerParticipacionesEvento(
-    dynamic eventoId,
-  ) async {
-    final response = await get('/eventos/$eventoId/participaciones');
+    dynamic eventoId, {
+    List<String>? categorias,
+  }) async {
+    String endpoint = '/eventos/$eventoId/participaciones';
+    if (categorias != null && categorias.isNotEmpty) {
+      final joinedCategorias = categorias
+          .map((categoria) => Uri.encodeComponent(categoria))
+          .join(',');
+      endpoint += '?categorias=$joinedCategorias';
+    }
+
+    final response = await get(endpoint);
     if (response.success) {
       return response.data;
     } else {

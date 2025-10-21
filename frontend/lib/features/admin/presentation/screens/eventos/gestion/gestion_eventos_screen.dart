@@ -108,210 +108,282 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
       final response = await ApiService.obtenerParticipacionesEvento(
         evento['id'],
       );
-      final datos = response['data'];
-      final estadisticasPorRama = datos['estadisticasPorRama'] as List;
-      final totalGeneral = datos['totalGeneral'] ?? 0;
+      final datos = response['data'] as Map<String, dynamic>;
+      final List<dynamic> estadisticasIniciales = List<dynamic>.from(
+        datos['estadisticasPorRama'] ?? [],
+      );
+      final List<dynamic> resumenInicial = List<dynamic>.from(
+        datos['resumenCategorias'] ?? [],
+      );
+      final List<String> categoriasDisponibles = List<String>.from(
+        (datos['categoriasDisponibles'] as List<dynamic>? ?? []).map(
+          (categoria) => categoria.toString(),
+        ),
+      );
+      final int totalGeneralInicial = datos['totalGeneral'] ?? 0;
+      final int totalRamasInicial =
+          datos['totalRamas'] ?? estadisticasIniciales.length;
 
       showDialog(
         context: context,
-        builder:
-            (context) => Dialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Container(
-                width: 800,
-                height: 600,
-                padding: EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Participaciones - ${evento['titulo'] ?? evento['nombre'] ?? 'Evento sin título'}',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: WessexColors.darkGrape,
+        builder: (dialogContext) {
+          bool isFiltering = false;
+          List<dynamic> estadisticasVisibles = List<dynamic>.from(
+            estadisticasIniciales,
+          );
+          List<dynamic> resumenVisible = List<dynamic>.from(resumenInicial);
+          int totalVisible = totalGeneralInicial;
+          int ramasVisibles = totalRamasInicial;
+          Set<String> categoriasSeleccionadas =
+              categoriasDisponibles.isEmpty
+                  ? <String>{}
+                  : categoriasDisponibles.toSet();
+
+          return StatefulBuilder(
+            builder: (context, setDialogState) {
+              Future<void> aplicarFiltro(Set<String> nuevasCategorias) async {
+                setDialogState(() {
+                  isFiltering = true;
+                });
+
+                try {
+                  final filtroResponse =
+                      await ApiService.obtenerParticipacionesEvento(
+                        evento['id'],
+                        categorias:
+                            (nuevasCategorias.isEmpty ||
+                                    nuevasCategorias.length ==
+                                        categoriasDisponibles.length)
+                                ? null
+                                : nuevasCategorias.toList(),
+                      );
+                  final filtroDatos =
+                      filtroResponse['data'] as Map<String, dynamic>;
+
+                  setDialogState(() {
+                    categoriasSeleccionadas =
+                        nuevasCategorias.isEmpty
+                            ? categoriasDisponibles.toSet()
+                            : nuevasCategorias;
+                    estadisticasVisibles = List<dynamic>.from(
+                      filtroDatos['estadisticasPorRama'] ?? [],
+                    );
+                    resumenVisible = List<dynamic>.from(
+                      filtroDatos['resumenCategorias'] ?? [],
+                    );
+                    totalVisible = filtroDatos['totalGeneral'] ?? 0;
+                    ramasVisibles =
+                        filtroDatos['totalRamas'] ??
+                        estadisticasVisibles.length;
+                    isFiltering = false;
+                  });
+                } catch (error) {
+                  setDialogState(() {
+                    isFiltering = false;
+                  });
+
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                    SnackBar(
+                      content: Text('Error al filtrar participaciones: $error'),
+                      backgroundColor: WessexColors.crimsonAlert,
+                    ),
+                  );
+                }
+              }
+
+              final bool todasSeleccionadas =
+                  categoriasSeleccionadas.length ==
+                  categoriasDisponibles.length;
+
+              final List<Widget> chips = <Widget>[];
+
+              if (categoriasDisponibles.isNotEmpty) {
+                chips.add(
+                  FilterChip(
+                    label: const Text('Todas'),
+                    selected: todasSeleccionadas,
+                    onSelected: (_) {
+                      aplicarFiltro(categoriasDisponibles.toSet());
+                    },
+                    selectedColor: WessexColors.darkGrape.withOpacity(0.2),
+                    checkmarkColor: WessexColors.darkGrape,
+                  ),
+                );
+
+                chips.addAll(
+                  categoriasDisponibles.map((categoria) {
+                    final bool estaSeleccionada = categoriasSeleccionadas
+                        .contains(categoria);
+                    return FilterChip(
+                      label: Text(categoria.toUpperCase()),
+                      selected: estaSeleccionada,
+                      onSelected: (selected) {
+                        final updated = Set<String>.from(
+                          categoriasSeleccionadas,
+                        );
+                        if (selected) {
+                          updated.add(categoria);
+                        } else {
+                          updated.remove(categoria);
+                        }
+
+                        if (updated.isEmpty) {
+                          updated.addAll(categoriasDisponibles);
+                        }
+
+                        aplicarFiltro(updated);
+                      },
+                      selectedColor: WessexColors.leafGreen.withOpacity(0.2),
+                      checkmarkColor: WessexColors.leafGreen,
+                    );
+                  }),
+                );
+              }
+
+              return Dialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Container(
+                  width: 800,
+                  height: 600,
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Participaciones - ${evento['titulo'] ?? evento['nombre'] ?? 'Evento sin título'}',
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: WessexColors.darkGrape,
+                              ),
                             ),
                           ),
-                        ),
-                        IconButton(
-                          onPressed: () => Navigator.pop(context),
-                          icon: Icon(Icons.close),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 16),
-
-                    Container(
-                      padding: EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: WessexColors.leafGreen.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: WessexColors.leafGreen,
-                          width: 1,
-                        ),
+                          IconButton(
+                            onPressed: () => Navigator.pop(dialogContext),
+                            icon: const Icon(Icons.close),
+                          ),
+                        ],
                       ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.group, color: WessexColors.leafGreen),
-                          SizedBox(width: 8),
-                          Text(
-                            'Total: $totalGeneral niños participantes',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: WessexColors.leafGreen.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: WessexColors.leafGreen,
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.group,
                               color: WessexColors.leafGreen,
                             ),
-                          ),
-                          Spacer(),
-                          Text(
-                            '${estadisticasPorRama.length} ramas deportivas',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: WessexColors.darkGrape,
+                            const SizedBox(width: 8),
+                            Text(
+                              'Total: $totalVisible niños participantes',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: WessexColors.leafGreen,
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: 16),
-
-                    // Filtros por categoría
-                    Container(
-                      padding: EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: WessexColors.darkGrape.withOpacity(0.05),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: WessexColors.darkGrape.withOpacity(0.2),
+                            const Spacer(),
+                            Text(
+                              '$ramasVisibles ramas deportivas',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: WessexColors.darkGrape,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Filtrar por categorías:',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: WessexColors.darkGrape,
+                      const SizedBox(height: 16),
+                      if (categoriasDisponibles.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: WessexColors.darkGrape.withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: WessexColors.darkGrape.withOpacity(0.2),
                             ),
                           ),
-                          SizedBox(height: 8),
-                          StatefulBuilder(
-                            builder: (context, setFilterState) {
-                              // Obtener todas las categorías disponibles
-                              final Set<String> todasCategorias = {};
-                              for (var rama in estadisticasPorRama) {
-                                final totalPorCategoria =
-                                    rama['totalPorCategoria']
-                                        as Map<String, dynamic>;
-                                todasCategorias.addAll(
-                                  totalPorCategoria.keys.cast<String>(),
-                                );
-                              }
-
-                              // Lista de categorías seleccionadas (inicialmente todas)
-                              Set<String> categoriasSeleccionadas = Set.from(
-                                todasCategorias,
-                              );
-
-                              return Column(
-                                children: [
-                                  Wrap(
-                                    spacing: 6,
-                                    runSpacing: 4,
-                                    children: [
-                                      // Botón "Todas"
-                                      FilterChip(
-                                        label: Text('Todas'),
-                                        selected:
-                                            categoriasSeleccionadas.length ==
-                                            todasCategorias.length,
-                                        onSelected: (selected) {
-                                          setFilterState(() {
-                                            if (selected) {
-                                              categoriasSeleccionadas =
-                                                  Set.from(todasCategorias);
-                                            } else {
-                                              categoriasSeleccionadas.clear();
-                                            }
-                                          });
-                                        },
-                                        selectedColor: WessexColors.darkGrape
-                                            .withOpacity(0.2),
-                                        checkmarkColor: WessexColors.darkGrape,
-                                      ),
-                                      // Filtros por categoría individual
-                                      ...todasCategorias
-                                          .map(
-                                            (categoria) => FilterChip(
-                                              label: Text(
-                                                categoria.toUpperCase(),
-                                              ),
-                                              selected: categoriasSeleccionadas
-                                                  .contains(categoria),
-                                              onSelected: (selected) {
-                                                setFilterState(() {
-                                                  if (selected) {
-                                                    categoriasSeleccionadas.add(
-                                                      categoria,
-                                                    );
-                                                  } else {
-                                                    categoriasSeleccionadas
-                                                        .remove(categoria);
-                                                  }
-                                                });
-                                              },
-                                              selectedColor: WessexColors
-                                                  .leafGreen
-                                                  .withOpacity(0.2),
-                                              checkmarkColor:
-                                                  WessexColors.leafGreen,
-                                            ),
-                                          )
-                                          .toList(),
-                                    ],
-                                  ),
-                                  SizedBox(height: 8),
-                                  // Mostrar conteo filtrado
-                                  if (categoriasSeleccionadas.isNotEmpty &&
-                                      categoriasSeleccionadas.length <
-                                          todasCategorias.length)
-                                    Text(
-                                      'Mostrando ${categoriasSeleccionadas.length} de ${todasCategorias.length} categorías',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: WessexColors.midnightNavy
-                                            .withOpacity(0.7),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Filtrar por categorías:',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: WessexColors.darkGrape,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Wrap(spacing: 6, runSpacing: 4, children: chips),
+                              if (isFiltering)
+                                const Padding(
+                                  padding: EdgeInsets.only(top: 12.0),
+                                  child: LinearProgressIndicator(),
+                                ),
+                            ],
+                          ),
+                        ),
+                      if (resumenVisible.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12.0),
+                          child: Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children:
+                                resumenVisible.map((item) {
+                                  final categoria =
+                                      item['categoria']?.toString() ?? 'N/A';
+                                  final total = item['totalNinos'] ?? 0;
+                                  final ramas = item['ramasParticipantes'] ?? 0;
+                                  return Chip(
+                                    avatar: CircleAvatar(
+                                      backgroundColor:
+                                          WessexColors.deepRoyalBlue,
+                                      child: Text(
+                                        categoria.substring(0, 1).toUpperCase(),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                        ),
                                       ),
                                     ),
-                                ],
-                              );
-                            },
+                                    label: Text(
+                                      '$categoria · $total niños · $ramas ramas',
+                                      style: const TextStyle(
+                                        color: WessexColors.darkGrape,
+                                      ),
+                                    ),
+                                    backgroundColor: WessexColors
+                                        .maximumGrayMint
+                                        .withOpacity(0.4),
+                                  );
+                                }).toList(),
                           ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: 16),
-
-                    Expanded(
-                      child:
-                          estadisticasPorRama.isEmpty
-                              ? Center(
-                                child: Column(
+                        ),
+                      const SizedBox(height: 16),
+                      Expanded(
+                        child:
+                            estadisticasVisibles.isEmpty
+                                ? Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
+                                  children: const [
                                     Icon(
                                       Icons.people_outline,
                                       size: 64,
-                                      color: WessexColors.darkGrape.withOpacity(
-                                        0.5,
-                                      ),
+                                      color: WessexColors.darkGrape,
                                     ),
                                     SizedBox(height: 16),
                                     Text(
@@ -322,42 +394,35 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
                                       ),
                                     ),
                                   ],
+                                )
+                                : ListView.builder(
+                                  itemCount: estadisticasVisibles.length,
+                                  itemBuilder:
+                                      (context, index) => _buildRamaCard(
+                                        estadisticasVisibles[index]
+                                            as Map<String, dynamic>,
+                                      ),
                                 ),
-                              )
-                              : StatefulBuilder(
-                                builder: (context, setState) {
-                                  // Aplicar filtros (esto es una implementación simplificada)
-                                  final estadisticasFiltradas =
-                                      estadisticasPorRama;
-
-                                  return ListView.builder(
-                                    itemCount: estadisticasFiltradas.length,
-                                    itemBuilder: (context, index) {
-                                      return _buildRamaCard(
-                                        estadisticasFiltradas[index],
-                                      );
-                                    },
-                                  );
-                                },
-                              ),
-                    ),
-
-                    SizedBox(height: 16),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: ElevatedButton(
-                        onPressed: () => Navigator.pop(context),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: WessexColors.darkGrape,
-                          foregroundColor: Colors.white,
-                        ),
-                        child: Text('Cerrar'),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 16),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.pop(dialogContext),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: WessexColors.darkGrape,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Text('Cerrar'),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
+          );
+        },
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(

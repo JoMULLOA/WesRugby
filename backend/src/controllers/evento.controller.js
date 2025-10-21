@@ -8,6 +8,7 @@ import {
   handleErrorServer,
   handleSuccess,
 } from "../handlers/responseHandlers.js";
+import { In } from "typeorm";
 
 // Crear un nuevo evento (solo directiva)
 export async function crearEvento(req, res) {
@@ -654,16 +655,15 @@ export async function eliminarEvento(req, res) {
 export async function obtenerParticipacionesEvento(req, res) {
   try {
     const { id } = req.params;
+    const { categorias } = req.query;
 
     const participacionRepository = AppDataSource.getRepository(ParticipacionEvento);
     const userRepository = AppDataSource.getRepository(User);
 
-    // Importar repositorios para eventos deportivos
     const { AppDataSource: dataSource } = await import("../config/configDb.js");
     const ParticipacionEventoDeportivo = (await import("../entity/participacionEventoDeportivo.entity.js")).default;
     const participacionDeportivaRepository = dataSource.getRepository(ParticipacionEventoDeportivo);
 
-    // Función para verificar si es un UUID válido
     const esUUID = (str) => {
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
       return uuidRegex.test(str);
@@ -672,15 +672,13 @@ export async function obtenerParticipacionesEvento(req, res) {
     let participaciones = [];
 
     if (esUUID(id)) {
-      // Es un UUID, buscar en participaciones deportivas
       participaciones = await participacionDeportivaRepository.find({
         where: { eventoDeportivoId: id },
         order: { categoria: "ASC", createdAt: "DESC" },
       });
     } else {
-      // Es un entero, buscar en participaciones regulares
       const eventoIdInt = parseInt(id);
-      if (!isNaN(eventoIdInt)) {
+      if (!Number.isNaN(eventoIdInt)) {
         participaciones = await participacionRepository.find({
           where: { eventoId: eventoIdInt },
           order: { categoria: "ASC", createdAt: "DESC" },
@@ -688,58 +686,137 @@ export async function obtenerParticipacionesEvento(req, res) {
       }
     }
 
-    // Obtener información de los usuarios y agrupar por rama deportiva
-    const participacionesConUsuarios = await Promise.all(
-      participaciones.map(async (participacion) => {
-        const usuario = await userRepository.findOne({
-          where: { rut: participacion.rutRamaExterna }
-        });
-        return {
-          ...participacion,
-          ramaExterna: usuario,
-          nombreRama: usuario ? usuario.nombreCompleto : "Rama no identificada"
-        };
-      })
+    if (!participaciones.length) {
+      handleSuccess(res, 200, "Participaciones del evento obtenidas exitosamente", {
+        categoriasDisponibles: [],
+        categoriasAplicadas: [],
+        participaciones: [],
+        estadisticasPorRama: [],
+        resumenCategorias: [],
+        totalGeneral: 0,
+        totalRamas: 0,
+      });
+      return;
+    }
+
+    const rutParticipantes = Array.from(
+      new Set(
+        participaciones
+          .map((participacion) => participacion.rutRamaExterna)
+          .filter(Boolean),
+      ),
     );
 
-    // Agrupar y calcular estadísticas por rama y categoría
-    const estadisticasPorRama = {};
+    let usuariosMap = new Map();
+    if (rutParticipantes.length) {
+      const usuarios = await userRepository.findBy({ rut: In(rutParticipantes) });
+      usuariosMap = new Map(usuarios.map((usuario) => [usuario.rut, usuario]));
+    }
+
+    const categoriasDisponiblesSet = new Set(
+      participaciones
+        .map((participacion) => participacion.categoria)
+        .filter(Boolean),
+    );
+
+    let categoriasFiltroSet = null;
+    if (typeof categorias === "string" && categorias.trim().length > 0) {
+      const parsedCategorias = categorias
+        .split(",")
+        .map((categoria) => categoria.trim())
+        .filter(Boolean);
+
+      if (parsedCategorias.length > 0) {
+        categoriasFiltroSet = new Set(parsedCategorias.map((cat) => cat.toLowerCase()));
+      }
+    }
+
+    const participacionesFiltradas = [];
+    const estadisticasPorRamaMap = new Map();
+    const resumenCategoriasMap = new Map();
     let totalGeneral = 0;
 
-    participacionesConUsuarios.forEach(participacion => {
-      const nombreRama = participacion.nombreRama;
-      const categoria = participacion.categoria;
-      
-      if (!estadisticasPorRama[nombreRama]) {
-        estadisticasPorRama[nombreRama] = {
+    for (const participacion of participaciones) {
+      const categoriaOriginal = (participacion.categoria || "sin categoria").trim();
+      const categoriaKey = categoriaOriginal.toLowerCase();
+
+      if (categoriasFiltroSet && !categoriasFiltroSet.has(categoriaKey)) {
+        continue;
+      }
+
+      const cantidadNinos = Number(participacion.cantidadNinos) || 0;
+      const usuario = usuariosMap.get(participacion.rutRamaExterna);
+      const nombreRama = usuario?.nombreCompleto || "Rama no identificada";
+
+      const participacionExtendida = {
+        ...participacion,
+        ramaExterna: usuario || null,
+        nombreRama,
+      };
+
+      participacionesFiltradas.push(participacionExtendida);
+
+      if (!estadisticasPorRamaMap.has(nombreRama)) {
+        estadisticasPorRamaMap.set(nombreRama, {
           nombreRama,
           rut: participacion.rutRamaExterna,
           participaciones: [],
           totalPorCategoria: {},
-          totalRama: 0
-        };
+          totalRama: 0,
+        });
       }
 
-      estadisticasPorRama[nombreRama].participaciones.push(participacion);
-      
-      if (!estadisticasPorRama[nombreRama].totalPorCategoria[categoria]) {
-        estadisticasPorRama[nombreRama].totalPorCategoria[categoria] = 0;
+      const ramaEntry = estadisticasPorRamaMap.get(nombreRama);
+      ramaEntry.participaciones.push(participacionExtendida);
+      ramaEntry.totalPorCategoria[categoriaOriginal] =
+        (ramaEntry.totalPorCategoria[categoriaOriginal] || 0) + cantidadNinos;
+      ramaEntry.totalRama += cantidadNinos;
+
+      if (!resumenCategoriasMap.has(categoriaOriginal)) {
+        resumenCategoriasMap.set(categoriaOriginal, {
+          categoria: categoriaOriginal,
+          totalNinos: 0,
+          ramasParticipantes: new Set(),
+        });
       }
-      
-      estadisticasPorRama[nombreRama].totalPorCategoria[categoria] += participacion.cantidadNinos;
-      estadisticasPorRama[nombreRama].totalRama += participacion.cantidadNinos;
-      totalGeneral += participacion.cantidadNinos;
+
+      const resumenCategoria = resumenCategoriasMap.get(categoriaOriginal);
+      resumenCategoria.totalNinos += cantidadNinos;
+      resumenCategoria.ramasParticipantes.add(participacion.rutRamaExterna);
+
+      totalGeneral += cantidadNinos;
+    }
+
+    const estadisticasPorRama = Array.from(estadisticasPorRamaMap.values()).filter(
+      (registro) => registro.totalRama > 0,
+    );
+
+    const resumenCategorias = Array.from(resumenCategoriasMap.values())
+      .map((registro) => ({
+        categoria: registro.categoria,
+        totalNinos: registro.totalNinos,
+        ramasParticipantes: registro.ramasParticipantes.size,
+      }))
+      .sort((a, b) => a.categoria.localeCompare(b.categoria));
+
+    const categoriasAplicadas = categoriasFiltroSet
+      ? Array.from(categoriasDisponiblesSet).filter((categoria) =>
+          categoriasFiltroSet.has(categoria.toLowerCase()),
+        )
+      : [];
+
+    handleSuccess(res, 200, "Participaciones del evento obtenidas exitosamente", {
+      categoriasDisponibles: Array.from(categoriasDisponiblesSet).sort(),
+      categoriasAplicadas,
+      participaciones: participacionesFiltradas,
+      estadisticasPorRama,
+      resumenCategorias,
+      totalGeneral,
+      totalRamas: estadisticasPorRama.length,
     });
-
-    const resumen = {
-      participaciones: participacionesConUsuarios,
-      estadisticasPorRama: Object.values(estadisticasPorRama),
-      totalGeneral
-    };
-
-    handleSuccess(res, 200, "Participaciones del evento obtenidas exitosamente", resumen);
   } catch (error) {
     console.error("Error al obtener participaciones del evento:", error);
     handleErrorServer(res, 500, error.message);
   }
 }
+

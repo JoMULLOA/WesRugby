@@ -3,6 +3,8 @@ import { AppDataSource } from "./configDb.js";
 import { encryptPassword } from "../helpers/bcrypt.helper.js";
 import User from "../entity/user.entity.js";
 import TipoEvento from "../entity/tipoEvento.entity.js";
+import EventoDeportivo from "../entity/eventoDeportivo.entity.js";
+import ParticipacionEventoDeportivo from "../entity/participacionEventoDeportivo.entity.js";
 
 
 //Los ruts estan hasta un maximo de 29.999.999-9, por lo que no se pueden crear usuarios con ruts mayores a ese valor, se creara, 
@@ -78,6 +80,7 @@ async function createInitialData() {
       console.log("Usuarios del sistema ya existen, cargando referencias...");
     }
 
+    await ensureSampleRamaUsers(userRepository);
 
 
     // Crear Tipos de Evento por defecto
@@ -113,11 +116,138 @@ async function createInitialData() {
       console.log("Tipos de evento ya existen...");
     }
 
+    await ensureDemoEventoDeportivo(userRepository, tipoEventoRepository);
+
   } catch (error) {
-    console.error("❌ Error al crear datos iniciales:", error);
+    console.error("Error al crear datos iniciales:", error);
   }
 }
 
+async function ensureSampleRamaUsers(userRepository) {
+  try {
+    const sampleRamas = [
+      {
+        rut: "56.789.012-3",
+        nombreCompleto: "Rama Externa Rugby Sub-12",
+        email: "coordinador@ubiobio.cl",
+      },
+      {
+        rut: "57.321.654-1",
+        nombreCompleto: "Rama Externa Rugby Sub-11",
+        email: "rama.sub11@ubiobio.cl",
+      },
+      {
+        rut: "58.654.321-9",
+        nombreCompleto: "Rama Externa Femenina Sub-13",
+        email: "rama.sub13@ubiobio.cl",
+      },
+    ];
 
+    for (const sample of sampleRamas) {
+      const existing = await userRepository.findOne({
+        where: { rut: sample.rut },
+      });
+
+      if (!existing) {
+        const demoUser = userRepository.create({
+          rut: sample.rut,
+          nombreCompleto: sample.nombreCompleto,
+          email: sample.email,
+          password: await encryptPassword("Rama2024"),
+          rol: "RamaExterna",
+        });
+
+        await userRepository.save(demoUser);
+        console.log(`   - RamaExterna demo creada: ${sample.email} / Rama2024`);
+      }
+    }
+  } catch (error) {
+    console.error("Error asegurando ramas deportivas demo:", error);
+  }
+}
+
+async function ensureDemoEventoDeportivo(userRepository, tipoEventoRepository) {
+  try {
+    const eventoRepository = AppDataSource.getRepository(EventoDeportivo);
+    const participacionRepository = AppDataSource.getRepository(ParticipacionEventoDeportivo);
+
+    const demoTitle = "Clinica Deportiva Multicategoria";
+    let eventoDemo = await eventoRepository.findOne({
+      where: { titulo: demoTitle },
+    });
+
+    const organizador = await userRepository.findOne({
+      where: { rol: "directiva" },
+    });
+
+    if (!organizador) {
+      console.warn("No se encontro usuario directiva para crear evento demo.");
+      return;
+    }
+
+    let tipoDeportivo = await tipoEventoRepository.findOne({
+      where: { nombre: "Partido", activo: true },
+    });
+
+    if (!tipoDeportivo) {
+      tipoDeportivo = await tipoEventoRepository.findOne({
+        where: { esDeportivo: true, activo: true },
+      });
+    }
+
+    if (!tipoDeportivo) {
+      console.warn("No se encontro tipo de evento deportivo activo para crear el demo.");
+      return;
+    }
+
+    if (!eventoDemo) {
+      const fechaInicio = new Date();
+      fechaInicio.setDate(fechaInicio.getDate() + 7);
+      const fechaFin = new Date(fechaInicio.getTime() + 2 * 60 * 60 * 1000);
+
+      eventoDemo = eventoRepository.create({
+        titulo: demoTitle,
+        descripcion: "Evento demostrativo con multiples ramas y categorias para pruebas internas.",
+        tipoEventoId: tipoDeportivo.id,
+        categoria: "sub-11,sub-12,sub-13",
+        fechaInicio,
+        fechaFin,
+        lugar: "Cancha Principal Wessex",
+        estado: "programado",
+        organizadoPorRut: organizador.rut,
+        notificarParticipantes: false,
+      });
+
+      await eventoRepository.save(eventoDemo);
+      console.log("   - Evento deportivo demo creado para pruebas");
+    }
+
+    const participacionesExistentes = await participacionRepository.count({
+      where: { eventoDeportivoId: eventoDemo.id },
+    });
+
+    if (participacionesExistentes === 0) {
+      const participacionesDemo = [
+        { rutRamaExterna: "56.789.012-3", categoria: "sub-12", cantidadNinos: 16 },
+        { rutRamaExterna: "56.789.012-3", categoria: "sub-13", cantidadNinos: 9 },
+        { rutRamaExterna: "57.321.654-1", categoria: "sub-11", cantidadNinos: 18 },
+        { rutRamaExterna: "57.321.654-1", categoria: "sub-12", cantidadNinos: 7 },
+        { rutRamaExterna: "58.654.321-9", categoria: "sub-13", cantidadNinos: 14 },
+      ];
+
+      const registros = participacionesDemo.map((item) =>
+        participacionRepository.create({
+          ...item,
+          eventoDeportivoId: eventoDemo.id,
+        }),
+      );
+
+      await participacionRepository.save(registros);
+      console.log("   - Participaciones demo creadas para el evento deportivo de ejemplo");
+    }
+  } catch (error) {
+    console.error("Error asegurando evento deportivo demo:", error);
+  }
+}
 
 export { createInitialData };
