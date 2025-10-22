@@ -23,6 +23,8 @@ import {
 } from "../handlers/responseHandlers.js";
 import { AppDataSource } from "../config/configDb.js";
 import User from "../entity/user.entity.js";
+import path from "path";
+import fs from "fs";
 
 // Obtener repositorio de usuarios
 const userRepository = AppDataSource.getRepository(User);
@@ -178,6 +180,66 @@ export async function getMisVehiculos(req, res) {
   } catch (error) {
     console.error("Error al obtener vehículos del usuario:", error);
     handleErrorServer(res, 500, error.message);
+  }
+}
+
+function buildUploadUrl(req, relativePath) {
+  const normalized = relativePath.replace(/\\/g, "/");
+  return `${req.protocol}://${req.get("host")}/uploads/${normalized}`;
+}
+
+function deleteIfExists(absolutePath) {
+  try {
+    if (absolutePath && fs.existsSync(absolutePath)) {
+      fs.unlinkSync(absolutePath);
+    }
+  } catch (error) {
+    console.warn("No se pudo eliminar el archivo anterior:", error.message);
+  }
+}
+
+export async function updateAvatar(req, res) {
+  try {
+    if (!req.file) {
+      return handleErrorClient(
+        res,
+        400,
+        "Archivo requerido",
+        "Debes adjuntar una imagen en formato JPG, PNG, WEBP o GIF.",
+      );
+    }
+
+    const user = await userRepository.findOne({
+      where: { rut: req.user.rut },
+    });
+
+    if (!user) {
+      deleteIfExists(req.file.path);
+      return handleErrorClient(res, 404, "Usuario no encontrado");
+    }
+
+    if (user.avatarPath) {
+      const previousPath = path.resolve("uploads", user.avatarPath);
+      deleteIfExists(previousPath);
+    }
+
+    const relativePath = path
+      .relative(path.resolve("uploads"), req.file.path)
+      .replace(/\\/g, "/");
+
+    user.avatarPath = relativePath;
+    await userRepository.save(user);
+
+    const avatarUrl = buildUploadUrl(req, relativePath);
+
+    handleSuccess(res, 200, "Avatar actualizado exitosamente", {
+      avatarPath: relativePath,
+      avatarUrl,
+    });
+  } catch (error) {
+    console.error("Error actualizando avatar:", error);
+    deleteIfExists(req.file?.path);
+    handleErrorServer(res, 500, "Error interno del servidor", error.message);
   }
 }
 

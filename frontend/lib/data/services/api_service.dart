@@ -687,12 +687,36 @@ class ApiService {
     }
   }
 
+  static Future<Map<String, dynamic>> uploadAvatar({
+    required Uint8List bytes,
+    required String fileName,
+    required String mimeType,
+  }) async {
+    final response = await _subirMultimediaEvento(
+      endpoint: '/user/avatar',
+      bytes: bytes,
+      fileName: fileName,
+      mimeType: mimeType,
+      fieldName: 'avatar',
+    );
+
+    final data = response['data'];
+    if (data is Map<String, dynamic>) {
+      return data;
+    }
+
+    throw Exception(
+      response['message'] ?? 'Error al actualizar la foto de perfil',
+    );
+  }
+
   static Future<Map<String, dynamic>> _subirMultimediaEvento({
     required String endpoint,
     required Uint8List bytes,
     required String fileName,
     required String mimeType,
     Map<String, String>? campos,
+    String fieldName = 'archivo',
   }) async {
     try {
       final uri = Uri.parse('$baseUrl$endpoint');
@@ -709,7 +733,7 @@ class ApiService {
 
       request.files.add(
         http.MultipartFile.fromBytes(
-          'archivo',
+          fieldName,
           bytes,
           filename: fileName,
           contentType: MediaType.parse(mimeType),
@@ -869,5 +893,20 @@ class ApiService {
     String nuevoEstado,
   ) async {
     return patch('/actas-reunion/$id/estado', {'estado': nuevoEstado});
+  }
+
+  static String buildUploadUrl(String relativePath) {
+    final sanitizedPath =
+        relativePath.startsWith('uploads/')
+            ? relativePath
+            : 'uploads/$relativePath';
+    final baseUri = Uri.parse(baseUrl);
+    final uri = Uri(
+      scheme: baseUri.scheme,
+      host: baseUri.host,
+      port: baseUri.hasPort ? baseUri.port : null,
+      path: sanitizedPath,
+    );
+    return uri.toString();
   }
 }

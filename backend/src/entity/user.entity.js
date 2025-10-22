@@ -27,6 +27,11 @@ const UserSchema = new EntitySchema({
       nullable: false,
       unique: true,
     },
+    avatarPath: {
+      type: "varchar",
+      length: 400,
+      nullable: true,
+    },
     rol: {
       type: "enum",
       enum: ["directiva", "tesorera", "apoderado", "entrenador", "RamaExterna"],

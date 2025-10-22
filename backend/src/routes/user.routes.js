@@ -2,9 +2,10 @@
 import express from "express";
 import { isAdmin, isDirectiva, isAuthenticated } from "../middlewares/authorization.middleware.js";
 import { authenticateJwt } from "../middlewares/authentication.middleware.js";
-import { deleteUser, getUser, getUsers, updateUser, searchUser, buscarRut, getMisVehiculos, calcularCalificacion, obtenerPromedioGlobal, actualizarTokenFCM, getHistorialTransacciones, calificarUsuario, changeUserRole, createUserByDirectiva, updateUserByDirectiva, deleteUserByDirectiva } from "../controllers/user.controller.js";
+import { deleteUser, getUser, getUsers, updateUser, searchUser, buscarRut, getMisVehiculos, calcularCalificacion, obtenerPromedioGlobal, actualizarTokenFCM, getHistorialTransacciones, calificarUsuario, changeUserRole, createUserByDirectiva, updateUserByDirectiva, deleteUserByDirectiva, updateAvatar } from "../controllers/user.controller.js";
 import { AppDataSource } from "../config/configDb.js";
 import User from "../entity/user.entity.js";
+import { uploadAvatar as uploadAvatarMiddleware } from "../middlewares/upload.middleware.js";
 
 const router = express.Router();
 
@@ -30,6 +31,12 @@ router.get("/mis-vehiculos", isAuthenticated, getMisVehiculos); // Nueva ruta pa
 router.get("/historial-transacciones", isAuthenticated, getHistorialTransacciones); // Nueva ruta para historial
 router.patch("/actualizar", isAuthenticated, updateUser);
 router.patch("/fcm-token", isAuthenticated, actualizarTokenFCM); // Nueva ruta para actualizar token FCM
+router.post(
+  "/avatar",
+  isAuthenticated,
+  uploadAvatarMiddleware.single("avatar"),
+  updateAvatar,
+);
 
 // Rutas que requieren permisos de directiva
 router.get("/", isDirectiva, getUsers); // GET /user/ - obtener todos los usuarios

@@ -12,6 +12,12 @@ import {
 import jwt from "jsonwebtoken";
 import { ACCESS_TOKEN_SECRET } from "../config/configEnv.js";
 
+function buildAvatarUrl(req, avatarPath) {
+  if (!avatarPath) return null;
+  const normalized = avatarPath.replace(/\\/g, "/");
+  return `${req.protocol}://${req.get("host")}/uploads/${normalized}`;
+}
+
 export async function login(req, res) {
   try {
     const { body } = req;
@@ -33,6 +39,9 @@ export async function login(req, res) {
       maxAge: 24 * 60 * 60 * 1000,
     });
 
+    const avatarPath = decoded.avatarPath || null;
+    const avatarUrl = buildAvatarUrl(req, avatarPath);
+
     // Devolver tanto el token como la información del usuario decodificada
     handleSuccess(res, 200, "Inicio de sesión exitoso", { 
       token: accessToken,
@@ -40,7 +49,9 @@ export async function login(req, res) {
         nombreCompleto: decoded.nombreCompleto,
         email: decoded.email,
         rut: decoded.rut,
-        rol: decoded.rol
+        rol: decoded.rol,
+        avatarPath,
+        avatarUrl,
       }
     });
   } catch (error) {
@@ -108,11 +119,16 @@ export async function getProfile(req, res) {
       return handleErrorClient(res, 401, "No autenticado", "No se encontró información del usuario");
     }
 
+    const avatarPath = user.avatarPath || null;
+    const avatarUrl = buildAvatarUrl(req, avatarPath);
+
     handleSuccess(res, 200, "Perfil obtenido exitosamente", {
       nombreCompleto: user.nombreCompleto,
       email: user.email,
       rut: user.rut,
-      rol: user.rol
+      rol: user.rol,
+      avatarPath,
+      avatarUrl,
     });
   } catch (error) {
     console.error("Error obteniendo perfil:", error);

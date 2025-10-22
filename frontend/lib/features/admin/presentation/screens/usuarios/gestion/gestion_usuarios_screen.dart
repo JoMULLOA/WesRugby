@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:flutter/material.dart';
 import 'package:wesrugby/core/config/colors.dart';
 import 'package:wesrugby/data/services/api_service.dart';
 import 'package:wesrugby/data/services/refresh_service.dart';
@@ -45,12 +45,12 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
 
   Future<void> _checkTokenOnInit() async {
     final token = await TokenManager.getToken();
-    print(
-      '🔍 DEBUG GestionUsuarios initState - Token disponible: ${token != null ? "SÍ" : "NO"}',
+    debugPrint(
+      '[DEBUG] GestionUsuarios initState - Token disponible: ${token != null ? "SI" : "NO"}',
     );
     if (token != null) {
-      print(
-        '🔍 DEBUG GestionUsuarios initState - Token (primeros 30 chars): ${token.substring(0, 30)}...',
+      debugPrint(
+        '[DEBUG] GestionUsuarios initState - Token (primeros 30 chars): ${token.substring(0, 30)}...',
       );
     }
   }
@@ -64,21 +64,25 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
 
   // Cargar usuarios desde la API
   Future<void> _loadUsuarios() async {
-    print('🔍 DEBUG GestionUsuarios - Iniciando carga de usuarios');
+    debugPrint('[DEBUG] GestionUsuarios - Iniciando carga de usuarios');
     setState(() {
       _isLoading = true;
       _error = null;
     });
 
     try {
-      print('🔍 DEBUG GestionUsuarios - Llamando a ApiService.getAllUsers()');
+      debugPrint(
+        '[DEBUG] GestionUsuarios - Llamando a ApiService.getAllUsers()',
+      );
       final response = await ApiService.getAllUsers();
-      print(
-        '🔍 DEBUG GestionUsuarios - Respuesta recibida: Status ${response.statusCode}',
+      debugPrint(
+        '[DEBUG] GestionUsuarios - Respuesta recibida: Status ${response.statusCode}',
       );
 
       if (response.statusCode == 200 && response.data != null) {
-        print('🔍 DEBUG GestionUsuarios - Respuesta exitosa, procesando datos');
+        debugPrint(
+          '[DEBUG] GestionUsuarios - Respuesta exitosa, procesando datos',
+        );
         List<dynamic> usuariosData = response.data['data'] ?? response.data;
 
         setState(() {
@@ -93,26 +97,28 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
                       'fechaNacimiento': usuario['fechaNacimiento'],
                       'createdAt': usuario['createdAt'],
                       'updatedAt': usuario['updatedAt'],
+                      'avatarUrl': usuario['avatarUrl'],
+                      'avatarPath': usuario['avatarPath'],
                     },
                   )
                   .toList();
           _applyFilters();
         });
-        print(
-          '🔍 DEBUG GestionUsuarios - ${_allUsuarios.length} usuarios cargados exitosamente',
+        debugPrint(
+          '[DEBUG] GestionUsuarios - ${_allUsuarios.length} usuarios cargados exitosamente',
         );
       } else {
-        print(
-          '🔍 DEBUG GestionUsuarios - Error en respuesta: ${response.statusCode} - ${response.message}',
+        debugPrint(
+          '[DEBUG] GestionUsuarios - Error en respuesta: ${response.statusCode} - ${response.message}',
         );
         setState(() {
           _error = response.message ?? 'Error al cargar usuarios';
         });
       }
     } catch (e) {
-      print('🔍 DEBUG GestionUsuarios - Excepción capturada: $e');
+      debugPrint('[DEBUG] GestionUsuarios - Excepcion capturada: $e');
       setState(() {
-        _error = 'Error de conexión: $e';
+        _error = 'Error de conexion: $e';
       });
     } finally {
       setState(() {
@@ -136,7 +142,7 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
               .toList();
     }
 
-    // Aplicar búsqueda
+    // Aplicar busqueda
     String query = _searchController.text.trim().toLowerCase();
     if (query.isNotEmpty) {
       usuarios =
@@ -167,7 +173,7 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: const WessexAppBar(
-        title: 'Gestión de Usuarios - Directiva',
+        title: 'Gestion de Usuarios - Directiva',
         elevation: 2,
       ),
       body: WessexBackground(
@@ -241,12 +247,12 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Header con estadísticas
+                        // Header con estadisticas
                         _buildStatsCards(),
 
                         const SizedBox(height: 32),
 
-                        // Controles de búsqueda y filtros
+                        // Controles de busqueda y filtros
                         _buildSearchAndFilters(),
 
                         const SizedBox(height: 24),
@@ -262,7 +268,7 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
   }
 
   Widget _buildStatsCards() {
-    // Calcular estadísticas de usuarios
+    // Calcular estadisticas de usuarios
     int totalUsuarios = _allUsuarios.length;
     int directivas = _allUsuarios.where((u) => u['rol'] == 'directiva').length;
     int tesoreras = _allUsuarios.where((u) => u['rol'] == 'tesorera').length;
@@ -276,7 +282,7 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const WessexSectionTitle(
-          title: 'Gestión de Usuarios',
+          title: 'Gestion de Usuarios',
           subtitle: 'Administre usuarios del sistema Wessex Rugby',
           titleColor: WessexColors.white,
         ),
@@ -548,6 +554,7 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
           border: Border.all(color: WessexColors.mistyRoseGray),
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               Icons.people_outline,
@@ -567,6 +574,7 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
             Text(
               'Prueba cambiar los filtros o crear nuevos usuarios',
               style: TextStyle(color: WessexColors.darkGrape.withOpacity(0.7)),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -583,7 +591,7 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
             child: Row(
               children: [
                 Text(
@@ -607,62 +615,40 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
               ],
             ),
           ),
+          Divider(
+            height: 1,
+            thickness: 1,
+            color: WessexColors.mistyRoseGray.withOpacity(0.4),
+          ),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              const double spacing = 20;
+              int crossAxisCount = (constraints.maxWidth / 320).floor();
+              if (crossAxisCount < 1) crossAxisCount = 1;
+              if (crossAxisCount > 4) crossAxisCount = 4;
 
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTable(
-              columns: const [
-                DataColumn(
-                  label: Text(
-                    'RUT',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
+              final double cardWidth =
+                  (constraints.maxWidth - (crossAxisCount - 1) * spacing) /
+                  crossAxisCount;
+              const double cardHeight = 240;
+              final double aspectRatio = cardWidth / cardHeight;
+
+              return GridView.builder(
+                shrinkWrap: true,
+                padding: const EdgeInsets.all(24),
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _filteredUsuarios.length,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  crossAxisSpacing: spacing,
+                  mainAxisSpacing: spacing,
+                  childAspectRatio: aspectRatio,
                 ),
-                DataColumn(
-                  label: Text(
-                    'NOMBRE',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'EMAIL',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'ROL',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'FECHA CREACIÓN',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-                DataColumn(
-                  label: Text(
-                    'ACCIONES',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-              rows:
-                  _filteredUsuarios.map((usuario) {
-                    return DataRow(
-                      cells: [
-                        DataCell(Text(usuario['rut'] ?? '')),
-                        DataCell(Text(usuario['nombreCompleto'] ?? '')),
-                        DataCell(Text(usuario['email'] ?? '')),
-                        DataCell(_buildRolChip(usuario['rol'] ?? '')),
-                        DataCell(Text(_formatDate(usuario['createdAt']))),
-                        DataCell(_buildActionButtons(usuario)),
-                      ],
-                    );
-                  }).toList(),
-            ),
+                itemBuilder:
+                    (context, index) =>
+                        _buildUsuarioCard(_filteredUsuarios[index]),
+              );
+            },
           ),
         ],
       ),
@@ -709,6 +695,208 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
     );
   }
 
+  Widget _buildUsuarioCard(Map<String, dynamic> usuario) {
+    final String nombre = usuario['nombreCompleto']?.toString() ?? 'Usuario';
+    final String rut = usuario['rut']?.toString() ?? '';
+    final String email = usuario['email']?.toString() ?? '';
+    final String rol = usuario['rol']?.toString() ?? '';
+    final String creado = _formatDate(usuario['createdAt']);
+    final String actualizado = _formatDate(usuario['updatedAt']);
+    final String? avatarUrl = _resolveUsuarioAvatar(usuario);
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: WessexColors.mistyRoseGray.withOpacity(0.35)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CircleAvatar(
+                radius: 28,
+                backgroundColor: WessexColors.mistyRoseGray.withOpacity(0.5),
+                backgroundImage:
+                    avatarUrl != null ? NetworkImage(avatarUrl) : null,
+                child:
+                    avatarUrl == null
+                        ? Text(
+                          _initialsForName(nombre),
+                          style: TextStyle(
+                            color: WessexColors.deepRoyalBlue,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        )
+                        : null,
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      nombre,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: WessexColors.darkGrape,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    if (rut.isNotEmpty)
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 10,
+                            backgroundColor: WessexColors.deepRoyalBlue
+                                .withOpacity(0.15),
+                            backgroundImage:
+                                avatarUrl != null
+                                    ? NetworkImage(avatarUrl)
+                                    : null,
+                            child:
+                                avatarUrl == null
+                                    ? Text(
+                                      _initialsForName(nombre),
+                                      style: TextStyle(
+                                        color: WessexColors.deepRoyalBlue,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    )
+                                    : null,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              rut,
+                              style: TextStyle(
+                                color: WessexColors.midnightNavy,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    if (email.isNotEmpty) const SizedBox(height: 6),
+                    if (email.isNotEmpty)
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.mail_outline,
+                            size: 16,
+                            color: WessexColors.midnightNavy,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              email,
+                              style: TextStyle(
+                                color: WessexColors.midnightNavy.withOpacity(
+                                  0.8,
+                                ),
+                                fontSize: 12,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              _buildRolChip(rol),
+              _buildUsuarioInfoChip(
+                icon: Icons.calendar_today,
+                label: 'Creado: $creado',
+              ),
+              if (actualizado != 'N/A')
+                _buildUsuarioInfoChip(
+                  icon: Icons.update,
+                  label: 'Actualizado: $actualizado',
+                ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Align(
+            alignment: Alignment.bottomRight,
+            child: _buildActionButtons(usuario),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUsuarioInfoChip({
+    required IconData icon,
+    required String label,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: WessexColors.mistyRoseGray.withOpacity(0.35),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: WessexColors.midnightNavy),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              color: WessexColors.midnightNavy.withOpacity(0.8),
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String? _resolveUsuarioAvatar(Map<String, dynamic> usuario) {
+    final url = usuario['avatarUrl']?.toString();
+    if (url != null && url.isNotEmpty) {
+      return url;
+    }
+    final path = usuario['avatarPath']?.toString();
+    if (path != null && path.isNotEmpty) {
+      return ApiService.buildUploadUrl(path);
+    }
+    return null;
+  }
+
+  String _initialsForName(String? name) {
+    if (name == null || name.trim().isEmpty) return 'U';
+    final parts = name.trim().split(RegExp(r'\s+'));
+    if (parts.length == 1) {
+      return parts.first.substring(0, 1).toUpperCase();
+    }
+    final first = parts.first;
+    final last = parts.last;
+    return (first[0] + last[0]).toUpperCase();
+  }
+
   Widget _buildActionButtons(Map<String, dynamic> usuario) {
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -722,7 +910,7 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
         IconButton(
           onPressed: () => _resetPassword(usuario),
           icon: const Icon(Icons.lock_reset),
-          tooltip: 'Resetear contraseña',
+          tooltip: 'Resetear contrasena',
           color: WessexColors.maximumGrayMint,
         ),
         IconButton(
@@ -752,10 +940,10 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
   }
 
   void _resetPassword(Map<String, dynamic> usuario) {
-    // TODO: Implementar reset de contraseña via API
+    // TODO: Implementar reset de contrasena via API
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Funcionalidad de reset de contraseña en desarrollo'),
+        content: Text('Funcionalidad de reset de contrasena en desarrollo'),
         backgroundColor: WessexColors.maximumGrayMint,
       ),
     );
@@ -766,9 +954,9 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
       context: context,
       builder:
           (context) => AlertDialog(
-            title: const Text('Confirmar eliminación'),
+            title: const Text('Confirmar eliminacion'),
             content: Text(
-              '¿Está seguro que desea eliminar al usuario ${usuario['nombreCompleto']}?\n\nEsta acción no se puede deshacer.',
+              '?Esta seguro que desea eliminar al usuario ${usuario['nombreCompleto']}?\n\nEsta accion no se puede deshacer.',
             ),
             actions: [
               TextButton(
@@ -858,7 +1046,7 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
                     // RUT
                     TextFormField(
                       controller: rutController,
-                      enabled: !isEditing, // No editable en modo edición
+                      enabled: !isEditing, // No editable en modo edicion
                       decoration: InputDecoration(
                         labelText: 'RUT',
                         hintText: '12.345.678-9',
@@ -898,7 +1086,7 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
                       controller: emailController,
                       keyboardType: TextInputType.emailAddress,
                       decoration: InputDecoration(
-                        labelText: 'Correo Electrónico',
+                        labelText: 'Correo Electronico',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -908,36 +1096,35 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
                           return 'El email es obligatorio';
                         }
                         if (!value.contains('@')) {
-                          return 'Ingrese un email válido';
+                          return 'Ingrese un email valido';
                         }
                         return null;
                       },
                     ),
                     const SizedBox(height: 16),
 
-                    // Contraseña (solo para crear)
-                    if (!isEditing) ...[
+                    // Contrasena (solo para crear)
+                    if (!isEditing)
                       TextFormField(
                         controller: passwordController,
                         obscureText: true,
                         decoration: InputDecoration(
-                          labelText: 'Contraseña',
+                          labelText: 'Contrasena',
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
-                            return 'La contraseña es obligatoria';
+                            return 'La contrasena es obligatoria';
                           }
                           if (value.length < 6) {
-                            return 'La contraseña debe tener al menos 6 caracteres';
+                            return 'La contrasena debe tener al menos 6 caracteres';
                           }
                           return null;
                         },
                       ),
-                      const SizedBox(height: 16),
-                    ],
+                    if (!isEditing) const SizedBox(height: 16),
 
                     // Rol
                     DropdownButtonFormField<String>(

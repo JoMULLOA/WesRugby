@@ -22,6 +22,9 @@ class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   bool _obscurePassword = true;
+  bool _hasStoredSession = false;
+  Map<String, dynamic>? _storedUser;
+  bool _clearingStoredSession = false;
 
   @override
   void initState() {
@@ -31,12 +34,194 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _checkExistingSession() async {
     final isValid = await TokenManager.isLoggedIn();
-    if (isValid && mounted) {
-      final userInfo = await TokenManager.getUserInfo();
-      if (userInfo != null) {
-        _navigateToRoleDashboard(userInfo['rol']);
+    final userInfo = isValid ? await TokenManager.getUserInfo() : null;
+
+    if (!mounted) return;
+
+    if (isValid && userInfo != null) {
+      setState(() {
+        _hasStoredSession = true;
+        _storedUser = Map<String, dynamic>.from(userInfo);
+        final email = userInfo['email']?.toString();
+        if (email != null && email.isNotEmpty) {
+          _emailController.text = email;
+        }
+      });
+    } else {
+      setState(() {
+        _hasStoredSession = false;
+        _storedUser = null;
+      });
+    }
+  }
+
+  Future<void> _continuarSesionGuardada() async {
+    final rol = _storedUser?['rol'];
+    if (rol == null) return;
+    _navigateToRoleDashboard(rol);
+  }
+
+  Future<void> _borrarSesionGuardada() async {
+    setState(() {
+      _clearingStoredSession = true;
+    });
+
+    try {
+      await TokenManager.clearAuthData();
+      if (!mounted) return;
+      setState(() {
+        _hasStoredSession = false;
+        _storedUser = null;
+        _emailController.clear();
+        _passwordController.clear();
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('No se pudo limpiar la sesión guardada: $e'),
+            backgroundColor: WessexColors.crimsonAlert,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _clearingStoredSession = false;
+        });
       }
     }
+  }
+
+  Widget _buildStoredSessionCard() {
+    final nombre =
+        _storedUser?['nombreCompleto']?.toString() ??
+        _storedUser?['nombre']?.toString() ??
+        'Mi cuenta';
+    final email = _storedUser?['email']?.toString() ?? '';
+    final rol = _storedUser?['rol']?.toString() ?? '';
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 24),
+      child: Card(
+        color: Colors.white.withOpacity(0.92),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        elevation: 8,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Icons.lock_open,
+                    color: WessexColors.deepRoyalBlue,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Sesión guardada',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: WessexColors.deepRoyalBlue,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          nombre,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: WessexColors.darkGrape,
+                          ),
+                        ),
+                        if (email.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            email,
+                            style: TextStyle(
+                              color: WessexColors.midnightNavy.withOpacity(0.7),
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: WessexColors.deepRoyalBlue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      rol.toUpperCase(),
+                      style: const TextStyle(
+                        color: WessexColors.deepRoyalBlue,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _continuarSesionGuardada,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: WessexColors.deepRoyalBlue,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      icon: const Icon(Icons.play_arrow),
+                      label: const Text('Continuar'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed:
+                          _clearingStoredSession ? null : _borrarSesionGuardada,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: WessexColors.darkGrape,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        side: BorderSide(
+                          color: WessexColors.darkGrape.withOpacity(0.4),
+                        ),
+                      ),
+                      child:
+                          _clearingStoredSession
+                              ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    WessexColors.darkGrape,
+                                  ),
+                                ),
+                              )
+                              : const Text('Olvidar sesión'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _login() async {
@@ -79,6 +264,13 @@ class _LoginPageState extends State<LoginPage> {
         await TokenManager.saveToken(token);
         await TokenManager.saveUserInfo(user);
         print('🟢 DEBUG - Token y user info guardados');
+
+        if (mounted) {
+          setState(() {
+            _hasStoredSession = true;
+            _storedUser = Map<String, dynamic>.from(user);
+          });
+        }
 
         // Verificar inmediatamente que el token se guardó correctamente
         final tokenVerification = await TokenManager.getToken();
@@ -269,6 +461,7 @@ class _LoginPageState extends State<LoginPage> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
+                      if (_hasStoredSession) _buildStoredSessionCard(),
                       // Logo
                       Image.asset(
                         'assets/icon/logosf.png',

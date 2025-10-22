@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:wesrugby/core/config/confGlobal.dart';
 import 'package:wesrugby/core/config/colors.dart';
 import 'package:wesrugby/data/services/tokenManager.dart';
+import 'package:wesrugby/data/services/api_service.dart';
 import 'package:wesrugby/features/admin/presentation/screens/dashboards/directiva/directiva_dashboard.dart';
 import 'package:wesrugby/features/admin/presentation/screens/dashboards/tesorera/tesorera_dashboard.dart';
 import 'package:wesrugby/features/admin/presentation/screens/dashboards/entrenador/entrenador_dashboard.dart';
@@ -21,6 +23,8 @@ class _CustomDrawerState extends State<CustomDrawer> {
   String? userRole;
   String? userName;
   String? userEmail;
+  String? _avatarUrl;
+  bool _avatarUploading = false;
 
   @override
   void initState() {
@@ -28,14 +32,144 @@ class _CustomDrawerState extends State<CustomDrawer> {
     _loadUserInfo();
   }
 
-  Future<void> _loadUserInfo() async {
+  Future<void> _loadUserInfo({bool refreshRemote = true}) async {
     final tokenData = await TokenManager.getUserInfo();
-    if (tokenData != null) {
+    if (mounted && tokenData != null) {
       setState(() {
-        userRole = tokenData['rol'];
-        userName = tokenData['nombreCompleto'] ?? 'Usuario';
-        userEmail = tokenData['email'];
+        userRole = tokenData['rol']?.toString();
+        userName =
+            tokenData['nombreCompleto']?.toString() ??
+            tokenData['nombre']?.toString() ??
+            'Usuario';
+        userEmail = tokenData['email']?.toString();
+        _avatarUrl = _resolveAvatarUrl(tokenData) ?? _avatarUrl;
       });
+    }
+
+    if (!refreshRemote) return;
+
+    try {
+      final response = await ApiService.getProfile();
+      final payload = response.data;
+      final data =
+          response.success && payload is Map<String, dynamic>
+              ? payload['data'] ?? payload
+              : null;
+      if (mounted && data is Map<String, dynamic>) {
+        final resolved = _resolveAvatarUrl(data);
+        setState(() {
+          userRole = data['rol']?.toString() ?? userRole;
+          userName = data['nombreCompleto']?.toString() ?? userName;
+          userEmail = data['email']?.toString() ?? userEmail;
+          _avatarUrl = resolved ?? _avatarUrl;
+        });
+        await TokenManager.saveUserInfo(data);
+      }
+    } catch (e) {
+      // Ignorar errores de red para mantener datos locales
+    }
+  }
+
+  String? _resolveAvatarUrl(Map<String, dynamic>? data) {
+    if (data == null) return null;
+    final providedUrl = data['avatarUrl']?.toString();
+    if (providedUrl != null && providedUrl.isNotEmpty) {
+      return providedUrl;
+    }
+    final path = data['avatarPath']?.toString();
+    if (path == null || path.isEmpty) {
+      return null;
+    }
+    return ApiService.buildUploadUrl(path);
+  }
+
+  String _mimeTypeFromExtension(String? extension) {
+    switch (extension?.toLowerCase()) {
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      case 'gif':
+        return 'image/gif';
+      case 'webp':
+        return 'image/webp';
+      default:
+        return 'image/jpeg';
+    }
+  }
+
+  Future<void> _changeAvatar() async {
+    final result = await FilePicker.platform.pickFiles(
+      allowMultiple: false,
+      withData: true,
+      type: FileType.custom,
+      allowedExtensions: const ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+    );
+
+    if (result == null || result.files.isEmpty) {
+      return;
+    }
+
+    final file = result.files.first;
+    final bytes = file.bytes;
+    if (bytes == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No se pudo leer el archivo seleccionado.'),
+            backgroundColor: WessexColors.crimsonAlert,
+          ),
+        );
+      }
+      return;
+    }
+
+    setState(() {
+      _avatarUploading = true;
+    });
+
+    try {
+      final response = await ApiService.uploadAvatar(
+        bytes: bytes,
+        fileName: file.name,
+        mimeType: _mimeTypeFromExtension(file.extension),
+      );
+
+      final newUrl =
+          response['avatarUrl']?.toString() ??
+          (response['avatarPath'] != null
+              ? ApiService.buildUploadUrl(response['avatarPath'].toString())
+              : null);
+
+      if (mounted) {
+        setState(() {
+          _avatarUrl = newUrl ?? _avatarUrl;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Foto de perfil actualizada.'),
+            backgroundColor: WessexColors.leafGreen,
+          ),
+        );
+      }
+
+      await _loadUserInfo(refreshRemote: true);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('No se pudo actualizar la foto: $e'),
+            backgroundColor: WessexColors.crimsonAlert,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _avatarUploading = false;
+        });
+      }
     }
   }
 
@@ -68,51 +202,123 @@ class _CustomDrawerState extends State<CustomDrawer> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CircleAvatar(
-                  radius: isTablet ? 40 : 35,
-                  backgroundColor: WessexColors.white,
-                  child: Icon(
-                    Icons.sports_rugby,
-                    size: isTablet ? 45 : 40,
-                    color: WessexColors.deepRoyalBlue,
-                  ),
-                ),
-                SizedBox(height: 12),
-                Text(
-                  userName ?? 'Usuario',
-                  style: TextStyle(
-                    color: WessexColors.white,
-                    fontSize: isTablet ? 20 : 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  userEmail ?? 'email@ejemplo.com',
-                  style: TextStyle(
-                    color: WessexColors.white.withOpacity(0.8),
-                    fontSize: isTablet ? 15 : 14,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: WessexColors.crimsonAlert,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(
-                    _getRoleDisplayName(userRole),
-                    style: TextStyle(
-                      color: WessexColors.white,
-                      fontSize: isTablet ? 13 : 12,
-                      fontWeight: FontWeight.w500,
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    GestureDetector(
+                      onTap: _avatarUploading ? null : _changeAvatar,
+                      child: Stack(
+                        alignment: Alignment.bottomRight,
+                        children: [
+                          CircleAvatar(
+                            radius: isTablet ? 42 : 38,
+                            backgroundColor: Colors.white,
+                            backgroundImage:
+                                _avatarUrl != null
+                                    ? NetworkImage(_avatarUrl!)
+                                    : null,
+                            child:
+                                _avatarUrl == null
+                                    ? Icon(
+                                      Icons.person,
+                                      size: isTablet ? 42 : 36,
+                                      color: WessexColors.deepRoyalBlue,
+                                    )
+                                    : null,
+                          ),
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              height: 28,
+                              width: 28,
+                              decoration: BoxDecoration(
+                                color: WessexColors.crimsonAlert,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 2,
+                                ),
+                              ),
+                              child:
+                                  _avatarUploading
+                                      ? const Padding(
+                                        padding: EdgeInsets.all(4),
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                Colors.white,
+                                              ),
+                                        ),
+                                      )
+                                      : const Icon(
+                                        Icons.camera_alt,
+                                        size: 14,
+                                        color: Colors.white,
+                                      ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            userName ?? 'Usuario',
+                            style: TextStyle(
+                              color: WessexColors.white,
+                              fontSize: isTablet ? 20 : 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          if (userEmail != null)
+                            Text(
+                              userEmail!,
+                              style: TextStyle(
+                                color: WessexColors.white.withOpacity(0.85),
+                                fontSize: isTablet ? 15 : 14,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          const SizedBox(height: 10),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Text(
+                              _getRoleDisplayName(userRole),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.4,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  onPressed: _avatarUploading ? null : _changeAvatar,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: const BorderSide(color: Colors.white70),
                   ),
+                  icon: const Icon(Icons.camera_alt_outlined, size: 18),
+                  label: const Text('Actualizar foto de perfil'),
                 ),
               ],
             ),
@@ -447,6 +653,8 @@ class _CustomDrawerState extends State<CustomDrawer> {
         return 'ENTRENADOR';
       case 'apoderado':
         return 'APODERADO';
+      case 'RamaExterna':
+        return 'RAMA EXTERNA';
       default:
         return 'USUARIO';
     }

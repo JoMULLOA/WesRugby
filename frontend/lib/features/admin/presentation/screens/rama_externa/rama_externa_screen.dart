@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
@@ -5,6 +6,7 @@ import 'package:wesrugby/features/admin/presentation/screens/eventos/gestion/wid
 import 'package:wesrugby/data/services/api_service.dart';
 import 'package:wesrugby/data/services/tokenManager.dart';
 import 'package:wesrugby/core/config/colors.dart';
+import 'package:wesrugby/shared/widgets/layout/wessex_widgets.dart';
 
 class RamaExternaScreen extends StatefulWidget {
   @override
@@ -16,10 +18,17 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
   late TabController _tabController;
   List<dynamic> _eventos = [];
   List<dynamic> _misParticipaciones = [];
+  Map<String, dynamic>? _perfil;
   bool _isLoading = false;
+  bool _subiendoAvatarPerfil = false;
   String _nombreUsuario = 'Usuario RamaExterna';
+  String? _avatarUrl;
+  bool _profileCollapsed = true;
 
-  // Función para convertir hora UTC a hora de Chile (UTC-3)
+  final ScrollController _eventosScrollController = ScrollController();
+  final ScrollController _participacionesScrollController = ScrollController();
+
+  // Funcion para convertir hora UTC a hora de Chile (UTC-3)
   String _convertirUTCaChile(String horaUTC) {
     if (horaUTC.isEmpty) return horaUTC;
 
@@ -52,12 +61,14 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _cargarDatos();
-    _cargarInfoUsuario();
+    _cargarPerfil();
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    _eventosScrollController.dispose();
+    _participacionesScrollController.dispose();
     super.dispose();
   }
 
@@ -73,17 +84,53 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
     }
   }
 
-  Future<void> _cargarInfoUsuario() async {
+  Future<void> _cargarPerfil() async {
     try {
-      final userInfo = await TokenManager.getUserInfo();
-      if (userInfo != null && mounted) {
+      final response = await ApiService.getProfile();
+      final payload = response.data;
+      final data =
+          response.success && payload is Map<String, dynamic>
+              ? payload['data'] ?? payload
+              : null;
+      if (mounted && data is Map<String, dynamic>) {
+        final avatarUrl = _resolveAvatarUrl(data);
         setState(() {
-          _nombreUsuario = userInfo['nombre'] ?? 'Usuario RamaExterna';
+          _perfil = Map<String, dynamic>.from(data);
+          _nombreUsuario = data['nombreCompleto']?.toString() ?? _nombreUsuario;
+          _avatarUrl = avatarUrl;
         });
+        await TokenManager.saveUserInfo(data);
+        return;
       }
     } catch (e) {
-      print('Error cargando info usuario: $e');
+      print('Error cargando perfil: $e');
     }
+
+    final storedUser = await TokenManager.getUserInfo();
+    if (mounted && storedUser != null) {
+      final avatarUrl = _resolveAvatarUrl(storedUser);
+      setState(() {
+        _perfil = Map<String, dynamic>.from(storedUser);
+        _nombreUsuario =
+            storedUser['nombreCompleto']?.toString() ??
+            storedUser['nombre']?.toString() ??
+            _nombreUsuario;
+        _avatarUrl = avatarUrl;
+      });
+    }
+  }
+
+  String? _resolveAvatarUrl(Map<String, dynamic>? data) {
+    if (data == null) return null;
+    final providedUrl = data['avatarUrl']?.toString();
+    if (providedUrl != null && providedUrl.isNotEmpty) {
+      return providedUrl;
+    }
+    final path = data['avatarPath']?.toString();
+    if (path == null || path.isEmpty) {
+      return null;
+    }
+    return ApiService.buildUploadUrl(path);
   }
 
   Future<void> _cargarEventos() async {
@@ -98,47 +145,112 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
   Future<void> _cargarMisParticipaciones() async {
     try {
       final response = await ApiService.obtenerMisParticipacionesEvento();
-      print('🔧 DEBUG - Respuesta completa: $response');
-      print('🔧 DEBUG - Tipo de response: ${response.runtimeType}');
-      print('🔧 DEBUG - Keys en response: ${response.keys}');
+      final payload = response['data'];
+      List<dynamic> eventosAgrupados = [];
 
-      // ✅ CORREGIDO: Acceder a los datos dentro de 'data'
-      final data = response['data'];
-      print('🔧 DEBUG - data: $data');
-      print('🔧 DEBUG - Keys en data: ${data?.keys}');
-
-      final eventosAgrupados = data?['eventosAgrupados'];
-      final participaciones = data?['participaciones'];
-
-      print('🔧 DEBUG - eventosAgrupados: $eventosAgrupados');
-      print(
-        '🔧 DEBUG - Length eventosAgrupados: ${(eventosAgrupados as List?)?.length}',
-      );
-      print('🔧 DEBUG - participaciones: $participaciones');
-
-      if (eventosAgrupados is List) {
-        print(
-          '🔧 DEBUG - eventosAgrupados es una Lista con ${eventosAgrupados.length} elementos',
-        );
-        for (int i = 0; i < eventosAgrupados.length; i++) {
-          print('🔧 DEBUG - Evento $i: ${eventosAgrupados[i]}');
+      if (payload is Map<String, dynamic>) {
+        final rawEventos = payload['eventosAgrupados'];
+        if (rawEventos is List) {
+          eventosAgrupados = List<dynamic>.from(rawEventos);
         }
-      } else {
-        print(
-          '🔧 DEBUG - eventosAgrupados NO es una Lista, es: ${eventosAgrupados.runtimeType}',
+      }
+
+      setState(() {
+        _misParticipaciones = eventosAgrupados;
+      });
+    } catch (e, stackTrace) {
+      debugPrint('[ERROR] cargar participaciones: $e');
+      debugPrint(stackTrace.toString());
+    }
+  }
+
+  String _mimeTypeFromExtension(String? extension) {
+    switch (extension?.toLowerCase()) {
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      case 'gif':
+        return 'image/gif';
+      case 'webp':
+        return 'image/webp';
+      default:
+        return 'image/jpeg';
+    }
+  }
+
+  Future<void> _cambiarFotoPerfil() async {
+    final result = await FilePicker.platform.pickFiles(
+      allowMultiple: false,
+      withData: true,
+      type: FileType.custom,
+      allowedExtensions: const ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+    );
+
+    if (result == null || result.files.isEmpty) {
+      return;
+    }
+
+    final file = result.files.first;
+    final bytes = file.bytes;
+    if (bytes == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No se pudo leer el archivo seleccionado.'),
+            backgroundColor: WessexColors.crimsonAlert,
+          ),
+        );
+      }
+      return;
+    }
+
+    setState(() {
+      _subiendoAvatarPerfil = true;
+    });
+
+    try {
+      final response = await ApiService.uploadAvatar(
+        bytes: bytes,
+        fileName: file.name,
+        mimeType: _mimeTypeFromExtension(file.extension),
+      );
+
+      final avatarUrl =
+          response['avatarUrl']?.toString() ??
+          (response['avatarPath'] != null
+              ? ApiService.buildUploadUrl(response['avatarPath'].toString())
+              : null);
+
+      if (mounted) {
+        setState(() {
+          _avatarUrl = avatarUrl;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Foto de perfil actualizada.'),
+            backgroundColor: WessexColors.leafGreen,
+          ),
         );
       }
 
-      setState(() => _misParticipaciones = eventosAgrupados ?? []);
-      print(
-        '🔧 DEBUG - _misParticipaciones después del setState: $_misParticipaciones',
-      );
-      print(
-        '🔧 DEBUG - _misParticipaciones.length: ${_misParticipaciones.length}',
-      );
+      await _cargarPerfil();
     } catch (e) {
-      print('🔴 ERROR cargando participaciones: $e');
-      print('🔴 ERROR stackTrace: ${e.toString()}');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('No se pudo actualizar la foto: $e'),
+            backgroundColor: WessexColors.crimsonAlert,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _subiendoAvatarPerfil = false;
+        });
+      }
     }
   }
 
@@ -157,67 +269,414 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Rama Externa - Eventos',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: WessexColors.darkGrape,
-        elevation: 0,
-        iconTheme: IconThemeData(color: Colors.white),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: [
-            Tab(icon: Icon(Icons.event), text: 'Eventos Disponibles'),
-            Tab(icon: Icon(Icons.assignment), text: 'Mis Participaciones'),
-          ],
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white.withOpacity(0.7),
-        ),
+      appBar: WessexAppBar(
+        title: 'Portal Ramas Externas',
+        centerTitle: false,
+        automaticallyImplyLeading: false,
         actions: [
           Padding(
-            padding: EdgeInsets.only(right: 16),
+            padding: const EdgeInsets.only(right: 12),
             child: PopupMenuButton<String>(
+              tooltip: _nombreUsuario,
               onSelected: (value) {
                 if (value == 'logout') {
                   _cerrarSesion();
                 }
               },
-              icon: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.account_circle, color: Colors.white),
-                  SizedBox(width: 8),
-                  Text(
-                    _nombreUsuario,
-                    style: TextStyle(color: Colors.white, fontSize: 14),
-                  ),
-                ],
-              ),
               itemBuilder:
-                  (context) => [
+                  (context) => const [
                     PopupMenuItem(
                       value: 'logout',
                       child: Row(
                         children: [
                           Icon(Icons.logout, color: WessexColors.crimsonAlert),
                           SizedBox(width: 8),
-                          Text('Cerrar Sesión'),
+                          Text('Cerrar sesion'),
                         ],
                       ),
                     ),
                   ],
+              icon: CircleAvatar(
+                radius: 18,
+                backgroundColor: Colors.white24,
+                backgroundImage:
+                    _avatarUrl != null ? NetworkImage(_avatarUrl!) : null,
+                child:
+                    _avatarUrl == null
+                        ? const Icon(Icons.person, color: Colors.white)
+                        : null,
+              ),
             ),
           ),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(92),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.18),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: Colors.white.withOpacity(0.22)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 12,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: TabBar(
+                controller: _tabController,
+                indicator: BoxDecoration(
+                  color: Colors.white.withOpacity(0.32),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                labelColor: Colors.white,
+                unselectedLabelColor: Colors.white.withOpacity(0.75),
+                labelStyle: const TextStyle(fontWeight: FontWeight.w600),
+                tabs: const [
+                  Tab(
+                    icon: Icon(Icons.event_available),
+                    text: 'Eventos disponibles',
+                  ),
+                  Tab(
+                    icon: Icon(Icons.assignment_turned_in),
+                    text: 'Mis participaciones',
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
-      backgroundColor: WessexColors.lightGray,
-      body: TabBarView(
-        controller: _tabController,
+      body: WessexBackground(
+        child: SafeArea(
+          child: Column(
+            children: [
+              _buildProfileSection(),
+              const SizedBox(height: 20),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.9),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: WessexColors.mistyRoseGray.withOpacity(0.35),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 20,
+                          offset: const Offset(0, 12),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(24),
+                      child: TabBarView(
+                        controller: _tabController,
+                        children: [
+                          _buildEventosDisponiblesTab(),
+                          _buildMisParticipacionesTab(),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileSection() {
+    final profile = _perfil ?? const <String, dynamic>{};
+    final nombre = profile['nombreCompleto']?.toString() ?? _nombreUsuario;
+    final email = profile['email']?.toString() ?? '';
+    final rut = profile['rut']?.toString() ?? '';
+    final rol = (profile['rol'] ?? 'RamaExterna').toString();
+    final collapsed = _profileCollapsed;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 20),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [WessexColors.deepRoyalBlue, WessexColors.midnightNavy],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(22),
+          boxShadow: [
+            BoxShadow(
+              color: WessexColors.midnightNavy.withOpacity(0.35),
+              blurRadius: 18,
+              offset: const Offset(0, 12),
+            ),
+          ],
+        ),
+        padding: EdgeInsets.symmetric(
+          horizontal: collapsed ? 18 : 24,
+          vertical: collapsed ? 14 : 26,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(18),
+                onTap: () {
+                  setState(() {
+                    _profileCollapsed = !_profileCollapsed;
+                  });
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      CircleAvatar(
+                        radius: collapsed ? 26 : 34,
+                        backgroundColor: Colors.white,
+                        backgroundImage:
+                            _avatarUrl != null
+                                ? NetworkImage(_avatarUrl!)
+                                : null,
+                        child:
+                            _avatarUrl == null
+                                ? const Icon(
+                                  Icons.person,
+                                  size: 28,
+                                  color: WessexColors.deepRoyalBlue,
+                                )
+                                : null,
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              nombre,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            if (email.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.mail_outline,
+                                    size: 16,
+                                    color: Colors.white70,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      email,
+                                      style: const TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 13,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                            if (rut.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.badge,
+                                    size: 16,
+                                    color: Colors.white70,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    rut,
+                                    style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 13,
+                                      letterSpacing: 0.2,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                            if (!collapsed) ...[
+                              const SizedBox(height: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.18),
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: Text(
+                                  rol.toUpperCase(),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.6,
+                                  ),
+                                ),
+                              ),
+                            ],
+                            if (collapsed) ...[
+                              const SizedBox(height: 6),
+                              const Text(
+                                'Toca para ver mas detalles',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      AnimatedRotation(
+                        turns: collapsed ? 0 : 0.5,
+                        duration: const Duration(milliseconds: 200),
+                        child: const Icon(
+                          Icons.expand_more,
+                          color: Colors.white70,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            if (!collapsed) ...[
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildProfileMetric(
+                      icon: Icons.event_available,
+                      label: 'Eventos disponibles',
+                      value: _eventos.length.toString(),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildProfileMetric(
+                      icon: Icons.emoji_events,
+                      label: 'Mis participaciones',
+                      value: _misParticipaciones.length.toString(),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed:
+                          _subiendoAvatarPerfil ? null : _cambiarFotoPerfil,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        side: const BorderSide(color: Colors.white70),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      icon: const Icon(Icons.camera_alt_outlined, size: 18),
+                      label:
+                          _subiendoAvatarPerfil
+                              ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              )
+                              : const Text('Actualizar foto'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _cerrarSesion,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: WessexColors.crimsonAlert,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      icon: const Icon(Icons.logout),
+                      label: const Text('Cerrar sesion'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileMetric({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withOpacity(0.18)),
+      ),
+      child: Row(
         children: [
-          _buildEventosDisponiblesTab(),
-          _buildMisParticipacionesTab(),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.18),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: Colors.white, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  label,
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -240,20 +699,20 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
             Icon(
               Icons.event_busy,
               size: 64,
-              color: WessexColors.darkGrape.withOpacity(0.5),
+              color: WessexColors.deepRoyalBlue.withOpacity(0.5),
             ),
             SizedBox(height: 16),
             Text(
               'No hay eventos disponibles',
               style: TextStyle(
                 fontSize: 18,
-                color: WessexColors.darkGrape,
+                color: WessexColors.deepRoyalBlue,
                 fontWeight: FontWeight.w500,
               ),
             ),
             SizedBox(height: 8),
             Text(
-              'Los eventos creados por la directiva aparecerán aquí',
+              'Los eventos creados por la directiva apareceran aqui',
               style: TextStyle(
                 fontSize: 14,
                 color: WessexColors.midnightNavy.withOpacity(0.7),
@@ -265,15 +724,22 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: () => _cargarEventos(),
-      color: WessexColors.darkGrape,
-      child: ListView.builder(
-        padding: EdgeInsets.all(16),
-        itemCount: _eventos.length,
-        itemBuilder: (context, index) {
-          return _buildEventoCard(_eventos[index]);
-        },
+    return Scrollbar(
+      controller: _eventosScrollController,
+      thumbVisibility: true,
+      child: RefreshIndicator(
+        onRefresh: () => _cargarEventos(),
+        color: WessexColors.deepRoyalBlue,
+        backgroundColor: Colors.transparent,
+        child: ListView.builder(
+          controller: _eventosScrollController,
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 22),
+          itemCount: _eventos.length,
+          itemBuilder: (context, index) {
+            return _buildEventoCard(_eventos[index]);
+          },
+        ),
       ),
     );
   }
@@ -295,20 +761,20 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
             Icon(
               Icons.assignment_outlined,
               size: 64,
-              color: WessexColors.darkGrape.withOpacity(0.5),
+              color: WessexColors.deepRoyalBlue.withOpacity(0.5),
             ),
             SizedBox(height: 16),
             Text(
               'No tienes participaciones registradas',
               style: TextStyle(
                 fontSize: 18,
-                color: WessexColors.darkGrape,
+                color: WessexColors.deepRoyalBlue,
                 fontWeight: FontWeight.w500,
               ),
             ),
             SizedBox(height: 8),
             Text(
-              'Participa en eventos desde la pestaña disponibles',
+              'Participa en eventos desde la pestana disponibles',
               style: TextStyle(
                 fontSize: 14,
                 color: WessexColors.midnightNavy.withOpacity(0.7),
@@ -320,15 +786,22 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: () => _cargarMisParticipaciones(),
-      color: WessexColors.darkGrape,
-      child: ListView.builder(
-        padding: EdgeInsets.all(16),
-        itemCount: _misParticipaciones.length,
-        itemBuilder: (context, index) {
-          return _buildParticipacionCard(_misParticipaciones[index]);
-        },
+    return Scrollbar(
+      controller: _participacionesScrollController,
+      thumbVisibility: true,
+      child: RefreshIndicator(
+        onRefresh: () => _cargarMisParticipaciones(),
+        color: WessexColors.deepRoyalBlue,
+        backgroundColor: Colors.transparent,
+        child: ListView.builder(
+          controller: _participacionesScrollController,
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 22),
+          itemCount: _misParticipaciones.length,
+          itemBuilder: (context, index) {
+            return _buildParticipacionCard(_misParticipaciones[index]);
+          },
+        ),
       ),
     );
   }
@@ -337,279 +810,280 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
     final fecha = DateTime.parse(evento['fecha']);
     final fechaFormateada = '${fecha.day}/${fecha.month}/${fecha.year}';
 
-    // Verificar si ya estoy participando en este evento
     final bool yaParticipando = _verificarParticipacionExistente(evento['id']);
     final List<String> categoriasParticipando = _obtenerCategoriasParticipando(
       evento['id'],
     );
+    final String descripcion = evento['descripcion']?.toString() ?? '';
+    final String categoria = evento['categoria']?.toString() ?? '';
+    final String tipoEvento = evento['tipoEvento']?.toString() ?? '';
 
     return Card(
-      margin: EdgeInsets.only(bottom: 12),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header con título y estado
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    evento['nombre'] ?? 'Sin nombre',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: WessexColors.darkGrape,
-                    ),
-                  ),
-                ),
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: WessexColors.leafGreen.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: WessexColors.leafGreen, width: 1),
-                  ),
-                  child: Text(
-                    'DISPONIBLE',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: WessexColors.leafGreen,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 12),
-
-            // Fecha y hora
-            Row(
-              children: [
-                Icon(
-                  Icons.calendar_today,
-                  size: 16,
-                  color: WessexColors.midnightNavy,
-                ),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    fechaFormateada,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: WessexColors.midnightNavy,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            // Horas (si están disponibles)
-            if (evento['horaInicio'] != null || evento['horaFin'] != null) ...[
-              SizedBox(height: 8),
+      margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+      elevation: 4,
+      shadowColor: WessexColors.midnightNavy.withOpacity(0.25),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Colors.white, Color(0xFFF5F0F4)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Row(
                 children: [
-                  Icon(
-                    Icons.access_time,
-                    size: 16,
-                    color: WessexColors.midnightNavy,
-                  ),
-                  SizedBox(width: 8),
-                  Text(
-                    _formatearHorarios(evento['horaInicio'], evento['horaFin']),
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: WessexColors.midnightNavy,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-
-            // Lugar (si está disponible)
-            if (evento['lugar'] != null &&
-                evento['lugar'].toString().isNotEmpty) ...[
-              SizedBox(height: 8),
-              Row(
-                children: [
-                  Icon(
-                    Icons.location_on,
-                    size: 16,
-                    color: WessexColors.midnightNavy,
-                  ),
-                  SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      evento['lugar'],
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: WessexColors.midnightNavy,
-                        fontWeight: FontWeight.w500,
+                      evento['nombre']?.toString() ?? 'Evento sin nombre',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: WessexColors.deepRoyalBlue,
                       ),
-                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: WessexColors.leafGreen.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: WessexColors.leafGreen),
+                    ),
+                    child: const Text(
+                      'DISPONIBLE',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: WessexColors.leafGreen,
+                      ),
                     ),
                   ),
                 ],
               ),
-            ],
-
-            // Tipo de evento (si es deportivo)
-            if (evento['tipoEvento'] != null) ...[
-              SizedBox(height: 8),
+              const SizedBox(height: 12),
               Row(
                 children: [
-                  Icon(
-                    Icons.sports_soccer,
+                  const Icon(
+                    Icons.calendar_today,
                     size: 16,
                     color: WessexColors.midnightNavy,
                   ),
-                  SizedBox(width: 8),
+                  const SizedBox(width: 8),
                   Text(
-                    'Tipo: ${evento['tipoEvento']}',
-                    style: TextStyle(
+                    fechaFormateada,
+                    style: const TextStyle(
                       fontSize: 14,
                       color: WessexColors.midnightNavy,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
               ),
-            ],
-
-            // Descripción (si está disponible)
-            if (evento['descripcion'] != null &&
-                evento['descripcion'].toString().isNotEmpty) ...[
-              SizedBox(height: 8),
-              Text(
-                evento['descripcion'],
-                style: TextStyle(
-                  fontSize: 14,
-                  color: WessexColors.midnightNavy.withOpacity(0.8),
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-
-            // Categorías (si es evento deportivo)
-            if (evento['categoria'] != null &&
-                evento['categoria'].toString().isNotEmpty) ...[
-              SizedBox(height: 8),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: WessexColors.darkGrape.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  'Categorías: ${evento['categoria']}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: WessexColors.darkGrape,
-                  ),
-                ),
-              ),
-            ],
-
-            SizedBox(height: 16),
-
-            // Información de participación existente o botón para participar
-            if (yaParticipando) ...[
-              // Mostrar información de participación existente
-              Container(
-                padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: WessexColors.leafGreen.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: WessexColors.leafGreen, width: 1.5),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              if (evento['horaInicio'] != null ||
+                  evento['horaFin'] != null) ...[
+                const SizedBox(height: 8),
+                Row(
                   children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.check_circle,
-                          color: WessexColors.leafGreen,
-                          size: 20,
-                        ),
-                        SizedBox(width: 8),
-                        Text(
-                          '¡Ya estás participando!',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: WessexColors.leafGreen,
-                          ),
-                        ),
-                      ],
+                    const Icon(
+                      Icons.access_time,
+                      size: 16,
+                      color: WessexColors.midnightNavy,
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(width: 8),
                     Text(
-                      'Categorías registradas: ${categoriasParticipando.join(", ")}',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: WessexColors.darkGrape,
-                        fontWeight: FontWeight.w500,
+                      _formatearHorarios(
+                        evento['horaInicio'],
+                        evento['horaFin'],
                       ),
-                    ),
-                    SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton(
-                        onPressed:
-                            () => _mostrarDialogoParticipacionEvento(evento),
-                        style: OutlinedButton.styleFrom(
-                          side: BorderSide(color: WessexColors.leafGreen),
-                          padding: EdgeInsets.symmetric(vertical: 10),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.add, color: WessexColors.leafGreen),
-                            SizedBox(width: 8),
-                            Text(
-                              'Agregar más categorías',
-                              style: TextStyle(color: WessexColors.leafGreen),
-                            ),
-                          ],
-                        ),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: WessexColors.midnightNavy,
                       ),
                     ),
                   ],
                 ),
-              ),
-            ] else ...[
-              // Botón normal de participar
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => _mostrarDialogoParticipacionEvento(evento),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: WessexColors.leafGreen,
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+              ],
+              if (evento['lugar'] != null &&
+                  evento['lugar'].toString().isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.location_on,
+                      size: 16,
+                      color: WessexColors.midnightNavy,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        evento['lugar'].toString(),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: WessexColors.midnightNavy,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              if (tipoEvento.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.sports_soccer,
+                      size: 16,
+                      color: WessexColors.midnightNavy,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Tipo: $tipoEvento',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: WessexColors.midnightNavy,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              if (descripcion.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Text(
+                  descripcion,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: WessexColors.midnightNavy.withOpacity(0.8),
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+              if (categoria.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: WessexColors.deepRoyalBlue.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    'Categorias: $categoria',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: WessexColors.deepRoyalBlue,
                     ),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                ),
+              ],
+              const SizedBox(height: 18),
+              if (yaParticipando) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: WessexColors.leafGreen.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: WessexColors.leafGreen),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.add_circle_outline),
-                      SizedBox(width: 8),
-                      Text('Participar en Evento'),
+                      Row(
+                        children: const [
+                          Icon(
+                            Icons.check_circle,
+                            color: WessexColors.leafGreen,
+                            size: 20,
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            '!Ya estas participando!',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: WessexColors.leafGreen,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Categorias registradas: ${categoriasParticipando.join(", ")}',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: WessexColors.deepRoyalBlue,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton(
+                          onPressed:
+                              () => _mostrarDialogoParticipacionEvento(evento),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(
+                              color: WessexColors.leafGreen,
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 11),
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.add, color: WessexColors.leafGreen),
+                              SizedBox(width: 8),
+                              Text(
+                                'Agregar mas categorias',
+                                style: TextStyle(color: WessexColors.leafGreen),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
-              ),
+              ] else ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => _mostrarDialogoParticipacionEvento(evento),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: WessexColors.leafGreen,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.add_circle_outline),
+                        SizedBox(width: 8),
+                        Text('Participar en evento'),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -620,21 +1094,26 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
     final fechaFormateada = '${fecha.day}/${fecha.month}/${fecha.year}';
     final participaciones = eventoAgrupado['participaciones'] as List;
 
-    // Determinar el estado del evento basado en la fecha
     final String estadoEvento = _determinarEstadoEvento(eventoAgrupado);
     final Map<String, dynamic> estadoInfo = _getEstadoInfo(estadoEvento);
+    final Color colorEstado = estadoInfo['color'] as Color;
 
     return Card(
-      margin: EdgeInsets.only(bottom: 16),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      margin: const EdgeInsets.only(bottom: 16),
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: estadoInfo['color'] as Color, width: 2),
+          gradient: LinearGradient(
+            colors: [Colors.white, colorEstado.withOpacity(0.08)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: colorEstado.withOpacity(0.45), width: 1.5),
         ),
         child: Padding(
-          padding: EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -647,7 +1126,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: WessexColors.darkGrape,
+                        color: WessexColors.deepRoyalBlue,
                       ),
                     ),
                   ),
@@ -655,12 +1134,9 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                   Container(
                     padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: (estadoInfo['color'] as Color).withOpacity(0.1),
+                      color: colorEstado.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: estadoInfo['color'] as Color,
-                        width: 1.5,
-                      ),
+                      border: Border.all(color: colorEstado, width: 1.5),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -668,7 +1144,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                         Icon(
                           estadoInfo['icon'] as IconData,
                           size: 16,
-                          color: estadoInfo['color'] as Color,
+                          color: colorEstado,
                         ),
                         SizedBox(width: 6),
                         Text(
@@ -676,7 +1152,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
-                            color: estadoInfo['color'] as Color,
+                            color: colorEstado,
                           ),
                         ),
                       ],
@@ -686,7 +1162,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
               ),
               SizedBox(height: 12),
 
-              // Información del evento
+              // Informacion del evento
               Row(
                 children: [
                   Icon(
@@ -712,7 +1188,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      eventoAgrupado['lugar'] ?? 'Sin ubicación',
+                      eventoAgrupado['lugar'] ?? 'Sin ubicacion',
                       style: TextStyle(
                         fontSize: 14,
                         color: WessexColors.midnightNavy,
@@ -723,7 +1199,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                 ],
               ),
 
-              // Mostrar horas si están disponibles
+              // Mostrar horas si estan disponibles
               if (eventoAgrupado['horaInicio'] != null ||
                   eventoAgrupado['horaFin'] != null) ...[
                 SizedBox(height: 8),
@@ -752,7 +1228,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
 
               SizedBox(height: 16),
 
-              // Resumen de participación
+              // Resumen de participacion
               Container(
                 padding: EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -767,7 +1243,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                     Icon(Icons.groups, size: 20, color: WessexColors.leafGreen),
                     SizedBox(width: 12),
                     Text(
-                      'Total registrado: ${eventoAgrupado['totalNinos']} niños',
+                      'Total registrado: ${eventoAgrupado['totalNinos']} ninos',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -776,11 +1252,11 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                     ),
                     Spacer(),
                     Text(
-                      '${participaciones.length} categoría${participaciones.length != 1 ? 's' : ''}',
+                      '${participaciones.length} categoria${participaciones.length != 1 ? 's' : ''}',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color: WessexColors.darkGrape,
+                        color: WessexColors.deepRoyalBlue,
                       ),
                     ),
                   ],
@@ -789,13 +1265,13 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
 
               SizedBox(height: 16),
 
-              // Lista detallada de participaciones por categoría
+              // Lista detallada de participaciones por categoria
               Text(
-                'Detalles de participación:',
+                'Detalles de participacion:',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: WessexColors.darkGrape,
+                  color: WessexColors.deepRoyalBlue,
                 ),
               ),
               SizedBox(height: 8),
@@ -809,7 +1285,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                         color: WessexColors.lightGray.withOpacity(0.3),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: WessexColors.darkGrape.withOpacity(0.2),
+                          color: WessexColors.deepRoyalBlue.withOpacity(0.2),
                         ),
                       ),
                       child: Column(
@@ -823,12 +1299,12 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: WessexColors.darkGrape.withOpacity(
+                                  color: WessexColors.deepRoyalBlue.withOpacity(
                                     0.1,
                                   ),
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                    color: WessexColors.darkGrape,
+                                    color: WessexColors.deepRoyalBlue,
                                     width: 1,
                                   ),
                                 ),
@@ -839,7 +1315,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
-                                    color: WessexColors.darkGrape,
+                                    color: WessexColors.deepRoyalBlue,
                                   ),
                                 ),
                               ),
@@ -851,14 +1327,14 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                               ),
                               SizedBox(width: 6),
                               Text(
-                                '${participacion['cantidadNinos']} niños',
+                                '${participacion['cantidadNinos']} ninos',
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
                                   color: WessexColors.leafGreen,
                                 ),
                               ),
-                              // Botón de editar (solo visible durante 10 minutos)
+                              // Boton de editar (solo visible durante 10 minutos)
                               if (_puedeEditarParticipacion(participacion)) ...[
                                 SizedBox(width: 8),
                                 GestureDetector(
@@ -944,7 +1420,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                     ElevatedButton.icon(
                       onPressed: () => _subirImagenesRama(eventoAgrupado),
                       icon: const Icon(Icons.cloud_upload),
-                      label: const Text('Agregar imágenes'),
+                      label: const Text('Agregar imagenes'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: WessexColors.leafGreen,
                         foregroundColor: Colors.white,
@@ -955,22 +1431,49 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                 const SizedBox(height: 16),
               ],
 
+              if (estadoEvento == 'participado') ...[
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () => _mostrarMultimediaRama(eventoAgrupado),
+                      icon: const Icon(Icons.photo_library_outlined),
+                      label: const Text('Ver multimedia'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: WessexColors.deepRoyalBlue,
+                        side: const BorderSide(
+                          color: WessexColors.deepRoyalBlue,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton.icon(
+                      onPressed: () => _subirImagenesRama(eventoAgrupado),
+                      icon: const Icon(Icons.cloud_upload),
+                      label: const Text('Agregar imagenes'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: WessexColors.leafGreen,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+
               // Mensaje informativo basado en el estado
               Container(
                 padding: EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: (estadoInfo['color'] as Color).withOpacity(0.05),
+                  color: colorEstado.withOpacity(0.05),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: (estadoInfo['color'] as Color).withOpacity(0.3),
-                  ),
+                  border: Border.all(color: colorEstado.withOpacity(0.3)),
                 ),
                 child: Row(
                   children: [
                     Icon(
                       estadoInfo['icon'] as IconData,
                       size: 18,
-                      color: estadoInfo['color'] as Color,
+                      color: colorEstado,
                     ),
                     SizedBox(width: 10),
                     Expanded(
@@ -979,7 +1482,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
-                          color: (estadoInfo['color'] as Color),
+                          color: colorEstado,
                         ),
                       ),
                     ),
@@ -1076,7 +1579,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
           content: Text(
             exitosas == 1
                 ? 'Imagen subida exitosamente.'
-                : '${exitosas} imágenes subidas exitosamente.',
+                : '${exitosas} imagenes subidas exitosamente.',
           ),
           backgroundColor: WessexColors.leafGreen,
         ),
@@ -1090,7 +1593,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
           content: Text(
             fallidas == 1
                 ? 'Una imagen no pudo subirse. Verifica el formato.'
-                : '${fallidas} imágenes no pudieron subirse.',
+                : '${fallidas} imagenes no pudieron subirse.',
           ),
           backgroundColor: WessexColors.crimsonAlert,
         ),
@@ -1133,11 +1636,11 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
   }
 
   void _mostrarDialogoParticipacionEvento(Map<String, dynamic> evento) {
-    // Extraer las categorías disponibles del evento
+    // Extraer las categorias disponibles del evento
     List<String> categoriasDisponibles = [];
     if (evento['categoria'] != null &&
         evento['categoria'].toString().isNotEmpty) {
-      // Las categorías vienen separadas por comas: "sub-8,sub-10"
+      // Las categorias vienen separadas por comas: "sub-8,sub-10"
       categoriasDisponibles =
           evento['categoria']
               .toString()
@@ -1147,16 +1650,16 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
               .toList();
     }
 
-    // Si no hay categorías especificadas, usar todas como fallback
+    // Si no hay categorias especificadas, usar todas como fallback
     final categorias =
         categoriasDisponibles.isNotEmpty
             ? categoriasDisponibles
             : ['sub-8', 'sub-10', 'sub-12', 'sub-14', 'sub-16', 'sub-18'];
 
-    // Lista para almacenar múltiples participaciones
+    // Lista para almacenar multiples participaciones
     List<Map<String, dynamic>> participaciones = [
       {
-        'categoria': categorias.first, // Usar la primera categoría disponible
+        'categoria': categorias.first, // Usar la primera categoria disponible
         'cantidad': TextEditingController(),
         'invitados': TextEditingController(),
       },
@@ -1187,7 +1690,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                             style: TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
-                              color: WessexColors.darkGrape,
+                              color: WessexColors.deepRoyalBlue,
                             ),
                           ),
                           SizedBox(height: 8),
@@ -1201,27 +1704,29 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                           ),
                           SizedBox(height: 8),
 
-                          // Información detallada del evento
+                          // Informacion detallada del evento
                           Container(
                             padding: EdgeInsets.all(12),
                             decoration: BoxDecoration(
                               color: WessexColors.lightGray.withOpacity(0.3),
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
-                                color: WessexColors.darkGrape.withOpacity(0.2),
+                                color: WessexColors.deepRoyalBlue.withOpacity(
+                                  0.2,
+                                ),
                               ),
                             ),
                             child: _buildDetalleEventoDialog(evento),
                           ),
                           SizedBox(height: 24),
 
-                          // Sección de participaciones por categoría
+                          // Seccion de participaciones por categoria
                           Text(
-                            'Participaciones por Categoría:',
+                            'Participaciones por Categoria:',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: WessexColors.darkGrape,
+                              color: WessexColors.deepRoyalBlue,
                             ),
                           ),
                           SizedBox(height: 16),
@@ -1233,10 +1738,13 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
 
                             return Container(
                               margin: EdgeInsets.only(bottom: 16),
-                              padding: EdgeInsets.all(16),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 12,
+                                horizontal: 6,
+                              ),
                               decoration: BoxDecoration(
                                 border: Border.all(
-                                  color: WessexColors.darkGrape.withOpacity(
+                                  color: WessexColors.deepRoyalBlue.withOpacity(
                                     0.3,
                                   ),
                                 ),
@@ -1248,11 +1756,11 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                                   Row(
                                     children: [
                                       Text(
-                                        'Categoría ${index + 1}',
+                                        'Categoria ${index + 1}',
                                         style: TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.bold,
-                                          color: WessexColors.darkGrape,
+                                          color: WessexColors.deepRoyalBlue,
                                         ),
                                       ),
                                       Spacer(),
@@ -1272,7 +1780,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                                   ),
                                   SizedBox(height: 12),
 
-                                  // Dropdown de categoría
+                                  // Dropdown de categoria
                                   DropdownButtonFormField<String>(
                                     value: participacion['categoria'],
                                     onChanged: (value) {
@@ -1281,7 +1789,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                                       });
                                     },
                                     decoration: InputDecoration(
-                                      labelText: 'Categoría',
+                                      labelText: 'Categoria',
                                       border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(8),
                                       ),
@@ -1306,7 +1814,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                                     controller: participacion['cantidad'],
                                     keyboardType: TextInputType.number,
                                     decoration: InputDecoration(
-                                      labelText: 'Cantidad de Niños',
+                                      labelText: 'Cantidad de Ninos',
                                       border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(8),
                                       ),
@@ -1335,7 +1843,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                             );
                           }).toList(),
 
-                          // Botón para agregar más categorías
+                          // Boton para agregar mas categorias
                           SizedBox(
                             width: double.infinity,
                             child: OutlinedButton(
@@ -1344,14 +1852,16 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                                   participaciones.add({
                                     'categoria':
                                         categorias
-                                            .first, // Usar la primera categoría disponible
+                                            .first, // Usar la primera categoria disponible
                                     'cantidad': TextEditingController(),
                                     'invitados': TextEditingController(),
                                   });
                                 });
                               },
                               style: OutlinedButton.styleFrom(
-                                side: BorderSide(color: WessexColors.darkGrape),
+                                side: BorderSide(
+                                  color: WessexColors.deepRoyalBlue,
+                                ),
                                 padding: EdgeInsets.symmetric(vertical: 12),
                               ),
                               child: Row(
@@ -1359,13 +1869,13 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                                 children: [
                                   Icon(
                                     Icons.add,
-                                    color: WessexColors.darkGrape,
+                                    color: WessexColors.deepRoyalBlue,
                                   ),
                                   SizedBox(width: 8),
                                   Text(
-                                    'Agregar otra categoría',
+                                    'Agregar otra categoria',
                                     style: TextStyle(
-                                      color: WessexColors.darkGrape,
+                                      color: WessexColors.deepRoyalBlue,
                                     ),
                                   ),
                                 ],
@@ -1374,7 +1884,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                           ),
                           SizedBox(height: 24),
 
-                          // Botones de acción
+                          // Botones de accion
                           Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
@@ -1419,7 +1929,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.bold,
-            color: WessexColors.darkGrape,
+            color: WessexColors.deepRoyalBlue,
           ),
         ),
         SizedBox(height: 8),
@@ -1442,7 +1952,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
           ],
         ),
 
-        // Horas (si están disponibles)
+        // Horas (si estan disponibles)
         if (evento['horaInicio'] != null || evento['horaFin'] != null) ...[
           SizedBox(height: 4),
           Row(
@@ -1512,7 +2022,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
           ),
         ],
 
-        // Categorías disponibles (si es deportivo)
+        // Categorias disponibles (si es deportivo)
         if (evento['categoria'] != null &&
             evento['categoria'].toString().isNotEmpty) ...[
           SizedBox(height: 4),
@@ -1522,7 +2032,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
               SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Categorías disponibles: ${evento['categoria']}',
+                  'Categorias disponibles: ${evento['categoria']}',
                   style: TextStyle(
                     fontSize: 13,
                     color: WessexColors.midnightNavy,
@@ -1541,7 +2051,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
     Map<String, dynamic> evento,
     List<Map<String, dynamic>> participaciones,
   ) async {
-    // Validar que todas las participaciones tengan datos válidos
+    // Validar que todas las participaciones tengan datos validos
     List<String> errores = [];
 
     for (int i = 0; i < participaciones.length; i++) {
@@ -1549,34 +2059,34 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
       final cantidad = participacion['cantidad'].text.trim();
 
       if (cantidad.isEmpty) {
-        errores.add('La cantidad para la categoría ${i + 1} es obligatoria');
+        errores.add('La cantidad para la categoria ${i + 1} es obligatoria');
         continue;
       }
 
       final cantidadNinos = int.tryParse(cantidad);
       if (cantidadNinos == null || cantidadNinos <= 0) {
-        errores.add('Cantidad inválida para la categoría ${i + 1}');
+        errores.add('Cantidad invalida para la categoria ${i + 1}');
       }
     }
 
-    // Validar categorías duplicadas
+    // Validar categorias duplicadas
     Set<String> categoriasUsadas = {};
     for (int i = 0; i < participaciones.length; i++) {
       final categoria = participaciones[i]['categoria'];
       if (categoriasUsadas.contains(categoria)) {
-        errores.add('La categoría $categoria está duplicada');
+        errores.add('La categoria $categoria esta duplicada');
       } else {
         categoriasUsadas.add(categoria);
       }
     }
 
     if (errores.isNotEmpty) {
-      _mostrarError('Errores de validación:\n${errores.join('\n')}');
+      _mostrarError('Errores de validacion:\n${errores.join('\n')}');
       return;
     }
 
     try {
-      // Registrar cada participación por separado
+      // Registrar cada participacion por separado
       for (final participacion in participaciones) {
         final datos = {
           'eventoId': evento['id'],
@@ -1599,7 +2109,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            '${participaciones.length} participación(es) registrada(s) exitosamente',
+            '${participaciones.length} participacion(es) registrada(s) exitosamente',
           ),
           backgroundColor: WessexColors.leafGreen,
         ),
@@ -1620,7 +2130,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
       return _convertirUTCaChile(horaInicio);
     }
 
-    // Fallback para horaFin (aunque ya no debería usarse)
+    // Fallback para horaFin (aunque ya no deberia usarse)
     if (horaFin != null) {
       return _convertirUTCaChile(horaFin);
     }
@@ -1633,8 +2143,8 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
       context: context,
       builder:
           (context) => AlertDialog(
-            title: Text('Cerrar Sesión'),
-            content: Text('¿Estás seguro de que deseas cerrar sesión?'),
+            title: Text('Cerrar Sesion'),
+            content: Text('?Estas seguro de que deseas cerrar sesion?'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
@@ -1643,14 +2153,14 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
               ElevatedButton(
                 onPressed: () async {
                   Navigator.pop(context);
-                  // Limpiar el token y datos de sesión
+                  // Limpiar el token y datos de sesion
                   await TokenManager.clearAuthData();
                   Navigator.pushReplacementNamed(context, '/login');
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: WessexColors.crimsonAlert,
                 ),
-                child: Text('Cerrar Sesión'),
+                child: Text('Cerrar Sesion'),
               ),
             ],
           ),
@@ -1663,27 +2173,27 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
       final fechaEvento = DateTime.parse(evento['fecha']);
       final ahora = DateTime.now();
 
-      // Si hay fecha de fin, usar esa para determinar si ya terminó
+      // Si hay fecha de fin, usar esa para determinar si ya termino
       DateTime? fechaFin;
       if (evento['fechaFin'] != null) {
         fechaFin = DateTime.parse(evento['fechaFin']);
       }
 
-      // Si ya pasó la fecha de fin o la fecha del evento, está "participado"
+      // Si ya paso la fecha de fin o la fecha del evento, esta "participado"
       if (fechaFin != null && ahora.isAfter(fechaFin)) {
         return 'participado';
       } else if (fechaFin == null && ahora.isAfter(fechaEvento)) {
         return 'participado';
       }
 
-      // Si es el día del evento o está en progreso, está "participando"
+      // Si es el dia del evento o esta en progreso, esta "participando"
       if (ahora.year == fechaEvento.year &&
           ahora.month == fechaEvento.month &&
           ahora.day == fechaEvento.day) {
         return 'participando';
       }
 
-      // Si es en el futuro, está "confirmado"
+      // Si es en el futuro, esta "confirmado"
       if (ahora.isBefore(fechaEvento)) {
         return 'confirmado';
       }
@@ -1694,7 +2204,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
     }
   }
 
-  // Obtener información visual del estado
+  // Obtener informacion visual del estado
   Map<String, dynamic> _getEstadoInfo(String estado) {
     switch (estado) {
       case 'participado':
@@ -1703,14 +2213,14 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
           'color': WessexColors.midnightNavy,
           'icon': Icons.check_circle,
           'mensaje':
-              'Ya participaste en este evento. ¡Gracias por tu participación!',
+              'Ya participaste en este evento. !Gracias por tu participacion!',
         };
       case 'participando':
         return {
           'texto': 'PARTICIPANDO',
           'color': WessexColors.leafGreen,
           'icon': Icons.sports,
-          'mensaje': '¡Estás participando! El evento está en curso o es hoy.',
+          'mensaje': '!Estas participando! El evento esta en curso o es hoy.',
         };
       case 'confirmado':
       default:
@@ -1719,19 +2229,19 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
           'color': WessexColors.darkGrape,
           'icon': Icons.calendar_today,
           'mensaje':
-              'Tu participación está confirmada para este evento futuro.',
+              'Tu participacion esta confirmada para este evento futuro.',
         };
     }
   }
 
-  // Verificar si ya hay participación en un evento específico
+  // Verificar si ya hay participacion en un evento especifico
   bool _verificarParticipacionExistente(dynamic eventoId) {
     return _misParticipaciones.any(
       (participacion) => participacion['id'].toString() == eventoId.toString(),
     );
   }
 
-  // Obtener las categorías en las que ya estoy participando para un evento
+  // Obtener las categorias en las que ya estoy participando para un evento
   List<String> _obtenerCategoriasParticipando(dynamic eventoId) {
     final participacion = _misParticipaciones.firstWhere(
       (p) => p['id'].toString() == eventoId.toString(),
@@ -1744,7 +2254,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
     return participaciones.map((p) => p['categoria'].toString()).toList();
   }
 
-  // Verificar si se puede editar una participación (solo durante 10 minutos)
+  // Verificar si se puede editar una participacion (solo durante 10 minutos)
   bool _puedeEditarParticipacion(Map<String, dynamic> participacion) {
     try {
       final createdAt = DateTime.parse(participacion['createdAt']);
@@ -1755,7 +2265,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
     }
   }
 
-  // Mostrar diálogo para editar participación
+  // Mostrar dialogo para editar participacion
   void _mostrarDialogoEditarParticipacion(Map<String, dynamic> participacion) {
     final TextEditingController cantidadController = TextEditingController(
       text: participacion['cantidadNinos'].toString(),
@@ -1769,10 +2279,10 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
       builder: (BuildContext context) {
         return AlertDialog(
           title: Text(
-            'Editar Participación',
+            'Editar Participacion',
             style: TextStyle(
               fontWeight: FontWeight.bold,
-              color: WessexColors.darkGrape,
+              color: WessexColors.deepRoyalBlue,
             ),
           ),
           content: SingleChildScrollView(
@@ -1781,7 +2291,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Categoría: ${participacion['categoria'].toString().toUpperCase()}',
+                  'Categoria: ${participacion['categoria'].toString().toUpperCase()}',
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
                     color: WessexColors.midnightNavy,
@@ -1789,7 +2299,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                 ),
                 SizedBox(height: 16),
                 Text(
-                  'Cantidad de niños:',
+                  'Cantidad de ninos:',
                   style: TextStyle(
                     fontWeight: FontWeight.w500,
                     color: WessexColors.midnightNavy,
@@ -1839,7 +2349,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                       SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Solo puedes editar durante los primeros 10 minutos después de crear la participación.',
+                          'Solo puedes editar durante los primeros 10 minutos despues de crear la participacion.',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.orange.shade700,
@@ -1866,7 +2376,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                 if (cantidadNinos == null || cantidadNinos <= 0) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Ingrese una cantidad válida de niños'),
+                      content: Text('Ingrese una cantidad valida de ninos'),
                       backgroundColor: Colors.red,
                     ),
                   );
@@ -1894,7 +2404,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
     );
   }
 
-  // Método para editar la participación
+  // Metodo para editar la participacion
   Future<void> _editarParticipacion(
     int participacionId,
     int cantidadNinos,
@@ -1910,7 +2420,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
       if (response['success']) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Participación actualizada exitosamente'),
+            content: Text('Participacion actualizada exitosamente'),
             backgroundColor: WessexColors.leafGreen,
           ),
         );
@@ -1918,13 +2428,13 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
         await _cargarMisParticipaciones();
       } else {
         throw Exception(
-          response['message'] ?? 'Error al actualizar participación',
+          response['message'] ?? 'Error al actualizar participacion',
         );
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error al actualizar participación: $e'),
+          content: Text('Error al actualizar participacion: $e'),
           backgroundColor: Colors.red,
         ),
       );
