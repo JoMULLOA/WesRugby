@@ -299,49 +299,51 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
                     ? 2
                     : 1;
 
-            return GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: crossAxisCount,
-              mainAxisSpacing: 16,
-              crossAxisSpacing: 16,
-              childAspectRatio: 2.5,
+            return Wrap(
+              spacing: 16,
+              runSpacing: 16,
               children: [
                 _buildStatCard(
                   'Total Usuarios',
                   '$totalUsuarios',
                   Icons.people,
                   WessexColors.deepRoyalBlue,
+                  constraints.maxWidth / crossAxisCount - 16,
                 ),
                 _buildStatCard(
                   'Directiva',
                   '$directivas',
                   Icons.admin_panel_settings,
                   WessexColors.crimsonAlert,
+                  constraints.maxWidth / crossAxisCount - 16,
                 ),
                 _buildStatCard(
                   'Tesorera',
                   '$tesoreras',
                   Icons.account_balance_wallet,
                   WessexColors.midnightNavy,
+                  constraints.maxWidth / crossAxisCount - 16,
                 ),
                 _buildStatCard(
                   'Entrenadores',
                   '$entrenadores',
                   Icons.sports_rugby,
                   WessexColors.leafGreen,
+                  constraints.maxWidth / crossAxisCount - 16,
                 ),
                 _buildStatCard(
                   'Apoderados',
                   '$apoderados',
                   Icons.family_restroom,
                   WessexColors.maximumGrayMint,
+                  constraints.maxWidth / crossAxisCount - 16,
                 ),
                 _buildStatCard(
                   'Coord. Rama',
                   '$coordinadores',
                   Icons.sports_soccer,
                   WessexColors.crimsonAlert,
+                  constraints.maxWidth / crossAxisCount - 16,
                 ),
               ],
             );
@@ -356,56 +358,61 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
     String value,
     IconData icon,
     Color color,
+    double width,
   ) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.2)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
+    return SizedBox(
+      width: width,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withOpacity(0.2)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
-            child: Icon(icon, color: color, size: 24),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: WessexColors.darkGrape,
-                  ),
-                ),
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: WessexColors.darkGrape.withOpacity(0.7),
-                  ),
-                ),
-              ],
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 24),
             ),
-          ),
-        ],
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    value,
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: WessexColors.darkGrape,
+                    ),
+                  ),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: WessexColors.darkGrape.withOpacity(0.7),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -620,35 +627,32 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
             thickness: 1,
             color: WessexColors.mistyRoseGray.withOpacity(0.4),
           ),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              const double spacing = 20;
-              int crossAxisCount = (constraints.maxWidth / 320).floor();
-              if (crossAxisCount < 1) crossAxisCount = 1;
-              if (crossAxisCount > 4) crossAxisCount = 4;
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                int crossAxisCount = (constraints.maxWidth / 320).floor();
+                if (crossAxisCount < 1) crossAxisCount = 1;
+                if (crossAxisCount > 4) crossAxisCount = 4;
 
-              final double cardWidth =
-                  (constraints.maxWidth - (crossAxisCount - 1) * spacing) /
-                  crossAxisCount;
-              const double cardHeight = 240;
-              final double aspectRatio = cardWidth / cardHeight;
+                final double cardWidth =
+                    (constraints.maxWidth - (crossAxisCount - 1) * 20) /
+                    crossAxisCount;
 
-              return GridView.builder(
-                shrinkWrap: true,
-                padding: const EdgeInsets.all(24),
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: _filteredUsuarios.length,
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: crossAxisCount,
-                  crossAxisSpacing: spacing,
-                  mainAxisSpacing: spacing,
-                  childAspectRatio: aspectRatio,
-                ),
-                itemBuilder:
-                    (context, index) =>
-                        _buildUsuarioCard(_filteredUsuarios[index]),
-              );
-            },
+                return Wrap(
+                  spacing: 20,
+                  runSpacing: 20,
+                  children: _filteredUsuarios
+                      .map(
+                        (usuario) => SizedBox(
+                          width: cardWidth,
+                          child: _buildUsuarioCard(usuario),
+                        ),
+                      )
+                      .toList(),
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -720,6 +724,7 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -744,6 +749,7 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       nombre,
@@ -757,27 +763,12 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
                     if (rut.isNotEmpty)
                       Row(
                         children: [
-                          CircleAvatar(
-                            radius: 10,
-                            backgroundColor: WessexColors.deepRoyalBlue
-                                .withOpacity(0.15),
-                            backgroundImage:
-                                avatarUrl != null
-                                    ? NetworkImage(avatarUrl)
-                                    : null,
-                            child:
-                                avatarUrl == null
-                                    ? Text(
-                                      _initialsForName(nombre),
-                                      style: TextStyle(
-                                        color: WessexColors.deepRoyalBlue,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    )
-                                    : null,
+                          Icon(
+                            Icons.badge,
+                            size: 14,
+                            color: WessexColors.midnightNavy,
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 6),
                           Expanded(
                             child: Text(
                               rut,
@@ -796,7 +787,7 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
                         children: [
                           const Icon(
                             Icons.mail_outline,
-                            size: 16,
+                            size: 14,
                             color: WessexColors.midnightNavy,
                           ),
                           const SizedBox(width: 6),
@@ -821,8 +812,8 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
           ),
           const SizedBox(height: 16),
           Wrap(
-            spacing: 12,
-            runSpacing: 12,
+            spacing: 8,
+            runSpacing: 8,
             children: [
               _buildRolChip(rol),
               _buildUsuarioInfoChip(
@@ -836,10 +827,35 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
                 ),
             ],
           ),
-          const SizedBox(height: 18),
-          Align(
-            alignment: Alignment.bottomRight,
-            child: _buildActionButtons(usuario),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              IconButton(
+                onPressed: () => _showEditUserDialog(usuario),
+                icon: const Icon(Icons.edit, size: 20),
+                tooltip: 'Editar',
+                color: WessexColors.deepRoyalBlue,
+                padding: EdgeInsets.all(8),
+                constraints: BoxConstraints(),
+              ),
+              IconButton(
+                onPressed: () => _resetPassword(usuario),
+                icon: const Icon(Icons.lock_reset, size: 20),
+                tooltip: 'Resetear contraseña',
+                color: WessexColors.maximumGrayMint,
+                padding: EdgeInsets.all(8),
+                constraints: BoxConstraints(),
+              ),
+              IconButton(
+                onPressed: () => _deleteUser(usuario),
+                icon: const Icon(Icons.delete, size: 20),
+                tooltip: 'Eliminar',
+                color: WessexColors.crimsonAlert,
+                padding: EdgeInsets.all(8),
+                constraints: BoxConstraints(),
+              ),
+            ],
           ),
         ],
       ),
@@ -895,32 +911,6 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
     final first = parts.first;
     final last = parts.last;
     return (first[0] + last[0]).toUpperCase();
-  }
-
-  Widget _buildActionButtons(Map<String, dynamic> usuario) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        IconButton(
-          onPressed: () => _showEditUserDialog(usuario),
-          icon: const Icon(Icons.edit),
-          tooltip: 'Editar',
-          color: WessexColors.deepRoyalBlue,
-        ),
-        IconButton(
-          onPressed: () => _resetPassword(usuario),
-          icon: const Icon(Icons.lock_reset),
-          tooltip: 'Resetear contrasena',
-          color: WessexColors.maximumGrayMint,
-        ),
-        IconButton(
-          onPressed: () => _deleteUser(usuario),
-          icon: const Icon(Icons.delete),
-          tooltip: 'Eliminar',
-          color: WessexColors.crimsonAlert,
-        ),
-      ],
-    );
   }
 
   String _formatDate(dynamic date) {

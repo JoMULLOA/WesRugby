@@ -60,6 +60,9 @@ class WessexAppBar extends StatelessWidget implements PreferredSizeWidget {
   final Widget? leading;
   final bool automaticallyImplyLeading;
   final PreferredSizeWidget? bottom;
+  final double? toolbarHeight;
+  final double? titleSpacing;
+  final EdgeInsetsGeometry? padding;
 
   const WessexAppBar({
     super.key,
@@ -70,6 +73,9 @@ class WessexAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.leading,
     this.automaticallyImplyLeading = true,
     this.bottom,
+    this.toolbarHeight,
+    this.titleSpacing,
+    this.padding,
   });
 
   @override
@@ -92,23 +98,30 @@ class WessexAppBar extends StatelessWidget implements PreferredSizeWidget {
                 ]
                 : null,
       ),
-      child: AppBar(
-        title: Text(
-          title,
-          style: const TextStyle(
-            color: WessexColors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
+      child: Padding(
+        padding: padding ?? EdgeInsets.zero,
+        child: SafeArea(
+          child: AppBar(
+            title: Text(
+              title,
+              style: const TextStyle(
+                color: WessexColors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            backgroundColor: Colors.transparent,
+            iconTheme: const IconThemeData(color: WessexColors.white),
+            elevation: 0,
+            centerTitle: centerTitle,
+            actions: actions,
+            leading: leading,
+            automaticallyImplyLeading: automaticallyImplyLeading,
+            bottom: bottom,
+            toolbarHeight: toolbarHeight,
+            titleSpacing: titleSpacing,
           ),
         ),
-        backgroundColor: Colors.transparent,
-        iconTheme: const IconThemeData(color: WessexColors.white),
-        elevation: 0,
-        centerTitle: centerTitle,
-        actions: actions,
-        leading: leading,
-        automaticallyImplyLeading: automaticallyImplyLeading,
-        bottom: bottom,
       ),
     );
   }
@@ -116,7 +129,13 @@ class WessexAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Size get preferredSize {
     final bottomHeight = bottom?.preferredSize.height ?? 0;
-    return Size.fromHeight(kToolbarHeight + bottomHeight);
+    final toolbar = toolbarHeight ?? kToolbarHeight;
+    final verticalPadding = padding != null 
+        ? (padding as EdgeInsets?)?.vertical ?? 0 
+        : 0;
+    // Incluir SafeArea top (típicamente ~40-50px en la mayoría de dispositivos)
+    // MediaQueryData.fromWindow(window).padding.top, pero aquí simplificamos
+    return Size.fromHeight(toolbar + bottomHeight + verticalPadding);
   }
 }
 

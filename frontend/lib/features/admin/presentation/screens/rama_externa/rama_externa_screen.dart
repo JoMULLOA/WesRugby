@@ -7,6 +7,7 @@ import 'package:wesrugby/data/services/api_service.dart';
 import 'package:wesrugby/data/services/tokenManager.dart';
 import 'package:wesrugby/core/config/colors.dart';
 import 'package:wesrugby/shared/widgets/layout/wessex_widgets.dart';
+import 'package:wesrugby/shared/widgets/effects/pulse_on_tap.dart';
 
 class RamaExternaScreen extends StatefulWidget {
   @override
@@ -273,37 +274,36 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
         title: 'Portal Ramas Externas',
         centerTitle: false,
         automaticallyImplyLeading: false,
+        toolbarHeight: 68,
+        titleSpacing: 24,
+        padding: const EdgeInsets.symmetric(vertical: 8),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: PopupMenuButton<String>(
-              tooltip: _nombreUsuario,
-              onSelected: (value) {
-                if (value == 'logout') {
-                  _cerrarSesion();
-                }
-              },
-              itemBuilder:
-                  (context) => const [
-                    PopupMenuItem(
-                      value: 'logout',
-                      child: Row(
-                        children: [
-                          Icon(Icons.logout, color: WessexColors.crimsonAlert),
-                          SizedBox(width: 8),
-                          Text('Cerrar sesion'),
-                        ],
-                      ),
-                    ),
-                  ],
-              icon: CircleAvatar(
-                radius: 18,
+          // Botón de logout con tooltip y accesibilidad
+          Semantics(
+            label: 'Cerrar sesión',
+            button: true,
+            child: IconButton(
+              icon: const Icon(Icons.logout),
+              tooltip: 'Cerrar sesión',
+              onPressed: _cerrarSesion,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Avatar del usuario
+          Semantics(
+            label: 'Perfil de $_nombreUsuario',
+            button: true,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: CircleAvatar(
+                radius: 20,
                 backgroundColor: Colors.white24,
                 backgroundImage:
                     _avatarUrl != null ? NetworkImage(_avatarUrl!) : null,
                 child:
                     _avatarUrl == null
-                        ? const Icon(Icons.person, color: Colors.white)
+                        ? const Icon(Icons.person, color: Colors.white, size: 24)
                         : null,
               ),
             ),
@@ -328,21 +328,34 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
               ),
               child: TabBar(
                 controller: _tabController,
-                indicator: BoxDecoration(
-                  color: Colors.white.withOpacity(0.32),
-                  borderRadius: BorderRadius.circular(14),
-                ),
+                // Eliminar línea divisoria debajo de las tabs
+                dividerColor: Colors.transparent,
+                // Desactivar indicador persistente por completo
+                indicatorColor: Colors.transparent,
+                indicator: const BoxDecoration(),
                 labelColor: Colors.white,
                 unselectedLabelColor: Colors.white.withOpacity(0.75),
                 labelStyle: const TextStyle(fontWeight: FontWeight.w600),
-                tabs: const [
-                  Tab(
-                    icon: Icon(Icons.event_available),
-                    text: 'Eventos disponibles',
+                unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
+                // Desactivar efectos de ripple nativos
+                splashFactory: NoSplash.splashFactory,
+                overlayColor: WidgetStateProperty.all(Colors.transparent),
+                tabs: [
+                  PulseOnTap(
+                    duration: 260,
+                    pulseColor: Colors.white.withOpacity(0.25),
+                    child: const Tab(
+                      icon: Icon(Icons.event_available),
+                      text: 'Eventos disponibles',
+                    ),
                   ),
-                  Tab(
-                    icon: Icon(Icons.assignment_turned_in),
-                    text: 'Mis participaciones',
+                  PulseOnTap(
+                    duration: 260,
+                    pulseColor: Colors.white.withOpacity(0.25),
+                    child: const Tab(
+                      icon: Icon(Icons.assignment_turned_in),
+                      text: 'Mis participaciones',
+                    ),
                   ),
                 ],
               ),
@@ -352,13 +365,14 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
       ),
       body: WessexBackground(
         child: SafeArea(
+          bottom: true,
           child: Column(
             children: [
               _buildProfileSection(),
               const SizedBox(height: 20),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
                   child: Container(
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.9),
@@ -610,19 +624,6 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                                 ),
                               )
                               : const Text('Actualizar foto'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: _cerrarSesion,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: WessexColors.crimsonAlert,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                      icon: const Icon(Icons.logout),
-                      label: const Text('Cerrar sesion'),
                     ),
                   ),
                 ],
