@@ -642,14 +642,15 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
                 return Wrap(
                   spacing: 20,
                   runSpacing: 20,
-                  children: _filteredUsuarios
-                      .map(
-                        (usuario) => SizedBox(
-                          width: cardWidth,
-                          child: _buildUsuarioCard(usuario),
-                        ),
-                      )
-                      .toList(),
+                  children:
+                      _filteredUsuarios
+                          .map(
+                            (usuario) => SizedBox(
+                              width: cardWidth,
+                              child: _buildUsuarioCard(usuario),
+                            ),
+                          )
+                          .toList(),
                 );
               },
             ),
@@ -842,7 +843,7 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
               IconButton(
                 onPressed: () => _resetPassword(usuario),
                 icon: const Icon(Icons.lock_reset, size: 20),
-                tooltip: 'Resetear contraseña',
+                tooltip: 'Resetear contrasena',
                 color: WessexColors.maximumGrayMint,
                 padding: EdgeInsets.all(8),
                 constraints: BoxConstraints(),

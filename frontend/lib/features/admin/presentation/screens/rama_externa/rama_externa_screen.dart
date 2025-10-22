@@ -29,32 +29,108 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
   final ScrollController _eventosScrollController = ScrollController();
   final ScrollController _participacionesScrollController = ScrollController();
 
-  // Funcion para convertir hora UTC a hora de Chile (UTC-3)
-  String _convertirUTCaChile(String horaUTC) {
-    if (horaUTC.isEmpty) return horaUTC;
+  // Helper para formatear hora del evento (UTC -> horario Chile)
+  String _formatEventTimeLocal(Map<String, dynamic> e) {
+    final fechaStr =
+        (e['fecha'] ?? e['fechaEvento'] ?? e['fecha_evento'] ?? '')
+            .toString()
+            .trim();
+    final hIniRaw =
+        (e['horaInicio'] ?? e['hora'] ?? e['hora_evento'])?.toString().trim();
+    final hFinRaw =
+        (e['horaFin'] ?? e['horaTermino'] ?? e['hora_fin'])?.toString().trim();
 
-    try {
-      // Parsear la hora en formato HH:mm
-      final partes = horaUTC.split(':');
-      if (partes.length != 2) return horaUTC;
+    if (fechaStr.isEmpty || (hIniRaw == null && hFinRaw == null)) return '';
 
-      int horas = int.parse(partes[0]);
-      int minutos = int.parse(partes[1]);
+    String extractDate(String raw) {
+      if (raw.isEmpty) return raw;
+      final parts = raw.split('T');
+      return parts.isNotEmpty && parts.first.isNotEmpty ? parts.first : raw;
+    }
 
-      // Restar 3 horas para convertir de UTC a Chile (UTC-3)
-      horas -= 3;
+    String normaliseTime(String? raw) {
+      if (raw == null || raw.isEmpty) return '';
+      var value = raw.trim();
+      if (value.isEmpty) return '';
+      if (value.contains(' ')) {
+        value = value.split(' ').first;
+      }
+      if (value.endsWith('Z') || value.endsWith('z')) {
+        value = value.substring(0, value.length - 1);
+      }
+      if (value.contains('.')) {
+        value = value.split('.').first;
+      }
+      final plusIndex = value.indexOf('+', 1);
+      final minusIndex = value.indexOf('-', 1);
+      int offsetIndex;
+      if (plusIndex == -1) {
+        offsetIndex = minusIndex;
+      } else if (minusIndex == -1) {
+        offsetIndex = plusIndex;
+      } else {
+        offsetIndex = plusIndex < minusIndex ? plusIndex : minusIndex;
+      }
+      if (offsetIndex != -1) {
+        value = value.substring(0, offsetIndex);
+      }
+      final segments =
+          value.split(':').where((segment) => segment.isNotEmpty).toList();
+      if (segments.isEmpty) return '';
+      final hh = segments[0].padLeft(2, '0');
+      final mm = (segments.length > 1 ? segments[1] : '00').padLeft(2, '0');
+      final ss = (segments.length > 2 ? segments[2] : '00').padLeft(2, '0');
+      return '$hh:$mm:$ss';
+    }
 
-      // Manejar el caso donde las horas se vuelven negativas
-      if (horas < 0) {
-        horas += 24;
+    DateTime? parseUtcToLocal(String? raw) {
+      final normalized = normaliseTime(raw);
+      if (normalized.isEmpty) return null;
+      final baseDate = extractDate(fechaStr);
+      final candidates = <String>[
+        '${baseDate}T${normalized}Z',
+        '${baseDate}T$normalized',
+      ];
+
+      for (final candidate in candidates) {
+        try {
+          final parsed = DateTime.parse(candidate);
+          return parsed.toLocal();
+        } catch (_) {
+          continue;
+        }
       }
 
-      // Formatear de vuelta a HH:mm
-      return '${horas.toString().padLeft(2, '0')}:${minutos.toString().padLeft(2, '0')}';
-    } catch (e) {
-      // Si hay error en el parseo, devolver la hora original
-      return horaUTC;
+      try {
+        final backupDate = DateTime.parse(fechaStr);
+        final hour = int.parse(normalized.substring(0, 2));
+        final minute = int.parse(normalized.substring(3, 5));
+        final second = int.parse(normalized.substring(6, 8));
+        return DateTime(
+          backupDate.year,
+          backupDate.month,
+          backupDate.day,
+          hour,
+          minute,
+          second,
+        );
+      } catch (_) {
+        return null;
+      }
     }
+
+    String fmt(DateTime dt) {
+      String pad(int n) => n.toString().padLeft(2, '0');
+      return '${pad(dt.hour)}:${pad(dt.minute)}';
+    }
+
+    final ini = parseUtcToLocal(hIniRaw);
+    final fin = parseUtcToLocal(hFinRaw);
+
+    if (ini != null && fin != null) return '${fmt(ini)} - ${fmt(fin)}';
+    if (ini != null) return fmt(ini);
+    if (fin != null) return fmt(fin);
+    return '';
   }
 
   @override
@@ -104,7 +180,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
         return;
       }
     } catch (e) {
-      print('Error cargando perfil: $e');
+      debugPrint('Error cargando perfil: $e');
     }
 
     final storedUser = await TokenManager.getUserInfo();
@@ -139,7 +215,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
       final response = await ApiService.obtenerEventosDisponibles();
       setState(() => _eventos = response['data'] ?? []);
     } catch (e) {
-      print('Error cargando eventos: $e');
+      debugPrint('Error cargando eventos: $e');
     }
   }
 
@@ -278,13 +354,13 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
         titleSpacing: 24,
         padding: const EdgeInsets.symmetric(vertical: 8),
         actions: [
-          // Botón de logout con tooltip y accesibilidad
+          // Boton de logout con tooltip y accesibilidad
           Semantics(
-            label: 'Cerrar sesión',
+            label: 'Cerrar sesion',
             button: true,
             child: IconButton(
               icon: const Icon(Icons.logout),
-              tooltip: 'Cerrar sesión',
+              tooltip: 'Cerrar sesion',
               onPressed: _cerrarSesion,
               color: Colors.white,
             ),
@@ -303,7 +379,11 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                     _avatarUrl != null ? NetworkImage(_avatarUrl!) : null,
                 child:
                     _avatarUrl == null
-                        ? const Icon(Icons.person, color: Colors.white, size: 24)
+                        ? const Icon(
+                          Icons.person,
+                          color: Colors.white,
+                          size: 24,
+                        )
                         : null,
               ),
             ),
@@ -328,7 +408,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
               ),
               child: TabBar(
                 controller: _tabController,
-                // Eliminar línea divisoria debajo de las tabs
+                // Eliminar linea divisoria debajo de las tabs
                 dividerColor: Colors.transparent,
                 // Desactivar indicador persistente por completo
                 indicatorColor: Colors.transparent,
@@ -336,7 +416,9 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                 labelColor: Colors.white,
                 unselectedLabelColor: Colors.white.withOpacity(0.75),
                 labelStyle: const TextStyle(fontWeight: FontWeight.w600),
-                unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
+                unselectedLabelStyle: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                ),
                 // Desactivar efectos de ripple nativos
                 splashFactory: NoSplash.splashFactory,
                 overlayColor: WidgetStateProperty.all(Colors.transparent),
@@ -890,30 +972,38 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                   ),
                 ],
               ),
-              if (evento['horaInicio'] != null ||
-                  evento['horaFin'] != null) ...[
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.access_time,
-                      size: 16,
-                      color: WessexColors.midnightNavy,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      _formatearHorarios(
-                        evento['horaInicio'],
-                        evento['horaFin'],
+              // Mostrar hora del evento
+              Builder(
+                builder: (context) {
+                  final horaFmt = _formatEventTimeLocal(evento);
+                  if (horaFmt.isEmpty) return const SizedBox.shrink();
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.access_time,
+                            size: 16,
+                            color: WessexColors.midnightNavy,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            horaFmt,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: WessexColors.midnightNavy,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
                       ),
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: WessexColors.midnightNavy,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  );
+                },
+              ),
               if (evento['lugar'] != null &&
                   evento['lugar'].toString().isNotEmpty) ...[
                 const SizedBox(height: 8),
@@ -1200,32 +1290,38 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                 ],
               ),
 
-              // Mostrar horas si estan disponibles
-              if (eventoAgrupado['horaInicio'] != null ||
-                  eventoAgrupado['horaFin'] != null) ...[
-                SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.access_time,
-                      size: 16,
-                      color: WessexColors.midnightNavy,
-                    ),
-                    SizedBox(width: 8),
-                    Text(
-                      _formatearHorarios(
-                        eventoAgrupado['horaInicio'],
-                        eventoAgrupado['horaFin'],
+              // Mostrar hora del evento si esta disponible
+              Builder(
+                builder: (context) {
+                  final horaFmt = _formatEventTimeLocal(eventoAgrupado);
+                  if (horaFmt.isEmpty) return const SizedBox.shrink();
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.access_time,
+                            size: 16,
+                            color: WessexColors.midnightNavy,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            horaFmt,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: WessexColors.midnightNavy,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
                       ),
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: WessexColors.midnightNavy,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  );
+                },
+              ),
 
               SizedBox(height: 16),
 
@@ -1430,35 +1526,6 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                   ],
                 ),
                 const SizedBox(height: 16),
-              ],
-
-              if (estadoEvento == 'participado') ...[
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    OutlinedButton.icon(
-                      onPressed: () => _mostrarMultimediaRama(eventoAgrupado),
-                      icon: const Icon(Icons.photo_library_outlined),
-                      label: const Text('Ver multimedia'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: WessexColors.deepRoyalBlue,
-                        side: const BorderSide(
-                          color: WessexColors.deepRoyalBlue,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    ElevatedButton.icon(
-                      onPressed: () => _subirImagenesRama(eventoAgrupado),
-                      icon: const Icon(Icons.cloud_upload),
-                      label: const Text('Agregar imagenes'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: WessexColors.leafGreen,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
               ],
 
               // Mensaje informativo basado en el estado
@@ -1954,26 +2021,36 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
         ),
 
         // Horas (si estan disponibles)
-        if (evento['horaInicio'] != null || evento['horaFin'] != null) ...[
-          SizedBox(height: 4),
-          Row(
-            children: [
-              Icon(
-                Icons.access_time,
-                size: 14,
-                color: WessexColors.midnightNavy,
-              ),
-              SizedBox(width: 8),
-              Text(
-                _formatearHorarios(evento['horaInicio'], evento['horaFin']),
-                style: TextStyle(
-                  fontSize: 13,
-                  color: WessexColors.midnightNavy,
+        Builder(
+          builder: (context) {
+            final horaFmt = _formatEventTimeLocal(evento);
+            if (horaFmt.isEmpty) return const SizedBox.shrink();
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.access_time,
+                      size: 14,
+                      color: WessexColors.midnightNavy,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      horaFmt,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: WessexColors.midnightNavy,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            );
+          },
+        ),
 
         // Lugar
         if (evento['lugar'] != null &&
@@ -2121,31 +2198,13 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
     }
   }
 
-  String _formatearHorarios(String? horaInicio, String? horaFin) {
-    if (horaInicio == null && horaFin == null) {
-      return 'Hora no especificada';
-    }
-
-    // Priorizar mostrar solo la hora de inicio convertida a hora de Chile
-    if (horaInicio != null) {
-      return _convertirUTCaChile(horaInicio);
-    }
-
-    // Fallback para horaFin (aunque ya no deberia usarse)
-    if (horaFin != null) {
-      return _convertirUTCaChile(horaFin);
-    }
-
-    return 'Hora no especificada';
-  }
-
   void _cerrarSesion() {
     showDialog(
       context: context,
       builder:
           (context) => AlertDialog(
             title: Text('Cerrar Sesion'),
-            content: Text('?Estas seguro de que deseas cerrar sesion?'),
+            content: Text('Estas seguro de que deseas cerrar sesion?'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),

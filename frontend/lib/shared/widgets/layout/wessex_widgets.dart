@@ -81,6 +81,7 @@ class WessexAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      padding: padding,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [WessexColors.midnightNavy, WessexColors.deepRoyalBlue],
@@ -98,30 +99,25 @@ class WessexAppBar extends StatelessWidget implements PreferredSizeWidget {
                 ]
                 : null,
       ),
-      child: Padding(
-        padding: padding ?? EdgeInsets.zero,
-        child: SafeArea(
-          child: AppBar(
-            title: Text(
-              title,
-              style: const TextStyle(
-                color: WessexColors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            backgroundColor: Colors.transparent,
-            iconTheme: const IconThemeData(color: WessexColors.white),
-            elevation: 0,
-            centerTitle: centerTitle,
-            actions: actions,
-            leading: leading,
-            automaticallyImplyLeading: automaticallyImplyLeading,
-            bottom: bottom,
-            toolbarHeight: toolbarHeight,
-            titleSpacing: titleSpacing,
+      child: AppBar(
+        title: Text(
+          title,
+          style: const TextStyle(
+            color: WessexColors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
           ),
         ),
+        backgroundColor: Colors.transparent,
+        iconTheme: const IconThemeData(color: WessexColors.white),
+        elevation: 0,
+        centerTitle: centerTitle,
+        actions: actions,
+        leading: leading,
+        automaticallyImplyLeading: automaticallyImplyLeading,
+        bottom: bottom,
+        toolbarHeight: toolbarHeight,
+        titleSpacing: titleSpacing,
       ),
     );
   }
@@ -129,13 +125,10 @@ class WessexAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Size get preferredSize {
     final bottomHeight = bottom?.preferredSize.height ?? 0;
-    final toolbar = toolbarHeight ?? kToolbarHeight;
-    final verticalPadding = padding != null 
-        ? (padding as EdgeInsets?)?.vertical ?? 0 
-        : 0;
-    // Incluir SafeArea top (típicamente ~40-50px en la mayoría de dispositivos)
-    // MediaQueryData.fromWindow(window).padding.top, pero aquí simplificamos
-    return Size.fromHeight(toolbar + bottomHeight + verticalPadding);
+    final baseHeight = toolbarHeight ?? kToolbarHeight;
+    final paddingHeight =
+        padding is EdgeInsets ? (padding as EdgeInsets).vertical : 0;
+    return Size.fromHeight(baseHeight + bottomHeight + paddingHeight);
   }
 }
 

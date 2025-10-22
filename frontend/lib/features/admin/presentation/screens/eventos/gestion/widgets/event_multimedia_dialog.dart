@@ -141,7 +141,7 @@ class _EventMultimediaDialogState extends State<EventMultimediaDialog> {
             content: Text(
               exitosas == 1
                   ? 'Imagen subida correctamente.'
-                  : '$exitosas imágenes subidas correctamente.',
+                  : '$exitosas imagenes subidas correctamente.',
             ),
             backgroundColor: WessexColors.leafGreen,
           ),
@@ -154,7 +154,7 @@ class _EventMultimediaDialogState extends State<EventMultimediaDialog> {
             content: Text(
               fallidas == 1
                   ? 'Una imagen no pudo subirse. Verifica el formato.'
-                  : '$fallidas imágenes no pudieron subirse.',
+                  : '$fallidas imagenes no pudieron subirse.',
             ),
             backgroundColor: WessexColors.crimsonAlert,
           ),
@@ -278,22 +278,22 @@ class _EventMultimediaDialogState extends State<EventMultimediaDialog> {
                               'Contenido compartido con ramas participantes',
                           media: _mediaCompartida,
                           vacioMensaje:
-                              'Aún no se han compartido imágenes con las ramas.',
+                              'Aun no se han compartido imagenes con las ramas.',
                         ),
                       if (widget.isDirectiva)
                         _buildSection(
                           titulo: 'Solo visible para directiva',
                           media: _mediaPrivada,
                           vacioMensaje:
-                              'No hay imágenes privadas para este evento.',
+                              'No hay imagenes privadas para este evento.',
                           badgeColor: WessexColors.darkGrape,
                         ),
                       if (!widget.isDirectiva)
                         _buildSection(
-                          titulo: 'Imágenes compartidas del evento',
+                          titulo: 'Imagenes compartidas del evento',
                           media: _mediaCompartida,
                           vacioMensaje:
-                              'Aún no hay imágenes compartidas para este evento.',
+                              'Aun no hay imagenes compartidas para este evento.',
                         ),
                     ],
                   ),
@@ -376,8 +376,9 @@ class _EventMultimediaDialogState extends State<EventMultimediaDialog> {
             )
           else
             Wrap(
-              spacing: 12,
-              runSpacing: 12,
+              spacing: 16,
+              runSpacing: 16,
+              alignment: WrapAlignment.start,
               children: media.map((item) => _buildMediaCard(item)).toList(),
             ),
         ],
@@ -385,9 +386,24 @@ class _EventMultimediaDialogState extends State<EventMultimediaDialog> {
     );
   }
 
+  String _initialsFor(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return 'IMG';
+    final parts =
+        trimmed.split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    if (parts.isEmpty) return 'IMG';
+    if (parts.length == 1) {
+      return parts.first.substring(0, 1).toUpperCase();
+    }
+    final first = parts.first.substring(0, 1);
+    final last = parts.last.substring(0, 1);
+    return (first + last).toUpperCase();
+  }
+
   Widget _buildMediaCard(Map<String, dynamic> media) {
     final uploader = media['uploadedByNombre'] ?? media['uploadedByRut'] ?? '';
-    final rol = media['uploadedByRol'] ?? '';
+    final rol = media['uploadedByRol']?.toString() ?? '';
+    final isPrivado = media['isPrivate'] == true;
     final fecha =
         media['createdAt'] != null
             ? DateTime.tryParse(media['createdAt'].toString())
@@ -396,61 +412,180 @@ class _EventMultimediaDialogState extends State<EventMultimediaDialog> {
         fecha != null
             ? '${fecha.day.toString().padLeft(2, '0')}/${fecha.month.toString().padLeft(2, '0')}/${fecha.year}'
             : '';
+    final iniciales = _initialsFor(uploader.isNotEmpty ? uploader : rol);
 
-    return SizedBox(
-      width: 180,
-      child: Card(
-        clipBehavior: Clip.antiAlias,
-        elevation: 3,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AspectRatio(
-              aspectRatio: 1,
-              child: InkWell(
-                onTap: () => _mostrarImagenCompleta(media['url']),
-                child: Ink.image(
-                  image: NetworkImage(media['url']),
-                  fit: BoxFit.cover,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 160, minWidth: 136),
+      child: Material(
+        elevation: 4,
+        borderRadius: BorderRadius.circular(18),
+        color: Colors.white,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: () => _mostrarImagenCompleta(media['url']),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(18),
+                ),
+                child: AspectRatio(
+                  aspectRatio: 4 / 3,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Image.network(
+                        media['url'],
+                        fit: BoxFit.cover,
+                        errorBuilder:
+                            (_, __, ___) => Container(
+                              color: WessexColors.mistyRoseGray.withOpacity(
+                                0.4,
+                              ),
+                              alignment: Alignment.center,
+                              child: const Icon(Icons.broken_image, size: 28),
+                            ),
+                      ),
+                      Positioned(
+                        top: 8,
+                        left: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.45),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                isPrivado ? Icons.lock : Icons.group,
+                                size: 12,
+                                color: Colors.white,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                isPrivado ? 'Privado' : 'Compartido',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      if (fechaTexto.isNotEmpty)
+                        Positioned(
+                          bottom: 8,
+                          right: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.4),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.calendar_month,
+                                  size: 12,
+                                  color: Colors.white,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  fechaTexto,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    uploader.isEmpty ? 'Sin registro' : uploader,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: WessexColors.darkGrape,
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 16,
+                          backgroundColor: WessexColors.deepRoyalBlue
+                              .withOpacity(0.12),
+                          child: Text(
+                            iniciales,
+                            style: const TextStyle(
+                              color: WessexColors.deepRoyalBlue,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                uploader.isEmpty ? 'Sin registro' : uploader,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: WessexColors.darkGrape,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              if (rol.isNotEmpty)
+                                Text(
+                                  rol,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: WessexColors.midnightNavy
+                                        .withOpacity(0.65),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    rol,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: WessexColors.midnightNavy.withOpacity(0.7),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  if (fechaTexto.isNotEmpty)
-                    Text(
-                      fechaTexto,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: WessexColors.midnightNavy.withOpacity(0.6),
+                    if (!widget.isDirectiva && rol.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text(
+                          'Subido por rama participante',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: WessexColors.midnightNavy.withOpacity(0.6),
+                          ),
+                        ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
