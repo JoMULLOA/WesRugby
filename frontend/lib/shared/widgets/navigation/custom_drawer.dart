@@ -7,6 +7,7 @@ import 'package:wesrugby/features/admin/presentation/screens/dashboards/tesorera
 import 'package:wesrugby/features/admin/presentation/screens/dashboards/entrenador/entrenador_dashboard.dart';
 import 'package:wesrugby/features/admin/presentation/screens/dashboards/apoderado/apoderado_dashboard.dart';
 import 'package:wesrugby/features/admin/presentation/screens/inscripciones/inscripciones_screen.dart';
+import 'package:wesrugby/features/admin/presentation/screens/eventos/multimedia/multimedia_overview_screen.dart';
 import 'package:wesrugby/features/auth/presentation/screens/simple_login/simple_login.dart';
 
 class CustomDrawer extends StatefulWidget {
@@ -287,6 +288,13 @@ class _CustomDrawerState extends State<CustomDrawer> {
         isTablet: isTablet,
       ),
       _buildMenuItem(
+        icon: Icons.photo_library,
+        title: 'Multimedia',
+        color: WessexColors.deepRoyalBlue,
+        onTap: () => _navigateToModule('multimedia'),
+        isTablet: isTablet,
+      ),
+      _buildMenuItem(
         icon: Icons.store,
         title: 'Productos',
         color: WessexColors.deepRoyalBlue,
@@ -452,6 +460,14 @@ class _CustomDrawerState extends State<CustomDrawer> {
         Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => const InscripcionesScreen()),
+        );
+        break;
+      case 'multimedia':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const MultimediaOverviewScreen(),
+          ),
         );
         break;
       default:

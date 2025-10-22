@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:wesrugby/data/services/api_service.dart';
 import 'package:wesrugby/core/config/colors.dart';
 import 'package:wesrugby/features/admin/presentation/screens/eventos/tipos/admin_tipos_evento_screen.dart';
+import 'package:wesrugby/features/admin/presentation/screens/eventos/gestion/widgets/event_multimedia_dialog.dart';
 import 'package:wesrugby/shared/widgets/layout/wessex_widgets.dart';
 // Versión 2.0 - Con gestión de categorías mejorada
 
@@ -432,6 +433,34 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
         ),
       );
     }
+  }
+
+  void _mostrarMultimediaEvento(Map<String, dynamic> evento) {
+    final String eventoId = evento['id']?.toString() ?? '';
+    if (eventoId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se pudo identificar el evento para multimedia.'),
+          backgroundColor: WessexColors.crimsonAlert,
+        ),
+      );
+      return;
+    }
+
+    final titulo = evento['titulo'] ?? evento['nombre'] ?? 'Evento';
+
+    showDialog(
+      context: context,
+      builder:
+          (_) => EventMultimediaDialog(
+            eventoId: eventoId,
+            tituloEvento: titulo,
+            scaffoldContext: context,
+            isDirectiva: true,
+            canUploadPrivate: true,
+            canUploadShared: true,
+          ),
+    );
   }
 
   Widget _buildRamaCard(Map<String, dynamic> ramaData) {
@@ -2557,44 +2586,54 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Botones de acción para eventos activos
-                if (!esEventoPasado) ...[
-                  Row(
-                    children: [
+                Row(
+                  children: [
+                    if (!esEventoPasado) ...[
                       TextButton.icon(
                         onPressed: () {
-                          print('DEBUG: Botón Editar presionado');
                           _editarEvento(evento);
                         },
-                        icon: Icon(
+                        icon: const Icon(
                           Icons.edit,
                           color: WessexColors.darkGrape,
                           size: 18,
                         ),
-                        label: Text(
+                        label: const Text(
                           'Editar',
                           style: TextStyle(color: WessexColors.darkGrape),
                         ),
                       ),
-                      SizedBox(width: 8),
+                      const SizedBox(width: 8),
                       TextButton.icon(
                         onPressed: () {
-                          print('DEBUG: Botón Eliminar presionado');
                           _eliminarEvento(evento);
                         },
-                        icon: Icon(
+                        icon: const Icon(
                           Icons.delete,
                           color: WessexColors.crimsonAlert,
                           size: 18,
                         ),
-                        label: Text(
+                        label: const Text(
                           'Eliminar',
                           style: TextStyle(color: WessexColors.crimsonAlert),
                         ),
                       ),
+                      const SizedBox(width: 8),
                     ],
-                  ),
-                ],
+                    if (esEventoPasado)
+                      TextButton.icon(
+                        onPressed: () => _mostrarMultimediaEvento(evento),
+                        icon: const Icon(
+                          Icons.photo_library,
+                          color: WessexColors.deepRoyalBlue,
+                        ),
+                        label: const Text(
+                          'Multimedia',
+                          style: TextStyle(color: WessexColors.deepRoyalBlue),
+                        ),
+                      ),
+                  ],
+                ),
                 FutureBuilder<int>(
                   future: _obtenerNumeroParticipantes(evento['id']),
                   builder: (context, snapshot) {

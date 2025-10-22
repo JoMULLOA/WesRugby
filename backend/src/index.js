@@ -7,15 +7,21 @@ import passport from "passport";
 import express, { json, urlencoded } from "express";
 import cron from "node-cron";
 import http from "http";
-import 'dotenv/config';
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+import "dotenv/config";
 import indexRoutes from "./routes/index.routes.js";
-// Socket.io removido - no necesario para WesRugby 
+// Socket.io removido - no necesario para WesRugby
 import { cookieKey, HOST, PORT } from "./config/configEnv.js";
 import { connectDB } from "./config/configDb.js";
 import { createInitialData } from "./config/initialSetup.js";
 import { passportJwtSetup } from "./auth/passport.auth.js";
 
 
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 async function setupServer() {
   try {
@@ -34,29 +40,39 @@ async function setupServer() {
       limit: "1mb",
     }));
 
-    app.use(json({
-      limit: "1mb",
-    }));
+    app.use(
+      json({
+        limit: "1mb",
+      }),
+    );
 
     // Configurar charset UTF-8 para evitar problemas con acentos
     app.use((req, res, next) => {
-      res.set('Content-Type', 'application/json; charset=utf-8');
+      res.set("Content-Type", "application/json; charset=utf-8");
       next();
     });
 
     app.use(cookieParser());
     app.use(morgan("dev"));
 
-    app.use(session({
-      secret: cookieKey,
-      resave: false,
-      saveUninitialized: false,
-      cookie: {
-        secure: false,
-        httpOnly: true,
-        sameSite: "strict",
-      },
-    }));
+    app.use(
+      session({
+        secret: cookieKey,
+        resave: false,
+        saveUninitialized: false,
+        cookie: {
+          secure: false,
+          httpOnly: true,
+          sameSite: "strict",
+        },
+      }),
+    );
+
+    const uploadsPath = path.resolve(__dirname, "..", "uploads");
+    if (!fs.existsSync(uploadsPath)) {
+      fs.mkdirSync(uploadsPath, { recursive: true });
+    }
+    app.use("/uploads", express.static(uploadsPath));
 
     // Inicialización de Passport para autenticación
     app.use(passport.initialize());

@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'dart:typed_data';
+import 'package:file_picker/file_picker.dart';
+import 'package:wesrugby/features/admin/presentation/screens/eventos/gestion/widgets/event_multimedia_dialog.dart';
 import 'package:wesrugby/data/services/api_service.dart';
 import 'package:wesrugby/data/services/tokenManager.dart';
 import 'package:wesrugby/core/config/colors.dart';
@@ -926,6 +929,32 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
 
               SizedBox(height: 16),
 
+              if (estadoEvento == 'participado') ...[
+                Row(
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () => _mostrarMultimediaRama(eventoAgrupado),
+                      icon: const Icon(Icons.photo_library_outlined),
+                      label: const Text('Ver multimedia'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: WessexColors.deepRoyalBlue,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton.icon(
+                      onPressed: () => _subirImagenesRama(eventoAgrupado),
+                      icon: const Icon(Icons.cloud_upload),
+                      label: const Text('Agregar imágenes'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: WessexColors.leafGreen,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+              ],
+
               // Mensaje informativo basado en el estado
               Container(
                 padding: EdgeInsets.all(12),
@@ -962,6 +991,145 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
         ),
       ),
     );
+  }
+
+  Future<void> _mostrarMultimediaRama(Map<String, dynamic> evento) async {
+    final String eventoId = evento['id']?.toString() ?? '';
+    if (eventoId.isEmpty) {
+      _mostrarError('No se pudo identificar el evento.');
+      return;
+    }
+
+    final titulo = evento['nombre'] ?? evento['titulo'] ?? 'Evento';
+
+    await showDialog(
+      context: context,
+      builder:
+          (_) => EventMultimediaDialog(
+            eventoId: eventoId,
+            tituloEvento: titulo,
+            scaffoldContext: context,
+            canUploadShared: true,
+          ),
+    );
+  }
+
+  Future<void> _subirImagenesRama(Map<String, dynamic> evento) async {
+    final String eventoId = evento['id']?.toString() ?? '';
+    if (eventoId.isEmpty) {
+      _mostrarError('No se pudo identificar el evento.');
+      return;
+    }
+
+    final result = await FilePicker.platform.pickFiles(
+      allowMultiple: true,
+      withData: true,
+      type: FileType.custom,
+      allowedExtensions: const ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+    );
+
+    if (result == null || result.files.isEmpty) {
+      return;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    int exitosas = 0;
+    int fallidas = 0;
+
+    try {
+      for (final file in result.files) {
+        try {
+          final mimeType = _inferMimeType(file.extension);
+          if (mimeType == null) {
+            fallidas++;
+            continue;
+          }
+
+          final bytes = await _obtenerBytesArchivo(file);
+          await ApiService.subirMultimediaEventoRama(
+            eventoId: eventoId,
+            bytes: bytes,
+            fileName: file.name,
+            mimeType: mimeType,
+          );
+          exitosas++;
+        } catch (e) {
+          fallidas++;
+        }
+      }
+    } finally {
+      if (Navigator.of(context, rootNavigator: true).canPop()) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+    }
+
+    if (!mounted) return;
+
+    if (exitosas > 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            exitosas == 1
+                ? 'Imagen subida exitosamente.'
+                : '${exitosas} imágenes subidas exitosamente.',
+          ),
+          backgroundColor: WessexColors.leafGreen,
+        ),
+      );
+      await _cargarMisParticipaciones();
+    }
+
+    if (fallidas > 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            fallidas == 1
+                ? 'Una imagen no pudo subirse. Verifica el formato.'
+                : '${fallidas} imágenes no pudieron subirse.',
+          ),
+          backgroundColor: WessexColors.crimsonAlert,
+        ),
+      );
+    }
+  }
+
+  Future<Uint8List> _obtenerBytesArchivo(PlatformFile file) async {
+    if (file.bytes != null) {
+      return file.bytes!;
+    }
+
+    final stream = file.readStream;
+    if (stream != null) {
+      final builder = BytesBuilder();
+      await for (final chunk in stream) {
+        builder.add(chunk);
+      }
+      return builder.toBytes();
+    }
+
+    throw Exception('No fue posible leer el archivo seleccionado.');
+  }
+
+  String? _inferMimeType(String? extension) {
+    if (extension == null) return null;
+    switch (extension.toLowerCase()) {
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      case 'gif':
+        return 'image/gif';
+      case 'webp':
+        return 'image/webp';
+      default:
+        return null;
+    }
   }
 
   void _mostrarDialogoParticipacionEvento(Map<String, dynamic> evento) {

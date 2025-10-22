@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:wesrugby/data/services/tokenManager.dart';
 
 class ApiResponse {
@@ -189,6 +191,17 @@ class ApiService {
         statusCode: response.statusCode,
         message: 'Error procesando respuesta: $e',
       );
+    }
+  }
+
+  static Map<String, dynamic>? _decodeJsonBody(String body) {
+    if (body.isEmpty) return null;
+    try {
+      final parsed = jsonDecode(body);
+      return parsed is Map<String, dynamic> ? parsed : null;
+    } catch (e) {
+      print('❌ ERROR decodificando respuesta multipart: $e');
+      return null;
     }
   }
 
@@ -565,6 +578,158 @@ class ApiService {
       throw Exception(
         response.message ?? 'Error al obtener participaciones del evento',
       );
+    }
+  }
+
+  static Future<Map<String, dynamic>> subirMultimediaEventoDirectiva({
+    required String eventoId,
+    required Uint8List bytes,
+    required String fileName,
+    required String mimeType,
+    required bool esPrivado,
+  }) async {
+    return _subirMultimediaEvento(
+      endpoint: '/eventos-deportivos/$eventoId/multimedia',
+      bytes: bytes,
+      fileName: fileName,
+      mimeType: mimeType,
+      campos: {'visibilidad': esPrivado ? 'privada' : 'compartida'},
+    );
+  }
+
+  static Future<Map<String, dynamic>> subirMultimediaEventoRama({
+    required String eventoId,
+    required Uint8List bytes,
+    required String fileName,
+    required String mimeType,
+  }) async {
+    return _subirMultimediaEvento(
+      endpoint: '/eventos-deportivos/$eventoId/multimedia/rama',
+      bytes: bytes,
+      fileName: fileName,
+      mimeType: mimeType,
+    );
+  }
+
+  static Future<Map<String, dynamic>> obtenerMultimediaEventoDirectiva(
+    String eventoId, {
+    String? visibilidad,
+  }) async {
+    var endpoint = '/eventos-deportivos/$eventoId/multimedia';
+    if (visibilidad != null && visibilidad.isNotEmpty) {
+      endpoint += '?visibilidad=$visibilidad';
+    }
+
+    final response = await get(endpoint);
+    if (response.success) {
+      return response.data;
+    } else {
+      throw Exception(
+        response.message ?? 'Error al obtener multimedia del evento',
+      );
+    }
+  }
+
+  static Future<Map<String, dynamic>> obtenerMultimediaEventoCompartido(
+    String eventoId,
+  ) async {
+    final response = await get(
+      '/eventos-deportivos/$eventoId/multimedia/compartido',
+    );
+    if (response.success) {
+      return response.data;
+    } else {
+      throw Exception(
+        response.message ?? 'Error al obtener multimedia compartida',
+      );
+    }
+  }
+
+  static Future<Map<String, dynamic>> obtenerMultimediaGlobalDirectiva({
+    String? evento,
+    String? fechaDesde,
+    String? fechaHasta,
+    String? rol,
+    String? visibilidad,
+    String? rut,
+  }) async {
+    final queryParameters = <String, String>{};
+    if (evento != null && evento.isNotEmpty) {
+      queryParameters['evento'] = evento;
+    }
+    if (fechaDesde != null && fechaDesde.isNotEmpty) {
+      queryParameters['fechaDesde'] = fechaDesde;
+    }
+    if (fechaHasta != null && fechaHasta.isNotEmpty) {
+      queryParameters['fechaHasta'] = fechaHasta;
+    }
+    if (rol != null && rol.isNotEmpty) {
+      queryParameters['rol'] = rol;
+    }
+    if (visibilidad != null && visibilidad.isNotEmpty) {
+      queryParameters['visibilidad'] = visibilidad;
+    }
+    if (rut != null && rut.isNotEmpty) {
+      queryParameters['rut'] = rut;
+    }
+
+    final uri =
+        Uri(
+          path: '/eventos-deportivos/multimedia/resumen',
+          queryParameters: queryParameters.isEmpty ? null : queryParameters,
+        ).toString();
+
+    final response = await get(uri);
+    if (response.success) {
+      return response.data;
+    } else {
+      throw Exception(response.message ?? 'Error al obtener multimedia');
+    }
+  }
+
+  static Future<Map<String, dynamic>> _subirMultimediaEvento({
+    required String endpoint,
+    required Uint8List bytes,
+    required String fileName,
+    required String mimeType,
+    Map<String, String>? campos,
+  }) async {
+    try {
+      final uri = Uri.parse('$baseUrl$endpoint');
+      final token = await TokenManager.getToken();
+
+      final request = http.MultipartRequest('POST', uri);
+      if (token != null) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+
+      if (campos != null) {
+        request.fields.addAll(campos);
+      }
+
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'archivo',
+          bytes,
+          filename: fileName,
+          contentType: MediaType.parse(mimeType),
+        ),
+      );
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+      final parsed = _decodeJsonBody(response.body);
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return parsed ?? {'success': true};
+      } else {
+        final message =
+            parsed?['message'] ??
+            'Error al subir multimedia (código ${response.statusCode})';
+        throw Exception(message);
+      }
+    } catch (e) {
+      throw Exception('Error de conexión al subir multimedia: $e');
     }
   }
 
