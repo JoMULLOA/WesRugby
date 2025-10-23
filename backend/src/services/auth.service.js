@@ -41,6 +41,7 @@ export async function loginService(user) {
       rut: userFound.rut,
       rol: userFound.rol,
       avatarPath: userFound.avatarPath,
+      avatarVersion: userFound.avatarVersion ?? 0,
     };
 
     console.log("🔧 DEBUG - Generando token JWT con payload:", payload);

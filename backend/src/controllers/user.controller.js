@@ -183,9 +183,13 @@ export async function getMisVehiculos(req, res) {
   }
 }
 
-function buildUploadUrl(req, relativePath) {
+function buildUploadUrl(req, relativePath, version) {
   const normalized = relativePath.replace(/\\/g, "/");
-  return `${req.protocol}://${req.get("host")}/uploads/${normalized}`;
+  const baseUrl = `${req.protocol}://${req.get("host")}/uploads/${normalized}`;
+  if (typeof version === "number" && !Number.isNaN(version)) {
+    return `${baseUrl}?v=${version}`;
+  }
+  return baseUrl;
 }
 
 function deleteIfExists(absolutePath) {
@@ -228,13 +232,15 @@ export async function updateAvatar(req, res) {
       .replace(/\\/g, "/");
 
     user.avatarPath = relativePath;
+    user.avatarVersion = (user.avatarVersion ?? 0) + 1;
     await userRepository.save(user);
 
-    const avatarUrl = buildUploadUrl(req, relativePath);
+    const avatarUrl = buildUploadUrl(req, relativePath, user.avatarVersion);
 
     handleSuccess(res, 200, "Avatar actualizado exitosamente", {
       avatarPath: relativePath,
       avatarUrl,
+      avatarVersion: user.avatarVersion,
     });
   } catch (error) {
     console.error("Error actualizando avatar:", error);

@@ -15,6 +15,7 @@ import {
   obtenerMultimediaEventoDirectiva,
   obtenerMultimediaEventoCompartido,
   obtenerMultimediaGlobalDirectiva,
+  descargarMultimediaEvento,
 } from "../controllers/eventoMultimedia.controller.js";
 import { authenticateJwt } from "../middlewares/authentication.middleware.js";
 import {
@@ -66,6 +67,20 @@ router.get(
   authenticateJwt,
   isAuthenticated,
   obtenerMultimediaEventoCompartido,
+);
+
+router.get(
+  "/:id/multimedia/:mediaId",
+  authenticateJwt,
+  isAuthenticated,
+  descargarMultimediaEvento,
+);
+
+router.get(
+  "/:id/multimedia/:mediaId/download",
+  authenticateJwt,
+  isAuthenticated,
+  descargarMultimediaEvento,
 );
 
 // Actualizar evento deportivo (Entrenador, Directiva)

@@ -10,8 +10,6 @@ import {
   handleErrorServer,
   handleSuccess,
 } from "../handlers/responseHandlers.js";
-import { In } from "typeorm";
-
 const eventoDeportivoRepository = AppDataSource.getRepository(EventoDeportivo);
 const participacionDeportivaRepository = AppDataSource.getRepository(
   ParticipacionEventoDeportivo,
@@ -74,10 +72,66 @@ function cleanupUploadedFile(file) {
   }
 }
 
+function getBaseUrl(req) {
+  return `${req.protocol}://${req.get("host")}`;
+}
+
+function buildPublicUploadUrl(req, storagePath) {
+  const normalizedPath = storagePath.replace(/\\/g, "/");
+  return `${getBaseUrl(req)}/uploads/${normalizedPath}`;
+}
+
+function buildAvatarUrl(req, avatarPath, avatarVersion) {
+  if (!avatarPath) return null;
+  const normalized = avatarPath.replace(/\\/g, "/");
+  const baseUrl = `${getBaseUrl(req)}/uploads/${normalized}`;
+  if (typeof avatarVersion === "number" && !Number.isNaN(avatarVersion)) {
+    return `${baseUrl}?v=${avatarVersion}`;
+  }
+  return baseUrl;
+}
+
+function resolveEventoIdForRoutes(media) {
+  if (media.eventoDeportivoId) {
+    return media.eventoDeportivoId;
+  }
+  if (media.eventoId !== undefined && media.eventoId !== null) {
+    return String(media.eventoId);
+  }
+  return null;
+}
+
 function buildMediaPayload(media, req) {
-  const baseUrl = `${req.protocol}://${req.get("host")}`;
-  const normalizedPath = media.storagePath.replace(/\\/g, "/");
-  const url = `${baseUrl}/uploads/${normalizedPath}`;
+  const url = buildPublicUploadUrl(req, media.storagePath);
+  const routeEventoId = resolveEventoIdForRoutes(media);
+  const routeSegment = routeEventoId
+    ? encodeURIComponent(routeEventoId)
+    : null;
+  const viewUrl = routeSegment
+    ? `${getBaseUrl(req)}/api/eventos-deportivos/${routeSegment}/multimedia/${media.id}`
+    : null;
+  const downloadUrl = routeSegment ? `${viewUrl}/download` : null;
+
+  const uploader = media.uploader || null;
+  const uploaderNombre =
+    uploader?.nombreCompleto || media.uploadedByNombre || null;
+  const uploaderEmail = uploader?.email || null;
+  const uploaderRol = uploader?.rol || media.uploadedByRol || null;
+  const uploaderRut = uploader?.rut || media.uploadedByRut || null;
+  const avatarVersion =
+    typeof uploader?.avatarVersion === "number"
+      ? uploader.avatarVersion
+      : null;
+  const avatarUrl = uploader?.avatarPath
+    ? buildAvatarUrl(req, uploader.avatarPath, avatarVersion ?? undefined)
+    : null;
+
+  const createdAtDate =
+    media.createdAt instanceof Date
+      ? media.createdAt
+      : media.createdAt
+        ? new Date(media.createdAt)
+        : null;
 
   return {
     id: media.id,
@@ -94,14 +148,89 @@ function buildMediaPayload(media, req) {
     size: media.size,
     extension: media.extension,
     createdAt: media.createdAt,
+    uploadedAt: createdAtDate ? createdAtDate.toISOString() : null,
     url,
+    viewUrl,
+    downloadUrl,
+    uploader: {
+      rut: uploaderRut,
+      nombreCompleto: uploaderNombre,
+      email: uploaderEmail,
+      rol: uploaderRol,
+      avatarUrl,
+      avatarVersion,
+    },
   };
 }
 
-async function formatMediaList(medias, req) {
-  return Promise.all(
-    medias.map(async (item) => buildMediaPayload(item, req)),
-  );
+function formatMediaList(medias, req) {
+  return medias.map((item) => buildMediaPayload(item, req));
+}
+
+async function ensureUserCanAccessMedia(req, media) {
+  const user = req.user;
+
+  if (!user) {
+    return {
+      ok: false,
+      status: 401,
+      message: "No autenticado",
+      details: "Debes iniciar sesión para acceder a este recurso.",
+    };
+  }
+
+  if (user.rol === "directiva") {
+    return { ok: true };
+  }
+
+  if (media.uploadedByRut && media.uploadedByRut === user.rut) {
+    return { ok: true };
+  }
+
+  if (media.isPrivate) {
+    return {
+      ok: false,
+      status: 403,
+      message: "Contenido privado",
+      details:
+        "Solo la directiva puede descargar elementos de visibilidad privada.",
+    };
+  }
+
+  if (!media.eventoDeportivoId) {
+    return {
+      ok: false,
+      status: 403,
+      message: "No autorizado",
+      details:
+        "No se pudo validar la pertenencia al evento para este recurso.",
+    };
+  }
+
+  const participacion = await participacionDeportivaRepository.findOne({
+    where: {
+      eventoDeportivoId: media.eventoDeportivoId,
+      rutRamaExterna: user.rut,
+    },
+  });
+
+  if (!participacion) {
+    return {
+      ok: false,
+      status: 403,
+      message: "No autorizado",
+      details:
+        "Solo las ramas participantes y la directiva pueden descargar este contenido.",
+    };
+  }
+
+  return { ok: true };
+}
+
+function resolveAbsoluteMediaPath(media) {
+  const storagePath = media.storagePath;
+  const normalized = storagePath.replace(/\\/g, path.sep);
+  return path.resolve("uploads", normalized);
 }
 
 export async function subirMultimediaDirectiva(req, res) {
@@ -153,7 +282,16 @@ export async function subirMultimediaDirectiva(req, res) {
     });
 
     const guardado = await multimediaRepository.save(registro);
-    const payload = buildMediaPayload(guardado, req);
+    const guardadoConRelaciones = await multimediaRepository.findOne({
+      where: { id: guardado.id },
+      relations: {
+        uploader: true,
+      },
+    });
+    const payload = buildMediaPayload(
+      guardadoConRelaciones ?? guardado,
+      req,
+    );
 
     handleSuccess(res, 201, "Imagen subida exitosamente", payload);
   } catch (error) {
@@ -225,7 +363,16 @@ export async function subirMultimediaRama(req, res) {
     });
 
     const guardado = await multimediaRepository.save(registro);
-    const payload = buildMediaPayload(guardado, req);
+    const guardadoConRelaciones = await multimediaRepository.findOne({
+      where: { id: guardado.id },
+      relations: {
+        uploader: true,
+      },
+    });
+    const payload = buildMediaPayload(
+      guardadoConRelaciones ?? guardado,
+      req,
+    );
 
     handleSuccess(res, 201, "Imagen subida exitosamente", payload);
   } catch (error) {
@@ -242,6 +389,9 @@ export async function obtenerMultimediaEventoDirectiva(req, res) {
 
     const qb = multimediaRepository
       .createQueryBuilder("media")
+      .leftJoinAndSelect("media.eventoDeportivo", "eventoDeportivo")
+      .leftJoinAndSelect("media.evento", "eventoGenerico")
+      .leftJoinAndSelect("media.uploader", "uploader")
       .where("media.eventoDeportivoId = :eventoId", { eventoId })
       .orderBy("media.createdAt", "DESC");
 
@@ -252,7 +402,7 @@ export async function obtenerMultimediaEventoDirectiva(req, res) {
     }
 
     const registros = await qb.getMany();
-    const data = await formatMediaList(registros, req);
+    const data = formatMediaList(registros, req);
 
     handleSuccess(
       res,
@@ -289,17 +439,15 @@ export async function obtenerMultimediaEventoCompartido(req, res) {
       }
     }
 
-    const registros = await multimediaRepository.find({
-      where: {
-        eventoDeportivoId: eventoId,
-        isPrivate: false,
-      },
-      order: {
-        createdAt: "DESC",
-      },
-    });
+    const registros = await multimediaRepository
+      .createQueryBuilder("media")
+      .leftJoinAndSelect("media.uploader", "uploader")
+      .where("media.eventoDeportivoId = :eventoId", { eventoId })
+      .andWhere("media.isPrivate = false")
+      .orderBy("media.createdAt", "DESC")
+      .getMany();
 
-    const data = await formatMediaList(registros, req);
+    const data = formatMediaList(registros, req);
 
     handleSuccess(
       res,
@@ -328,6 +476,7 @@ export async function obtenerMultimediaGlobalDirectiva(req, res) {
       .createQueryBuilder("media")
       .leftJoinAndSelect("media.eventoDeportivo", "eventoDeportivo")
       .leftJoinAndSelect("media.evento", "eventoGenerico")
+      .leftJoinAndSelect("media.uploader", "uploader")
       .orderBy("media.createdAt", "DESC");
 
     if (fechaDesde) {
@@ -362,11 +511,91 @@ export async function obtenerMultimediaGlobalDirectiva(req, res) {
     }
 
     const registros = await qb.getMany();
-    const data = await formatMediaList(registros, req);
+    const data = formatMediaList(registros, req);
 
     handleSuccess(res, 200, "Multimedia obtenida exitosamente", data);
   } catch (error) {
     console.error("Error obteniendo multimedia global:", error);
+    handleErrorServer(res, 500, "Error interno del servidor", error.message);
+  }
+}
+
+export async function descargarMultimediaEvento(req, res) {
+  try {
+    const { id: eventoId, mediaId } = req.params;
+
+    const media = await multimediaRepository.findOne({
+      where: { id: mediaId },
+    });
+
+    if (!media) {
+      return handleErrorClient(
+        res,
+        404,
+        "Multimedia no encontrada",
+        "El recurso solicitado no está disponible.",
+      );
+    }
+
+    const matchesEventoDeportivo =
+      media.eventoDeportivoId &&
+      media.eventoDeportivoId.toString() === eventoId;
+    const matchesEventoGenerico =
+      media.eventoId !== undefined &&
+      media.eventoId !== null &&
+      String(media.eventoId) === eventoId;
+
+    if (!matchesEventoDeportivo && !matchesEventoGenerico) {
+      return handleErrorClient(
+        res,
+        404,
+        "Multimedia no encontrada",
+        "El recurso no corresponde al evento indicado.",
+      );
+    }
+
+    const { ok, status, message, details } = await ensureUserCanAccessMedia(
+      req,
+      media,
+    );
+    if (!ok) {
+      return handleErrorClient(res, status ?? 403, message, details);
+    }
+
+    const absolutePath = resolveAbsoluteMediaPath(media);
+
+    if (!fs.existsSync(absolutePath)) {
+      return handleErrorClient(
+        res,
+        404,
+        "Archivo no disponible",
+        "El archivo original no se encuentra en el servidor.",
+      );
+    }
+
+    res.setHeader(
+      "Content-Type",
+      media.mimeType || "application/octet-stream",
+    );
+    if (media.size) {
+      res.setHeader("Content-Length", media.size);
+    }
+
+    return res.download(absolutePath, media.originalName, (downloadError) => {
+      if (downloadError) {
+        console.error("Error enviando archivo multimedia:", downloadError);
+        if (!res.headersSent) {
+          handleErrorServer(
+            res,
+            500,
+            "Error descargando archivo multimedia",
+            downloadError.message,
+          );
+        }
+      }
+    });
+  } catch (error) {
+    console.error("Error general al descargar multimedia:", error);
     handleErrorServer(res, 500, "Error interno del servidor", error.message);
   }
 }

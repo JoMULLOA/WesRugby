@@ -12,10 +12,14 @@ import {
 import jwt from "jsonwebtoken";
 import { ACCESS_TOKEN_SECRET } from "../config/configEnv.js";
 
-function buildAvatarUrl(req, avatarPath) {
+function buildAvatarUrl(req, avatarPath, avatarVersion) {
   if (!avatarPath) return null;
   const normalized = avatarPath.replace(/\\/g, "/");
-  return `${req.protocol}://${req.get("host")}/uploads/${normalized}`;
+  const baseUrl = `${req.protocol}://${req.get("host")}/uploads/${normalized}`;
+  if (typeof avatarVersion === "number" && !Number.isNaN(avatarVersion)) {
+    return `${baseUrl}?v=${avatarVersion}`;
+  }
+  return baseUrl;
 }
 
 export async function login(req, res) {
@@ -40,7 +44,10 @@ export async function login(req, res) {
     });
 
     const avatarPath = decoded.avatarPath || null;
-    const avatarUrl = buildAvatarUrl(req, avatarPath);
+    const avatarVersion = Number.isFinite(decoded.avatarVersion)
+      ? decoded.avatarVersion
+      : 0;
+    const avatarUrl = buildAvatarUrl(req, avatarPath, avatarVersion);
 
     // Devolver tanto el token como la información del usuario decodificada
     handleSuccess(res, 200, "Inicio de sesión exitoso", { 
@@ -52,6 +59,7 @@ export async function login(req, res) {
         rol: decoded.rol,
         avatarPath,
         avatarUrl,
+        avatarVersion,
       }
     });
   } catch (error) {
@@ -120,7 +128,11 @@ export async function getProfile(req, res) {
     }
 
     const avatarPath = user.avatarPath || null;
-    const avatarUrl = buildAvatarUrl(req, avatarPath);
+    const avatarVersion =
+      typeof user.avatarVersion === "number" && !Number.isNaN(user.avatarVersion)
+        ? user.avatarVersion
+        : 0;
+    const avatarUrl = buildAvatarUrl(req, avatarPath, avatarVersion);
 
     handleSuccess(res, 200, "Perfil obtenido exitosamente", {
       nombreCompleto: user.nombreCompleto,
@@ -129,6 +141,7 @@ export async function getProfile(req, res) {
       rol: user.rol,
       avatarPath,
       avatarUrl,
+      avatarVersion,
     });
   } catch (error) {
     console.error("Error obteniendo perfil:", error);

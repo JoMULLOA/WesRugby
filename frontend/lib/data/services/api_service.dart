@@ -63,7 +63,9 @@ class ApiService {
         '🔍 DEBUG ApiService GET - Status code respuesta: ${response.statusCode}',
       );
       print('🔍 DEBUG ApiService GET - Response Body: ${response.body}');
-      return _handleResponse(response);
+      final apiResponse = _handleResponse(response);
+      await _handleJwtExpirationIfNeeded(apiResponse);
+      return apiResponse;
     } catch (e) {
       return ApiResponse(statusCode: 500, message: 'Error de conexión: $e');
     }
@@ -92,7 +94,9 @@ class ApiService {
       );
       print('🔍 DEBUG ApiService POST - Response Body: ${response.body}');
 
-      return _handleResponse(response);
+      final apiResponse = _handleResponse(response);
+      await _handleJwtExpirationIfNeeded(apiResponse);
+      return apiResponse;
     } catch (e) {
       print('❌ ERROR ApiService POST - Exception: $e');
       return ApiResponse(statusCode: 500, message: 'Error de conexión: $e');
@@ -112,7 +116,9 @@ class ApiService {
         body: data != null ? jsonEncode(data) : null,
       );
 
-      return _handleResponse(response);
+      final apiResponse = _handleResponse(response);
+      await _handleJwtExpirationIfNeeded(apiResponse);
+      return apiResponse;
     } catch (e) {
       return ApiResponse(statusCode: 500, message: 'Error de conexión: $e');
     }
@@ -127,7 +133,9 @@ class ApiService {
         headers: headers,
       );
 
-      return _handleResponse(response);
+      final apiResponse = _handleResponse(response);
+      await _handleJwtExpirationIfNeeded(apiResponse);
+      return apiResponse;
     } catch (e) {
       return ApiResponse(statusCode: 500, message: 'Error de conexión: $e');
     }
@@ -146,7 +154,9 @@ class ApiService {
         body: jsonEncode(data),
       );
 
-      return _handleResponse(response);
+      final apiResponse = _handleResponse(response);
+      await _handleJwtExpirationIfNeeded(apiResponse);
+      return apiResponse;
     } catch (e) {
       return ApiResponse(statusCode: 500, message: 'Error de conexión: $e');
     }
@@ -192,6 +202,30 @@ class ApiService {
         message: 'Error procesando respuesta: $e',
       );
     }
+  }
+
+  static Future<void> _handleJwtExpirationIfNeeded(ApiResponse response) async {
+    if (_responseHasJwtExpired(response)) {
+      await TokenManager.clearAuthData();
+    }
+  }
+
+  static bool _responseHasJwtExpired(ApiResponse response) {
+    bool containsExpired(String? value) =>
+        value != null && value.toLowerCase().contains('jwt expired');
+
+    if (containsExpired(response.message)) {
+      return true;
+    }
+
+    final data = response.data;
+    if (data is Map<String, dynamic>) {
+      if (containsExpired(data['message']?.toString())) return true;
+      if (containsExpired(data['details']?.toString())) return true;
+      if (containsExpired(data['error']?.toString())) return true;
+    }
+
+    return false;
   }
 
   static Map<String, dynamic>? _decodeJsonBody(String body) {

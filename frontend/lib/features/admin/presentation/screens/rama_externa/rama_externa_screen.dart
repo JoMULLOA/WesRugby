@@ -1,6 +1,7 @@
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'dart:typed_data';
+import 'package:intl/intl.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:wesrugby/features/admin/presentation/screens/eventos/gestion/widgets/event_multimedia_dialog.dart';
 import 'package:wesrugby/data/services/api_service.dart';
@@ -8,6 +9,7 @@ import 'package:wesrugby/data/services/tokenManager.dart';
 import 'package:wesrugby/core/config/colors.dart';
 import 'package:wesrugby/shared/widgets/layout/wessex_widgets.dart';
 import 'package:wesrugby/shared/widgets/effects/pulse_on_tap.dart';
+import 'package:wesrugby/shared/widgets/event/event_date_time_row.dart';
 
 class RamaExternaScreen extends StatefulWidget {
   @override
@@ -19,17 +21,127 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
   late TabController _tabController;
   List<dynamic> _eventos = [];
   List<dynamic> _misParticipaciones = [];
+  List<dynamic> _misParticipacionesFiltradas = [];
   Map<String, dynamic>? _perfil;
   bool _isLoading = false;
   bool _subiendoAvatarPerfil = false;
   String _nombreUsuario = 'Usuario RamaExterna';
   String? _avatarUrl;
   bool _profileCollapsed = true;
+  DateTimeRange? _participacionesRango;
 
   final ScrollController _eventosScrollController = ScrollController();
   final ScrollController _participacionesScrollController = ScrollController();
 
-  // Helper para formatear hora del evento (UTC -> horario Chile)
+  String _extractEventDate(String raw) {
+    if (raw.isEmpty) return raw;
+    final parts = raw.split('T');
+    return parts.isNotEmpty && parts.first.isNotEmpty ? parts.first : raw;
+  }
+
+  String _normalizeEventTime(String? raw) {
+    if (raw == null || raw.isEmpty) return '';
+    var value = raw.trim();
+    if (value.isEmpty) return '';
+    if (value.contains(' ')) {
+      value = value.split(' ').first;
+    }
+    if (value.endsWith('Z') || value.endsWith('z')) {
+      value = value.substring(0, value.length - 1);
+    }
+    if (value.contains('.')) {
+      value = value.split('.').first;
+    }
+    final plusIndex = value.indexOf('+', 1);
+    final minusIndex = value.indexOf('-', 1);
+    int offsetIndex;
+    if (plusIndex == -1) {
+      offsetIndex = minusIndex;
+    } else if (minusIndex == -1) {
+      offsetIndex = plusIndex;
+    } else {
+      offsetIndex = plusIndex < minusIndex ? plusIndex : minusIndex;
+    }
+    if (offsetIndex != -1) {
+      value = value.substring(0, offsetIndex);
+    }
+    final segments =
+        value.split(':').where((segment) => segment.isNotEmpty).toList();
+    if (segments.isEmpty) return '';
+    final hh = segments[0].padLeft(2, '0');
+    final mm = (segments.length > 1 ? segments[1] : '00').padLeft(2, '0');
+    final ss = (segments.length > 2 ? segments[2] : '00').padLeft(2, '0');
+    return '$hh:$mm:$ss';
+  }
+
+  DateTime? _parseEventDateTime(String dateRaw, String? timeRaw) {
+    final normalized = _normalizeEventTime(timeRaw);
+    if (normalized.isEmpty) return null;
+    final baseDate = _extractEventDate(dateRaw);
+    final candidates = <String>[
+      '${baseDate}T${normalized}Z',
+      '${baseDate}T$normalized',
+    ];
+
+    for (final candidate in candidates) {
+      try {
+        final parsed = DateTime.parse(candidate);
+        return parsed.toLocal();
+      } catch (_) {
+        continue;
+      }
+    }
+
+    try {
+      final backupDate = DateTime.parse(dateRaw);
+      final hour = int.parse(normalized.substring(0, 2));
+      final minute = int.parse(normalized.substring(3, 5));
+      final second = int.parse(normalized.substring(6, 8));
+      return DateTime(
+        backupDate.year,
+        backupDate.month,
+        backupDate.day,
+        hour,
+        minute,
+        second,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String _formatHourMinute(DateTime dt) {
+    String pad(int value) => value.toString().padLeft(2, '0');
+    final local = dt.toLocal();
+    return '${pad(local.hour)}:${pad(local.minute)}';
+  }
+
+  DateTime? _resolveEventStartAt(Map<String, dynamic> e) {
+    final fechaStr =
+        (e['fecha'] ?? e['fechaEvento'] ?? e['fecha_evento'] ?? '')
+            .toString()
+            .trim();
+    if (fechaStr.isEmpty) return null;
+
+    final hIniRaw =
+        (e['horaInicio'] ?? e['hora'] ?? e['hora_evento'])?.toString().trim();
+    final hFinRaw =
+        (e['horaFin'] ?? e['horaTermino'] ?? e['hora_fin'])?.toString().trim();
+
+    final inicio = _parseEventDateTime(fechaStr, hIniRaw);
+    if (inicio != null) return inicio;
+
+    final fin = _parseEventDateTime(fechaStr, hFinRaw);
+    if (fin != null) return fin;
+
+    try {
+      return DateTime.parse(fechaStr).toLocal();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // Helper para formatear hora del evento (UTC -> horario local)
   String _formatEventTimeLocal(Map<String, dynamic> e) {
     final fechaStr =
         (e['fecha'] ?? e['fechaEvento'] ?? e['fecha_evento'] ?? '')
@@ -42,95 +154,53 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
 
     if (fechaStr.isEmpty || (hIniRaw == null && hFinRaw == null)) return '';
 
-    String extractDate(String raw) {
-      if (raw.isEmpty) return raw;
-      final parts = raw.split('T');
-      return parts.isNotEmpty && parts.first.isNotEmpty ? parts.first : raw;
+    final ini = _parseEventDateTime(fechaStr, hIniRaw);
+    final fin = _parseEventDateTime(fechaStr, hFinRaw);
+
+    if (ini != null && fin != null) {
+      return '${_formatHourMinute(ini)} - ${_formatHourMinute(fin)}';
     }
+    if (ini != null) return _formatHourMinute(ini);
+    if (fin != null) return _formatHourMinute(fin);
+    return '';
+  }
 
-    String normaliseTime(String? raw) {
-      if (raw == null || raw.isEmpty) return '';
-      var value = raw.trim();
-      if (value.isEmpty) return '';
-      if (value.contains(' ')) {
-        value = value.split(' ').first;
-      }
-      if (value.endsWith('Z') || value.endsWith('z')) {
-        value = value.substring(0, value.length - 1);
-      }
-      if (value.contains('.')) {
-        value = value.split('.').first;
-      }
-      final plusIndex = value.indexOf('+', 1);
-      final minusIndex = value.indexOf('-', 1);
-      int offsetIndex;
-      if (plusIndex == -1) {
-        offsetIndex = minusIndex;
-      } else if (minusIndex == -1) {
-        offsetIndex = plusIndex;
-      } else {
-        offsetIndex = plusIndex < minusIndex ? plusIndex : minusIndex;
-      }
-      if (offsetIndex != -1) {
-        value = value.substring(0, offsetIndex);
-      }
-      final segments =
-          value.split(':').where((segment) => segment.isNotEmpty).toList();
-      if (segments.isEmpty) return '';
-      final hh = segments[0].padLeft(2, '0');
-      final mm = (segments.length > 1 ? segments[1] : '00').padLeft(2, '0');
-      final ss = (segments.length > 2 ? segments[2] : '00').padLeft(2, '0');
-      return '$hh:$mm:$ss';
-    }
+  List<dynamic> _filtrarParticipacionesPorRango(
+    List<dynamic> source,
+    DateTimeRange? range,
+  ) {
+    if (range == null) return List<dynamic>.from(source);
 
-    DateTime? parseUtcToLocal(String? raw) {
-      final normalized = normaliseTime(raw);
-      if (normalized.isEmpty) return null;
-      final baseDate = extractDate(fechaStr);
-      final candidates = <String>[
-        '${baseDate}T${normalized}Z',
-        '${baseDate}T$normalized',
-      ];
+    final start = DateTime(
+      range.start.year,
+      range.start.month,
+      range.start.day,
+    );
+    final end = DateTime(
+      range.end.year,
+      range.end.month,
+      range.end.day,
+      23,
+      59,
+      59,
+      999,
+    );
 
-      for (final candidate in candidates) {
-        try {
-          final parsed = DateTime.parse(candidate);
-          return parsed.toLocal();
-        } catch (_) {
-          continue;
-        }
-      }
+    return source.where((evento) {
+      final fechaRaw =
+          evento['fecha'] ?? evento['fechaEvento'] ?? evento['fecha_evento'];
+      if (fechaRaw == null) return false;
+
+      final fechaStr = fechaRaw.toString();
+      if (fechaStr.isEmpty) return false;
 
       try {
-        final backupDate = DateTime.parse(fechaStr);
-        final hour = int.parse(normalized.substring(0, 2));
-        final minute = int.parse(normalized.substring(3, 5));
-        final second = int.parse(normalized.substring(6, 8));
-        return DateTime(
-          backupDate.year,
-          backupDate.month,
-          backupDate.day,
-          hour,
-          minute,
-          second,
-        );
+        final fecha = DateTime.parse(fechaStr).toLocal();
+        return !fecha.isBefore(start) && !fecha.isAfter(end);
       } catch (_) {
-        return null;
+        return false;
       }
-    }
-
-    String fmt(DateTime dt) {
-      String pad(int n) => n.toString().padLeft(2, '0');
-      return '${pad(dt.hour)}:${pad(dt.minute)}';
-    }
-
-    final ini = parseUtcToLocal(hIniRaw);
-    final fin = parseUtcToLocal(hFinRaw);
-
-    if (ini != null && fin != null) return '${fmt(ini)} - ${fmt(fin)}';
-    if (ini != null) return fmt(ini);
-    if (fin != null) return fmt(fin);
-    return '';
+    }).toList();
   }
 
   @override
@@ -234,6 +304,10 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
 
       setState(() {
         _misParticipaciones = eventosAgrupados;
+        _misParticipacionesFiltradas = _filtrarParticipacionesPorRango(
+          eventosAgrupados,
+          _participacionesRango,
+        );
       });
     } catch (e, stackTrace) {
       debugPrint('[ERROR] cargar participaciones: $e');
@@ -869,6 +943,11 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
       );
     }
 
+    final itemCount =
+        _misParticipacionesFiltradas.isEmpty
+            ? 1
+            : _misParticipacionesFiltradas.length + 1;
+
     return Scrollbar(
       controller: _participacionesScrollController,
       thumbVisibility: true,
@@ -880,18 +959,135 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
           controller: _participacionesScrollController,
           physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 22),
-          itemCount: _misParticipaciones.length,
+          itemCount: itemCount,
           itemBuilder: (context, index) {
-            return _buildParticipacionCard(_misParticipaciones[index]);
+            if (index == 0) {
+              return _buildParticipacionesFilterHeader();
+            }
+            final participacion = _misParticipacionesFiltradas[index - 1];
+            return _buildParticipacionCard(participacion);
           },
         ),
       ),
     );
   }
 
+  Widget _buildParticipacionesFilterHeader() {
+    final range = _participacionesRango;
+    final hasFilter = range != null;
+    final dateFormat = DateFormat('dd/MM/yyyy');
+    final rangeLabel =
+        range == null
+            ? 'Todas las fechas'
+            : '${dateFormat.format(range.start)} - ${dateFormat.format(range.end)}';
+    final noResults =
+        _misParticipacionesFiltradas.isEmpty && _misParticipaciones.isNotEmpty;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _seleccionarRangoParticipaciones,
+                  icon: const Icon(Icons.date_range),
+                  label: Text(rangeLabel),
+                ),
+              ),
+              if (hasFilter) ...[
+                const SizedBox(width: 12),
+                Tooltip(
+                  message: 'Limpiar filtro',
+                  child: IconButton(
+                    onPressed: _limpiarFiltroParticipaciones,
+                    icon: const Icon(Icons.close),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          if (noResults) ...[
+            const SizedBox(height: 8),
+            Text(
+              'No hay participaciones en el rango seleccionado.',
+              style: TextStyle(
+                fontSize: 13,
+                color: WessexColors.midnightNavy.withOpacity(0.7),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _seleccionarRangoParticipaciones() async {
+    if (_misParticipaciones.isEmpty) return;
+
+    final now = DateTime.now();
+    final defaultStart = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ).subtract(const Duration(days: 30));
+    final defaultRange = DateTimeRange(
+      start: defaultStart,
+      end: DateTime(now.year, now.month, now.day),
+    );
+
+    final rangeSeleccionado = await showDateRangePicker(
+      context: context,
+      initialDateRange: _participacionesRango ?? defaultRange,
+      firstDate: DateTime(now.year - 5),
+      lastDate: DateTime(now.year + 2),
+      builder: (context, child) {
+        if (child == null) return const SizedBox.shrink();
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            return Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: 500,
+                  maxHeight: constraints.maxHeight * 0.9,
+                ),
+                child: Scrollbar(
+                  thumbVisibility: true,
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: child,
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    if (rangeSeleccionado != null) {
+      setState(() {
+        _participacionesRango = rangeSeleccionado;
+        _misParticipacionesFiltradas = _filtrarParticipacionesPorRango(
+          _misParticipaciones,
+          rangeSeleccionado,
+        );
+      });
+    }
+  }
+
+  void _limpiarFiltroParticipaciones() {
+    if (_participacionesRango == null) return;
+    setState(() {
+      _participacionesRango = null;
+      _misParticipacionesFiltradas = List<dynamic>.from(_misParticipaciones);
+    });
+  }
+
   Widget _buildEventoCard(Map<String, dynamic> evento) {
-    final fecha = DateTime.parse(evento['fecha']);
-    final fechaFormateada = '${fecha.day}/${fecha.month}/${fecha.year}';
+    final DateTime? startAt = _resolveEventStartAt(evento);
 
     final bool yaParticipando = _verificarParticipacionExistente(evento['id']);
     final List<String> categoriasParticipando = _obtenerCategoriasParticipando(
@@ -954,24 +1150,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                 ],
               ),
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  const Icon(
-                    Icons.calendar_today,
-                    size: 16,
-                    color: WessexColors.midnightNavy,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    fechaFormateada,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: WessexColors.midnightNavy,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
+              EventDateTimeRow(startAt),
               // Mostrar hora del evento
               Builder(
                 builder: (context) {
@@ -1181,8 +1360,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
   }
 
   Widget _buildParticipacionCard(Map<String, dynamic> eventoAgrupado) {
-    final fecha = DateTime.parse(eventoAgrupado['fecha']);
-    final fechaFormateada = '${fecha.day}/${fecha.month}/${fecha.year}';
+    final DateTime? startAt = _resolveEventStartAt(eventoAgrupado);
     final participaciones = eventoAgrupado['participaciones'] as List;
 
     final String estadoEvento = _determinarEstadoEvento(eventoAgrupado);
@@ -1254,33 +1432,20 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
               SizedBox(height: 12),
 
               // Informacion del evento
+              EventDateTimeRow(startAt),
+              const SizedBox(height: 8),
               Row(
                 children: [
-                  Icon(
-                    Icons.calendar_today,
-                    size: 16,
-                    color: WessexColors.midnightNavy,
-                  ),
-                  SizedBox(width: 8),
-                  Text(
-                    fechaFormateada,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: WessexColors.midnightNavy,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  SizedBox(width: 16),
-                  Icon(
+                  const Icon(
                     Icons.location_on,
                     size: 16,
                     color: WessexColors.midnightNavy,
                   ),
-                  SizedBox(width: 8),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       eventoAgrupado['lugar'] ?? 'Sin ubicacion',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 14,
                         color: WessexColors.midnightNavy,
                         fontWeight: FontWeight.w500,
@@ -2002,23 +2167,8 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
         ),
         SizedBox(height: 8),
 
-        // Fecha
-        Row(
-          children: [
-            Icon(
-              Icons.calendar_today,
-              size: 14,
-              color: WessexColors.midnightNavy,
-            ),
-            SizedBox(width: 8),
-            Text(
-              DateTime.parse(
-                evento['fecha'],
-              ).toLocal().toString().split(' ')[0],
-              style: TextStyle(fontSize: 13, color: WessexColors.midnightNavy),
-            ),
-          ],
-        ),
+        // Fecha y hora
+        EventDateTimeRow(_resolveEventStartAt(evento)),
 
         // Horas (si estan disponibles)
         Builder(

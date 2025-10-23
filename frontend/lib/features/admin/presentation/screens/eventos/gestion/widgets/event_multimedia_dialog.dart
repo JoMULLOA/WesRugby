@@ -3,8 +3,10 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:wesrugby/core/config/colors.dart';
 import 'package:wesrugby/data/services/api_service.dart';
+import 'package:wesrugby/shared/widgets/media/media_lightbox.dart';
 
 class EventMultimediaDialog extends StatefulWidget {
   final String eventoId;
@@ -34,6 +36,7 @@ class _EventMultimediaDialogState extends State<EventMultimediaDialog> {
   String? _errorMessage;
   List<dynamic> _mediaPrivada = [];
   List<dynamic> _mediaCompartida = [];
+  final DateFormat _cardDateFormat = DateFormat('dd/MM/yyyy');
 
   @override
   void initState() {
@@ -314,6 +317,8 @@ class _EventMultimediaDialogState extends State<EventMultimediaDialog> {
     required String vacioMensaje,
     Color badgeColor = WessexColors.leafGreen,
   }) {
+    final entries = _buildLightboxEntries(media);
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
       child: Column(
@@ -340,7 +345,7 @@ class _EventMultimediaDialogState extends State<EventMultimediaDialog> {
               ),
               const SizedBox(width: 8),
               Text(
-                '(${media.length})',
+                '(${entries.length})',
                 style: TextStyle(
                   color: WessexColors.midnightNavy.withOpacity(0.7),
                 ),
@@ -348,7 +353,7 @@ class _EventMultimediaDialogState extends State<EventMultimediaDialog> {
             ],
           ),
           const SizedBox(height: 12),
-          if (media.isEmpty)
+          if (entries.isEmpty)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
@@ -379,7 +384,10 @@ class _EventMultimediaDialogState extends State<EventMultimediaDialog> {
               spacing: 16,
               runSpacing: 16,
               alignment: WrapAlignment.start,
-              children: media.map((item) => _buildMediaCard(item)).toList(),
+              children: List.generate(
+                entries.length,
+                (index) => _buildMediaCard(entries[index], entries, index),
+              ),
             ),
         ],
       ),
@@ -400,19 +408,18 @@ class _EventMultimediaDialogState extends State<EventMultimediaDialog> {
     return (first + last).toUpperCase();
   }
 
-  Widget _buildMediaCard(Map<String, dynamic> media) {
-    final uploader = media['uploadedByNombre'] ?? media['uploadedByRut'] ?? '';
-    final rol = media['uploadedByRol']?.toString() ?? '';
-    final isPrivado = media['isPrivate'] == true;
-    final fecha =
-        media['createdAt'] != null
-            ? DateTime.tryParse(media['createdAt'].toString())
-            : null;
-    final fechaTexto =
-        fecha != null
-            ? '${fecha.day.toString().padLeft(2, '0')}/${fecha.month.toString().padLeft(2, '0')}/${fecha.year}'
-            : '';
-    final iniciales = _initialsFor(uploader.isNotEmpty ? uploader : rol);
+  Widget _buildMediaCard(
+    MediaLightboxEntry entry,
+    List<MediaLightboxEntry> entries,
+    int index,
+  ) {
+    final displayName = entry.uploader.displayName;
+    final rol = entry.uploader.rol ?? '';
+    final isPrivado = entry.isPrivate;
+    final fecha = entry.uploadedAt?.toLocal();
+    final fechaTexto = fecha != null ? _cardDateFormat.format(fecha) : '';
+    final avatarUrl = entry.uploader.avatarUrl;
+    final iniciales = _initialsFor(displayName);
 
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 160, minWidth: 136),
@@ -422,7 +429,7 @@ class _EventMultimediaDialogState extends State<EventMultimediaDialog> {
         color: Colors.white,
         child: InkWell(
           borderRadius: BorderRadius.circular(18),
-          onTap: () => _mostrarImagenCompleta(media['url']),
+          onTap: () => _openLightboxWithEntries(entries, index),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
@@ -437,7 +444,7 @@ class _EventMultimediaDialogState extends State<EventMultimediaDialog> {
                     fit: StackFit.expand,
                     children: [
                       Image.network(
-                        media['url'],
+                        entry.imageUrl,
                         fit: BoxFit.cover,
                         errorBuilder:
                             (_, __, ___) => Container(
@@ -530,14 +537,21 @@ class _EventMultimediaDialogState extends State<EventMultimediaDialog> {
                           radius: 16,
                           backgroundColor: WessexColors.deepRoyalBlue
                               .withOpacity(0.12),
-                          child: Text(
-                            iniciales,
-                            style: const TextStyle(
-                              color: WessexColors.deepRoyalBlue,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 12,
-                            ),
-                          ),
+                          backgroundImage:
+                              avatarUrl != null && avatarUrl.isNotEmpty
+                                  ? NetworkImage(avatarUrl)
+                                  : null,
+                          child:
+                              avatarUrl != null && avatarUrl.isNotEmpty
+                                  ? null
+                                  : Text(
+                                    iniciales,
+                                    style: const TextStyle(
+                                      color: WessexColors.deepRoyalBlue,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 12,
+                                    ),
+                                  ),
                         ),
                         const SizedBox(width: 8),
                         Expanded(
@@ -545,7 +559,7 @@ class _EventMultimediaDialogState extends State<EventMultimediaDialog> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                uploader.isEmpty ? 'Sin registro' : uploader,
+                                displayName,
                                 style: const TextStyle(
                                   fontWeight: FontWeight.w600,
                                   color: WessexColors.darkGrape,
@@ -591,18 +605,74 @@ class _EventMultimediaDialogState extends State<EventMultimediaDialog> {
     );
   }
 
-  Future<void> _mostrarImagenCompleta(String url) async {
-    if (!mounted) return;
-    await showDialog<void>(
+  Future<void> _openLightboxWithEntries(
+    List<MediaLightboxEntry> entries,
+    int initialIndex,
+  ) async {
+    if (entries.isEmpty) return;
+    final safeIndex = initialIndex.clamp(0, entries.length - 1);
+    await MediaLightbox.show(
       context: context,
-      builder:
-          (context) => Dialog(
-            insetPadding: const EdgeInsets.all(24),
-            child: InteractiveViewer(
-              child: Image.network(url, fit: BoxFit.contain),
-            ),
-          ),
+      entries: entries,
+      initialIndex: safeIndex,
     );
+  }
+
+  List<MediaLightboxEntry> _buildLightboxEntries(List<dynamic> media) {
+    return media
+        .whereType<Map<String, dynamic>>()
+        .map(_mapMediaToEntry)
+        .whereType<MediaLightboxEntry>()
+        .toList(growable: false);
+  }
+
+  MediaLightboxEntry? _mapMediaToEntry(Map<String, dynamic> raw) {
+    final imageUrl = raw['url']?.toString();
+    if (imageUrl == null || imageUrl.isEmpty) return null;
+
+    final uploadedAt = _parseUploadedAt(raw['uploadedAt'] ?? raw['createdAt']);
+
+    final uploaderMap =
+        raw['uploader'] is Map<String, dynamic>
+            ? raw['uploader'] as Map<String, dynamic>
+            : null;
+
+    final uploaderInfo = MediaUploaderInfo(
+      nombreCompleto:
+          uploaderMap?['nombreCompleto']?.toString() ??
+          raw['uploadedByNombre']?.toString(),
+      email: uploaderMap?['email']?.toString(),
+      rol: uploaderMap?['rol']?.toString() ?? raw['uploadedByRol']?.toString(),
+      avatarUrl: uploaderMap?['avatarUrl']?.toString(),
+      avatarVersion: _parseInt(uploaderMap?['avatarVersion']),
+    );
+
+    return MediaLightboxEntry(
+      id: raw['id']?.toString() ?? imageUrl,
+      imageUrl: imageUrl,
+      viewUrl: raw['viewUrl']?.toString(),
+      downloadUrl: raw['downloadUrl']?.toString(),
+      uploadedAt: uploadedAt,
+      uploader: uploaderInfo,
+      isPrivate: raw['isPrivate'] == true,
+      title: raw['tituloEvento']?.toString(),
+      originalName: raw['originalName']?.toString(),
+    );
+  }
+
+  DateTime? _parseUploadedAt(dynamic value) {
+    if (value is DateTime) return value.toLocal();
+    if (value is String && value.isNotEmpty) {
+      final parsed = DateTime.tryParse(value);
+      return parsed?.toLocal();
+    }
+    return null;
+  }
+
+  int? _parseInt(dynamic value) {
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value);
+    return null;
   }
 
   Future<Uint8List> _obtenerBytes(PlatformFile file) async {
