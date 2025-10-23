@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:wesrugby/data/services/api_service.dart';
+import 'package:wesrugby/data/services/tokenManager.dart';
 
 class MediaUploaderInfo {
   final String? nombreCompleto;
@@ -167,7 +169,8 @@ class _MediaLightboxState extends State<MediaLightbox> {
       return;
     }
 
-    final uri = Uri.tryParse(url);
+    final resolvedUrl = await _withAuthTokenIfNeeded(url);
+    final uri = Uri.tryParse(resolvedUrl);
     if (uri == null) {
       _showMessage('Enlace no válido');
       return;
@@ -184,6 +187,52 @@ class _MediaLightboxState extends State<MediaLightbox> {
     } catch (error) {
       _showMessage('No se pudo abrir el enlace');
     }
+  }
+
+  Future<String> _withAuthTokenIfNeeded(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null || !uri.hasScheme) {
+      return url;
+    }
+
+    final apiUri = Uri.tryParse(ApiService.baseUrl);
+    if (apiUri == null) {
+      return url;
+    }
+
+    final baseHost = apiUri.host.toLowerCase();
+    final targetHost = uri.host.toLowerCase();
+    final basePort = _effectivePort(apiUri);
+    final targetPort = _effectivePort(uri);
+
+    final sameOrigin =
+        apiUri.scheme == uri.scheme &&
+        baseHost == targetHost &&
+        basePort == targetPort;
+
+    if (!sameOrigin) {
+      return url;
+    }
+
+    if (!uri.path.startsWith('/api/')) {
+      return url;
+    }
+
+    final token = await TokenManager.getToken();
+    if (token == null || token.isEmpty) {
+      return url;
+    }
+
+    final query = Map<String, String>.from(uri.queryParameters);
+    query['token'] = token;
+
+    final updatedUri = uri.replace(queryParameters: query);
+    return updatedUri.toString();
+  }
+
+  int _effectivePort(Uri uri) {
+    if (uri.hasPort) return uri.port;
+    return uri.scheme == 'https' ? 443 : 80;
   }
 
   void _showMessage(String message) {
