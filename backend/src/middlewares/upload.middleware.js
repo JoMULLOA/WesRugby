@@ -62,3 +62,7 @@ export const uploadEventoMultimedia = createUploader("eventos", {
 export const uploadAvatar = createUploader("avatars", {
   fileSize: 4 * 1024 * 1024,
 });
+
+export const uploadAuspiciadorLogo = createUploader(path.join("imagenes", "auspiciadores"), {
+  fileSize: 5 * 1024 * 1024,
+});

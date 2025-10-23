@@ -11,6 +11,7 @@ import {
   deleteAuspiciador,
   changeEstadoAuspiciador,
 } from "../controllers/auspiciador.controller.js";
+import { uploadAuspiciadorLogo } from "../middlewares/upload.middleware.js";
 
 const router = Router();
 
@@ -22,8 +23,20 @@ router.get("/", authenticateJwt, getAuspiciadores);
 router.get("/:id", authenticateJwt, getAuspiciador);
 
 // CRUD de auspiciadores - solo directiva
-router.post("/", authenticateJwt, isDirectiva, createAuspiciador);
-router.put("/:id", authenticateJwt, isDirectiva, updateAuspiciador);
+router.post(
+  "/",
+  authenticateJwt,
+  isDirectiva,
+  uploadAuspiciadorLogo.single("imagen"),
+  createAuspiciador,
+);
+router.put(
+  "/:id",
+  authenticateJwt,
+  isDirectiva,
+  uploadAuspiciadorLogo.single("imagen"),
+  updateAuspiciador,
+);
 router.delete("/:id", authenticateJwt, isDirectiva, deleteAuspiciador);
 
 // Gestión de estado - solo directiva
