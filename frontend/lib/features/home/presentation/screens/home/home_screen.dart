@@ -226,7 +226,7 @@ class _HomeScreenState extends State<HomeScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 32, color: WessexColors.ashGray),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Text(
             message,
             style: const TextStyle(
@@ -344,7 +344,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   : _cardFallbackIcon(icon: Icons.article_outlined),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Text(
             noticia.titulo,
             style: const TextStyle(
@@ -366,7 +366,7 @@ class _HomeScreenState extends State<HomeScreen> {
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
           ),
-          const Spacer(),
+          const SizedBox(height: 12),
           Row(
             children: [
               const Icon(Icons.calendar_today, size: 14, color: WessexColors.ashGray),
@@ -432,7 +432,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-          const Spacer(),
+          const SizedBox(height: 12),
           Text(
             producto.precioFormateado,
             style: const TextStyle(

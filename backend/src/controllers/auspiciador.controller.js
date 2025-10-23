@@ -14,6 +14,7 @@ import {
   handleErrorServer,
   handleSuccess,
 } from "../handlers/responseHandlers.js";
+import { optimizeUploadedImage } from "../utils/image.utils.js";
 
 const uploadsRoot = path.resolve("uploads");
 
@@ -178,6 +179,17 @@ export async function createAuspiciador(req, res) {
     let uploadedRelativePath = null;
 
     if (req.file) {
+      try {
+        await optimizeUploadedImage(req.file, {
+          maxWidth: 1200,
+          maxHeight: 1200,
+          quality: 80,
+        });
+      } catch (error) {
+        deleteUploadedFileFromRequest(req.file);
+        return handleErrorServer(res, 500, "Error procesando la imagen", error.message);
+      }
+
       uploadedRelativePath = toRelativeUploadPath(req.file.path);
       auspiciadorData.imagen = uploadedRelativePath;
     } else if (typeof auspiciadorData.imagen === "string") {
@@ -333,6 +345,17 @@ export async function updateAuspiciador(req, res) {
     let newRelativePath = null;
 
     if (req.file) {
+      try {
+        await optimizeUploadedImage(req.file, {
+          maxWidth: 1200,
+          maxHeight: 1200,
+          quality: 80,
+        });
+      } catch (error) {
+        deleteUploadedFileFromRequest(req.file);
+        return handleErrorServer(res, 500, "Error procesando la imagen", error.message);
+      }
+
       newRelativePath = toRelativeUploadPath(req.file.path);
       updateData.imagen = newRelativePath;
     } else if (typeof updateData.imagen === "string") {

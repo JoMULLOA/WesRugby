@@ -254,7 +254,7 @@ class _NoticiasScreenState extends State<NoticiasScreen> {
               height: 1.5,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
           Row(
             children: [
               Icon(Icons.calendar_today, size: 16, color: WessexColors.ashGray),

@@ -410,11 +410,6 @@ class DirectivaDashboard extends StatelessWidget {
                   ],
                 ),
 
-                const SizedBox(height: 32),
-
-                // Actividad reciente
-                _buildActivityCard(isDesktop, isTablet),
-
                 const SizedBox(height: 24),
               ],
             ),
@@ -542,127 +537,6 @@ class DirectivaDashboard extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildActivityCard(bool isDesktop, bool isTablet) {
-    return WessexCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.history,
-                color: WessexColors.deepRoyalBlue,
-                size: isDesktop ? 28 : (isTablet ? 24 : 20),
-              ),
-              SizedBox(width: isDesktop ? 16 : (isTablet ? 14 : 12)),
-              Text(
-                'Actividad Reciente',
-                style: TextStyle(
-                  fontSize: isDesktop ? 20 : (isTablet ? 18 : 16),
-                  fontWeight: FontWeight.bold,
-                  color: WessexColors.darkGrape,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: isDesktop ? 20 : (isTablet ? 18 : 16)),
-          _buildActivityItem(
-            'Nuevo miembro registrado',
-            'Juan Pérez se unió al equipo juvenil',
-            Icons.person_add,
-            isDesktop,
-            isTablet,
-          ),
-          _buildActivityItem(
-            'Pago recibido',
-            'Cuota mensual de María García',
-            Icons.payment,
-            isDesktop,
-            isTablet,
-          ),
-          _buildActivityItem(
-            'Evento programado',
-            'Torneo regional el próximo sábado',
-            Icons.event,
-            isDesktop,
-            isTablet,
-          ),
-          SizedBox(height: isDesktop ? 20 : (isTablet ? 18 : 16)),
-          SizedBox(
-            width: double.infinity,
-            child: TextButton(
-              onPressed: () {},
-              style: TextButton.styleFrom(
-                foregroundColor: WessexColors.deepRoyalBlue,
-              ),
-              child: Text(
-                'Ver historial completo',
-                style: TextStyle(
-                  fontSize: isDesktop ? 16 : (isTablet ? 15 : 14),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActivityItem(
-    String title,
-    String description,
-    IconData icon,
-    bool isDesktop,
-    bool isTablet,
-  ) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: EdgeInsets.all(isDesktop ? 16 : (isTablet ? 14 : 12)),
-      decoration: BoxDecoration(
-        color: WessexColors.mistyRoseGray.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            icon,
-            color: WessexColors.deepRoyalBlue,
-            size: isDesktop ? 24 : (isTablet ? 22 : 20),
-          ),
-          SizedBox(width: isDesktop ? 16 : (isTablet ? 14 : 12)),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: isDesktop ? 16 : (isTablet ? 15 : 14),
-                    fontWeight: FontWeight.w600,
-                    color: WessexColors.darkGrape,
-                  ),
-                ),
-                Text(
-                  description,
-                  style: TextStyle(
-                    fontSize: isDesktop ? 14 : (isTablet ? 13 : 12),
-                    color: WessexColors.darkGrape.withOpacity(0.7),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Icon(
-            Icons.chevron_right,
-            color: WessexColors.darkGrape.withOpacity(0.3),
-            size: isDesktop ? 20 : (isTablet ? 18 : 16),
-          ),
-        ],
       ),
     );
   }

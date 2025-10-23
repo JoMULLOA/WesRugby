@@ -25,6 +25,7 @@ import { AppDataSource } from "../config/configDb.js";
 import User from "../entity/user.entity.js";
 import path from "path";
 import fs from "fs";
+import { optimizeUploadedImage } from "../utils/image.utils.js";
 
 // Obtener repositorio de usuarios
 const userRepository = AppDataSource.getRepository(User);
@@ -220,6 +221,17 @@ export async function updateAvatar(req, res) {
     if (!user) {
       deleteIfExists(req.file.path);
       return handleErrorClient(res, 404, "Usuario no encontrado");
+    }
+
+    try {
+      await optimizeUploadedImage(req.file, {
+        maxWidth: 600,
+        maxHeight: 600,
+        quality: 80,
+      });
+    } catch (error) {
+      deleteIfExists(req.file.path);
+      return handleErrorServer(res, 500, "Error procesando la imagen", error.message);
     }
 
     if (user.avatarPath) {

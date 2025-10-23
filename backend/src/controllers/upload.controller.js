@@ -7,6 +7,7 @@ import {
   handleErrorServer,
   handleSuccess,
 } from "../handlers/responseHandlers.js";
+import { optimizeImageBuffer } from "../utils/image.utils.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -54,7 +55,21 @@ export async function uploadImagen(req, res) {
       return handleErrorClient(res, 400, "Formato de archivo inválido");
     }
 
-    // Validar tamaño del archivo (5MB máximo)
+    try {
+      const optimization = await optimizeImageBuffer(buffer, mimeType, {
+        maxWidth: 1400,
+        maxHeight: 1400,
+        quality: 80,
+      });
+
+      if (optimization?.buffer) {
+        buffer = optimization.buffer;
+      }
+    } catch (error) {
+      return handleErrorServer(res, 500, "Error procesando la imagen", error.message);
+    }
+
+    // Validar tamaño del archivo (5MB máximo) después de optimizar
     const maxSize = 5 * 1024 * 1024; // 5MB
     if (buffer.length > maxSize) {
       return handleErrorClient(res, 400, "El archivo es muy grande", {

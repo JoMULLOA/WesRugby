@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
@@ -144,8 +145,19 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> login() async {
+    final email = _emailController.text.trim().toLowerCase();
+    final password = _passwordController.text;
+
+    if (_emailController.text != email) {
+      _emailController.value = _emailController.value.copyWith(
+        text: email,
+        selection: TextSelection.collapsed(offset: email.length),
+        composing: TextRange.empty,
+      );
+    }
+
     // Validaciones
-    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+    if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Todos los campos son obligatorios")),
       );
@@ -161,8 +173,8 @@ class _LoginPageState extends State<LoginPage> {
         Uri.parse("${confGlobal.baseUrl}/auth/login/"),
         headers: {"Content-Type": "application/json"},
         body: json.encode({
-          "email": _emailController.text.trim(),
-          "password": _passwordController.text,
+          "email": email,
+          "password": password,
         }),
       );
 
@@ -190,7 +202,9 @@ class _LoginPageState extends State<LoginPage> {
 
         // Decodificar el token para obtener información del usuario
         Map<String, dynamic> decodedToken = JwtDecoder.decode(token);
-        final userEmail = decodedToken['email'];
+  final rawUserEmail = decodedToken['email'] ?? '';
+  final userEmail = rawUserEmail.toString();
+  final normalizedUserEmail = userEmail.toLowerCase();
         final userRole = decodedToken['rol'] ?? 'usuario'; // valor por defecto
         final userId = decodedToken['id'].toString();
 
@@ -198,13 +212,13 @@ class _LoginPageState extends State<LoginPage> {
         print('💾 Guardando nuevo token para usuario: $userEmail ($userRole)');
         await _storage.write(key: 'jwt_token', value: token);
         await _storage.write(key: 'user_id', value: userId);
-        await _storage.write(key: 'user_email', value: userEmail);
+  await _storage.write(key: 'user_email', value: normalizedUserEmail);
         await _storage.write(key: 'user_role', value: userRole);
 
         // Guardar en SharedPreferences para compatibilidad
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('isLogged', true);
-        await prefs.setString('email', userEmail);
+  await prefs.setString('email', normalizedUserEmail);
         await prefs.setString('userId', userId);
         await prefs.setString('userRole', userRole);
 
@@ -217,8 +231,9 @@ class _LoginPageState extends State<LoginPage> {
           Map<String, dynamic> decodedVerification = JwtDecoder.decode(
             tokenVerificacion,
           );
+          final verifiedEmail = decodedVerification["email"]?.toString().toLowerCase() ?? "";
           print(
-            '📋 Token verificado - Usuario: ${decodedVerification["email"]}, RUT: ${decodedVerification["rut"]}',
+            '📋 Token verificado - Usuario: $verifiedEmail, RUT: ${decodedVerification["rut"]}',
           );
         }
 
@@ -414,6 +429,18 @@ class _LoginPageState extends State<LoginPage> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: IconButton(
+                          icon: Icon(
+                            Icons.arrow_back,
+                            color: WessexColors.deepRoyalBlue,
+                          ),
+                          onPressed: () => Navigator.pop(context),
+                          tooltip: 'Volver',
+                        ),
+                      ),
+                      SizedBox(height: isDesktop ? 8 : 4),
                       // Logo
                       Image.asset(
                         'assets/icon/logosf.png',

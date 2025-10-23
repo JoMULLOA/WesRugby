@@ -243,7 +243,7 @@ class _MerchandisingScreenState extends State<MerchandisingScreen> {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                  const Spacer(),
+                  const SizedBox(height: 10),
                   Text(
                     '\$${producto.precio.toStringAsFixed(0)}',
                     style: const TextStyle(

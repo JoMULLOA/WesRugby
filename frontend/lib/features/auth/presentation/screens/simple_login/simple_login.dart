@@ -421,6 +421,25 @@ class _LoginPageState extends State<LoginPage> {
     final isDesktop = screenSize.width > 1200;
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            final navigator = Navigator.of(context);
+            if (navigator.canPop()) {
+              navigator.pop();
+            } else {
+              navigator.pushReplacementNamed('/');
+            }
+          },
+          tooltip: 'Volver',
+        ),
+      ),
       body: Stack(
         fit: StackFit.expand,
         children: [

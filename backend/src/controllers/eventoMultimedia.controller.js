@@ -10,6 +10,7 @@ import {
   handleErrorServer,
   handleSuccess,
 } from "../handlers/responseHandlers.js";
+import { optimizeUploadedImage } from "../utils/image.utils.js";
 const eventoDeportivoRepository = AppDataSource.getRepository(EventoDeportivo);
 const participacionDeportivaRepository = AppDataSource.getRepository(
   ParticipacionEventoDeportivo,
@@ -261,6 +262,17 @@ export async function subirMultimediaDirectiva(req, res) {
     const evento = validacion.evento;
     const esPrivado = visibilidad === "privada";
 
+    try {
+      await optimizeUploadedImage(archivo, {
+        maxWidth: 1600,
+        maxHeight: 1600,
+        quality: 80,
+      });
+    } catch (error) {
+      cleanupUploadedFile(archivo);
+      return handleErrorServer(res, 500, "Error procesando la imagen", error.message);
+    }
+
     const relativeStoragePath = path
       .relative(path.resolve("uploads"), archivo.path)
       .replace(/\\/g, "/");
@@ -340,6 +352,17 @@ export async function subirMultimediaRama(req, res) {
         "No autorizado",
         "Solo las ramas que participaron en el evento pueden subir imágenes.",
       );
+    }
+
+    try {
+      await optimizeUploadedImage(archivo, {
+        maxWidth: 1600,
+        maxHeight: 1600,
+        quality: 80,
+      });
+    } catch (error) {
+      cleanupUploadedFile(archivo);
+      return handleErrorServer(res, 500, "Error procesando la imagen", error.message);
     }
 
     const relativeStoragePath = path
