@@ -379,15 +379,6 @@ class _MediaLightboxState extends State<MediaLightbox> {
               runSpacing: 8,
               alignment: WrapAlignment.end,
               children: [
-                OutlinedButton.icon(
-                  icon: const Icon(Icons.open_in_new),
-                  label: const Text('Abrir en pestaña'),
-                  onPressed:
-                      entry.viewUrl != null || entry.imageUrl.isNotEmpty
-                          ? () =>
-                              _launchExternal(entry.viewUrl ?? entry.imageUrl)
-                          : null,
-                ),
                 FilledButton.icon(
                   icon: const Icon(Icons.download),
                   label: const Text('Descargar'),
