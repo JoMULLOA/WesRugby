@@ -1,22 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:wesrugby/core/config/colors.dart';
 
+const double kWessexMaxContentWidth = 1180;
+
 /// Widget de background común para toda la aplicación Wessex Rugby
 /// Mantiene consistencia visual con imagen de fondo y overlay
 class WessexBackground extends StatelessWidget {
   final Widget child;
   final double opacity;
   final bool showOverlay;
+  final double? maxContentWidth;
 
   const WessexBackground({
     super.key,
     required this.child,
     this.opacity = 0.3,
     this.showOverlay = true,
+    this.maxContentWidth = kWessexMaxContentWidth,
   });
 
   @override
   Widget build(BuildContext context) {
+    Widget content = child;
+
+    if (maxContentWidth != null) {
+      content = Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: maxContentWidth!,
+          ),
+          child: SizedBox(
+            width: double.infinity,
+            child: child,
+          ),
+        ),
+      );
+    }
+
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -45,7 +66,7 @@ class WessexBackground extends StatelessWidget {
         if (showOverlay)
           Container(color: WessexColors.darkGrape.withOpacity(opacity)),
         // Content
-        child,
+        content,
       ],
     );
   }
@@ -218,7 +239,7 @@ class WessexButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: backgroundColor ?? WessexColors.crimsonAlert,
+          backgroundColor: backgroundColor ?? WessexColors.primaryAction,
           foregroundColor: textColor ?? WessexColors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),

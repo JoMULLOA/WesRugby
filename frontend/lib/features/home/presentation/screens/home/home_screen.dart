@@ -546,31 +546,6 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Row(
-          children: [
-            Image.asset(
-              'assets/icon/logosf.png',
-              height: 28,
-              width: 28,
-              fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  width: 28,
-                  height: 28,
-                  decoration: const BoxDecoration(
-                    color: WessexColors.white,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.sports_rugby,
-                    color: WessexColors.deepNavyBlue,
-                    size: 16,
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
         actions: [
           Container(
             margin: const EdgeInsets.only(right: 16, top: 8, bottom: 8),
@@ -594,12 +569,16 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       body: WessexBackground(
+        opacity: 0.28,
         child: SingleChildScrollView(
           child: Column(
             children: [
               _buildHeroSection(context, isDesktop, isTablet),
-              Container(
-                padding: EdgeInsets.all(isDesktop ? 48 : (isTablet ? 32 : 24)),
+              Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isDesktop ? 48 : (isTablet ? 32 : 20),
+                  vertical: isDesktop ? 56 : (isTablet ? 48 : 36),
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
@@ -625,9 +604,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     _buildMainButtons(context, isDesktop, isTablet),
 
-                    const SizedBox(height: 48),
-
-                    _buildInfoSection(context, isDesktop, isTablet),
+                    const SizedBox(height: 32),
                   ],
                 ),
               ),
@@ -646,13 +623,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return Container(
       height: isDesktop ? 300 : (isTablet ? 250 : 200),
       width: double.infinity,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Colors.transparent, WessexColors.darkGrape.withOpacity(0.3)],
-        ),
-      ),
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -721,6 +691,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 _selectedTabIndex == 2,
                 () => setState(() => _selectedTabIndex = 2),
               ),
+              const SizedBox(width: 8),
+              _buildTabButton(
+                'Club Wessex',
+                Icons.info_outline,
+                _selectedTabIndex == 3,
+                () => setState(() => _selectedTabIndex = 3),
+              ),
             ],
           ),
         ),
@@ -787,6 +764,8 @@ class _HomeScreenState extends State<HomeScreen> {
         return _buildMerchandisingContent(context, isDesktop, isTablet);
       case 2:
         return _buildAuspiciadoresContent(context, isDesktop, isTablet);
+      case 3:
+        return _buildClubInfoContent(context, isDesktop, isTablet);
       default:
         return _buildNoticiasContent(context, isDesktop, isTablet);
     }
@@ -968,33 +947,160 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildInfoSection(
+  Widget _buildClubInfoContent(
     BuildContext context,
     bool isDesktop,
     bool isTablet,
   ) {
+    final contactDetails = [
+      {
+        'icon': Icons.mail_outline,
+        'title': 'Correo electrónico',
+        'detail': 'rugby@wessexschool.cl',
+      },
+      {
+        'icon': Icons.phone_outlined,
+        'title': 'Teléfono de contacto',
+        'detail': '+56 9 8765 4321',
+      },
+      {
+        'icon': Icons.location_on_outlined,
+        'title': 'Dirección',
+        'detail': 'The Wessex School, Camino El Venado 950, San Pedro.',
+      },
+    ];
+
+    final bodyFontSize = isDesktop ? 16.0 : 14.0;
+
     return WessexCard(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Sobre Wessex Rugby Club',
+            'Historia de la Rama',
             style: TextStyle(
               color: WessexColors.darkGrape,
-              fontSize: 24,
+              fontSize: 22,
               fontWeight: FontWeight.bold,
             ),
-            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
           Text(
-            'Rama fundada para promover el deporte entre los estudiantes de The Wessex School.',
+            'La rama de rugby del Wessex School nació del entusiasmo de las generaciones de 1989 y se ha mantenido como un espacio formativo que transmite los valores del colegio. A través de los años, apoderados, entrenadores y estudiantes han consolidado una comunidad que compite en torneos regionales y nacionales.',
             style: TextStyle(
               color: WessexColors.charcoalGray,
-              fontSize: isDesktop ? 16 : 14,
+              fontSize: bodyFontSize,
               height: 1.5,
             ),
-            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Hoy la directiva impulsa proyectos deportivos, académicos y sociales para seguir creciendo. Si tienes recuerdos, fotografías o hitos que desees sumar, comunícate con el equipo y forma parte de nuestra memoria colectiva.',
+            style: TextStyle(
+              color: WessexColors.charcoalGray,
+              fontSize: bodyFontSize,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Divider(),
+          const SizedBox(height: 16),
+          const Text(
+            'Contactos Oficiales',
+            style: TextStyle(
+              color: WessexColors.darkGrape,
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 12),
+          for (final detail in contactDetails) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: WessexColors.deepRoyalBlue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      detail['icon'] as IconData,
+                      color: WessexColors.deepRoyalBlue,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          detail['title'] as String,
+                          style: const TextStyle(
+                            color: WessexColors.darkGrape,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          detail['detail'] as String,
+                          style: TextStyle(
+                            color: WessexColors.charcoalGray,
+                            fontSize: bodyFontSize,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: WessexColors.deepRoyalBlue.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(
+                  Icons.edit_note,
+                  color: WessexColors.deepRoyalBlue,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'La directiva puede actualizar esta información desde su panel administrativo. Mantener los datos vigentes ayudará a que la comunidad se mantenga conectada.',
+                    style: TextStyle(
+                      color: WessexColors.deepRoyalBlue.withOpacity(0.9),
+                      fontSize: bodyFontSize,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              onPressed: () => _navigateToLogin(context),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: WessexColors.deepRoyalBlue,
+                side: BorderSide(
+                  color: WessexColors.deepRoyalBlue.withOpacity(0.6),
+                ),
+              ),
+              icon: const Icon(Icons.login),
+              label: const Text('Iniciar sesión como directiva'),
+            ),
           ),
         ],
       ),

@@ -80,7 +80,7 @@ class _LoginPageState extends State<LoginPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('No se pudo limpiar la sesión guardada: $e'),
-            backgroundColor: WessexColors.crimsonAlert,
+            backgroundColor: WessexColors.alertRed,
           ),
         );
       }
@@ -117,7 +117,7 @@ class _LoginPageState extends State<LoginPage> {
                 children: [
                   const Icon(
                     Icons.lock_open,
-                    color: WessexColors.deepRoyalBlue,
+                    color: WessexColors.primaryAction,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -128,7 +128,7 @@ class _LoginPageState extends State<LoginPage> {
                           'Sesión guardada',
                           style: TextStyle(
                             fontWeight: FontWeight.w700,
-                            color: WessexColors.deepRoyalBlue,
+                            color: WessexColors.primaryAction,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -137,7 +137,7 @@ class _LoginPageState extends State<LoginPage> {
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
-                            color: WessexColors.darkGrape,
+                            color: WessexColors.crestSlate,
                           ),
                         ),
                         if (email.isNotEmpty) ...[
@@ -145,7 +145,7 @@ class _LoginPageState extends State<LoginPage> {
                           Text(
                             email,
                             style: TextStyle(
-                              color: WessexColors.midnightNavy.withOpacity(0.7),
+                              color: WessexColors.crestShadow.withOpacity(0.6),
                               fontSize: 13,
                             ),
                           ),
@@ -159,13 +159,13 @@ class _LoginPageState extends State<LoginPage> {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: WessexColors.deepRoyalBlue.withOpacity(0.1),
+                      color: WessexColors.primaryAction.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       rol.toUpperCase(),
                       style: const TextStyle(
-                        color: WessexColors.deepRoyalBlue,
+                        color: WessexColors.primaryAction,
                         fontWeight: FontWeight.w600,
                         fontSize: 12,
                       ),
@@ -180,7 +180,7 @@ class _LoginPageState extends State<LoginPage> {
                     child: ElevatedButton.icon(
                       onPressed: _continuarSesionGuardada,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: WessexColors.deepRoyalBlue,
+                        backgroundColor: WessexColors.primaryAction,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
@@ -194,10 +194,10 @@ class _LoginPageState extends State<LoginPage> {
                       onPressed:
                           _clearingStoredSession ? null : _borrarSesionGuardada,
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: WessexColors.darkGrape,
+                        foregroundColor: WessexColors.secondaryAction,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         side: BorderSide(
-                          color: WessexColors.darkGrape.withOpacity(0.4),
+                          color: WessexColors.secondaryAction.withOpacity(0.4),
                         ),
                       ),
                       child:
@@ -452,8 +452,8 @@ class _LoginPageState extends State<LoginPage> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      WessexColors.midnightNavy,
-                      WessexColors.deepRoyalBlue,
+                      WessexColors.crestDeepGreen,
+                      WessexColors.crestNavyBlue,
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -463,7 +463,7 @@ class _LoginPageState extends State<LoginPage> {
             },
           ),
           // Dark overlay
-          Container(color: WessexColors.darkGrape.withOpacity(0.3)),
+          Container(color: WessexColors.crestShadow.withOpacity(0.28)),
           // Login content
           SafeArea(
             child: Center(
@@ -490,13 +490,11 @@ class _LoginPageState extends State<LoginPage> {
                             height: isDesktop ? 120 : (isTablet ? 100 : 80),
                             width: isDesktop ? 120 : (isTablet ? 100 : 80),
                             decoration: BoxDecoration(
-                              color: WessexColors.white,
+                              color: WessexColors.crestIvory,
                               borderRadius: BorderRadius.circular(20),
                               boxShadow: [
                                 BoxShadow(
-                                  color: WessexColors.darkGrape.withOpacity(
-                                    0.3,
-                                  ),
+                                  color: WessexColors.crestShadow.withOpacity(0.25),
                                   blurRadius: 10,
                                   offset: const Offset(0, 5),
                                 ),
@@ -505,7 +503,7 @@ class _LoginPageState extends State<LoginPage> {
                             child: Icon(
                               Icons.sports_rugby,
                               size: isDesktop ? 60 : (isTablet ? 50 : 40),
-                              color: WessexColors.deepRoyalBlue,
+                              color: WessexColors.primaryAction,
                             ),
                           );
                         },
@@ -521,7 +519,7 @@ class _LoginPageState extends State<LoginPage> {
                           fontWeight: FontWeight.bold,
                           shadows: [
                             Shadow(
-                              color: WessexColors.darkGrape.withOpacity(0.5),
+                              color: WessexColors.crestShadow.withOpacity(0.5),
                               blurRadius: 4,
                               offset: const Offset(0, 2),
                             ),
@@ -539,7 +537,7 @@ class _LoginPageState extends State<LoginPage> {
                           fontWeight: FontWeight.w400,
                           shadows: [
                             Shadow(
-                              color: WessexColors.darkGrape.withOpacity(0.5),
+                              color: WessexColors.crestShadow.withOpacity(0.45),
                               blurRadius: 4,
                               offset: const Offset(0, 2),
                             ),
@@ -559,7 +557,7 @@ class _LoginPageState extends State<LoginPage> {
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: WessexColors.darkGrape.withOpacity(0.2),
+                              color: WessexColors.crestShadow.withOpacity(0.18),
                               blurRadius: 20,
                               offset: const Offset(0, 10),
                             ),
@@ -577,11 +575,11 @@ class _LoginPageState extends State<LoginPage> {
                                   labelText: "Email",
                                   hintText: "usuario@wessexrugby.com",
                                   labelStyle: TextStyle(
-                                    color: WessexColors.darkGrape,
+                                    color: WessexColors.crestSlate,
                                   ),
                                   prefixIcon: Icon(
                                     Icons.email,
-                                    color: WessexColors.deepRoyalBlue,
+                                    color: WessexColors.primaryAction,
                                   ),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
@@ -592,7 +590,7 @@ class _LoginPageState extends State<LoginPage> {
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
                                     borderSide: BorderSide(
-                                      color: WessexColors.deepRoyalBlue,
+                                      color: WessexColors.primaryAction,
                                       width: 2,
                                     ),
                                   ),
@@ -610,7 +608,7 @@ class _LoginPageState extends State<LoginPage> {
                                   ),
                                 ),
                                 style: TextStyle(
-                                  color: WessexColors.darkGrape,
+                                  color: WessexColors.crestSlate,
                                   fontSize: isDesktop ? 16 : 14,
                                 ),
                                 validator: (value) {
@@ -632,18 +630,18 @@ class _LoginPageState extends State<LoginPage> {
                                 decoration: InputDecoration(
                                   labelText: "Contraseña",
                                   labelStyle: TextStyle(
-                                    color: WessexColors.darkGrape,
+                                    color: WessexColors.crestSlate,
                                   ),
                                   prefixIcon: Icon(
                                     Icons.lock,
-                                    color: WessexColors.deepRoyalBlue,
+                                    color: WessexColors.primaryAction,
                                   ),
                                   suffixIcon: IconButton(
                                     icon: Icon(
                                       _obscurePassword
                                           ? Icons.visibility
                                           : Icons.visibility_off,
-                                      color: WessexColors.deepRoyalBlue,
+                                      color: WessexColors.primaryAction,
                                     ),
                                     onPressed: () {
                                       setState(() {
@@ -660,7 +658,7 @@ class _LoginPageState extends State<LoginPage> {
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
                                     borderSide: BorderSide(
-                                      color: WessexColors.deepRoyalBlue,
+                                      color: WessexColors.primaryAction,
                                       width: 2,
                                     ),
                                   ),
@@ -678,7 +676,7 @@ class _LoginPageState extends State<LoginPage> {
                                   ),
                                 ),
                                 style: TextStyle(
-                                  color: WessexColors.darkGrape,
+                                  color: WessexColors.crestSlate,
                                   fontSize: isDesktop ? 16 : 14,
                                 ),
                                 validator: (value) {
@@ -705,7 +703,7 @@ class _LoginPageState extends State<LoginPage> {
                                     );
                                   },
                                   style: TextButton.styleFrom(
-                                    foregroundColor: WessexColors.deepRoyalBlue,
+                                    foregroundColor: WessexColors.accentAction,
                                   ),
                                   child: Text(
                                     '¿Olvidaste tu contraseña?',
@@ -726,7 +724,7 @@ class _LoginPageState extends State<LoginPage> {
                                 child: ElevatedButton(
                                   onPressed: _isLoading ? null : _login,
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: WessexColors.crimsonAlert,
+                                    backgroundColor: WessexColors.primaryAction,
                                     foregroundColor: WessexColors.white,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12),
@@ -763,9 +761,7 @@ class _LoginPageState extends State<LoginPage> {
                               Text(
                                 '© 2025 Wessex Rugby Club',
                                 style: TextStyle(
-                                  color: WessexColors.darkGrape.withOpacity(
-                                    0.6,
-                                  ),
+                                  color: WessexColors.crestShadow.withOpacity(0.6),
                                   fontSize: 12,
                                 ),
                               ),

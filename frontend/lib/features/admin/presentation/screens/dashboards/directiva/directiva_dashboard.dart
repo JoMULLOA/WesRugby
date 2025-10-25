@@ -32,7 +32,7 @@ class DirectivaDashboard extends StatelessWidget {
           child: SingleChildScrollView(
             padding: EdgeInsets.all(isDesktop ? 24 : (isTablet ? 20 : 16)),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // Header de bienvenida con diseño Wessex
                 WessexCard(
@@ -46,8 +46,8 @@ class DirectivaDashboard extends StatelessWidget {
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              WessexColors.crimsonAlert,
-                              WessexColors.deepRoyalBlue,
+                              WessexColors.secondaryAction,
+                              WessexColors.primaryAction,
                             ],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
@@ -68,7 +68,7 @@ class DirectivaDashboard extends StatelessWidget {
                             Text(
                               '¡Bienvenido Directiva!',
                               style: TextStyle(
-                                color: WessexColors.darkGrape,
+                                color: WessexColors.crestShadow,
                                 fontSize: isDesktop ? 28 : (isTablet ? 24 : 22),
                                 fontWeight: FontWeight.bold,
                               ),
@@ -77,7 +77,7 @@ class DirectivaDashboard extends StatelessWidget {
                             Text(
                               'Panel de administración\nWessex Rugby Club',
                               style: TextStyle(
-                                color: WessexColors.darkGrape.withOpacity(0.7),
+                                color: WessexColors.crestSlate.withOpacity(0.75),
                                 fontSize: isDesktop ? 16 : (isTablet ? 15 : 14),
                               ),
                             ),
@@ -104,7 +104,7 @@ class DirectivaDashboard extends StatelessWidget {
                         'Registro de Datos',
                         'Importar estudiantes desde Excel',
                         Icons.upload_file,
-                        WessexColors.crimsonAlert,
+                        WessexColors.primaryAction,
                         () => Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -121,7 +121,7 @@ class DirectivaDashboard extends StatelessWidget {
                         'Gestión de Usuarios',
                         'Administrar miembros del club',
                         Icons.people,
-                        WessexColors.leafGreen,
+                        WessexColors.secondaryAction,
                         () => Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -144,7 +144,7 @@ class DirectivaDashboard extends StatelessWidget {
                         'Control Financiero',
                         'Supervisar ingresos y gastos',
                         Icons.account_balance_wallet,
-                        WessexColors.deepRoyalBlue,
+                        WessexColors.accentAction,
                         () => _showComingSoon(context, 'Control Financiero'),
                         isDesktop: isDesktop,
                         isTablet: isTablet,
@@ -156,7 +156,7 @@ class DirectivaDashboard extends StatelessWidget {
                         'Base de Datos',
                         'Consultar estudiantes registrados',
                         Icons.storage,
-                        WessexColors.leafGreen,
+                        WessexColors.secondaryAction,
                         () => Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -180,7 +180,7 @@ class DirectivaDashboard extends StatelessWidget {
                         'Gestión de Justificantes',
                         'Evaluar justificantes de inasistencia',
                         Icons.assignment_turned_in,
-                        WessexColors.crimsonAlert,
+                        WessexColors.primaryAction,
                         () => Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -198,7 +198,7 @@ class DirectivaDashboard extends StatelessWidget {
                         'Estadísticas Club',
                         'Métricas y análisis general',
                         Icons.bar_chart,
-                        WessexColors.leafGreen,
+                        WessexColors.secondaryAction,
                         () => _showComingSoon(context, 'Estadísticas del Club'),
                         isDesktop: isDesktop,
                         isTablet: isTablet,
@@ -217,7 +217,7 @@ class DirectivaDashboard extends StatelessWidget {
                         'Reportes',
                         'Generar reportes del club',
                         Icons.assessment,
-                        WessexColors.leafGreen,
+                        WessexColors.secondaryAction,
                         () => _showComingSoon(context, 'Reportes'),
                         isDesktop: isDesktop,
                         isTablet: isTablet,
@@ -229,7 +229,7 @@ class DirectivaDashboard extends StatelessWidget {
                         'Gestión de Eventos',
                         'Administrar eventos deportivos',
                         Icons.event,
-                        WessexColors.deepRoyalBlue,
+                        WessexColors.primaryAction,
                         () => Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -253,7 +253,7 @@ class DirectivaDashboard extends StatelessWidget {
                         'Tipos de Evento',
                         'Administrar tipos de eventos deportivos/no deportivos',
                         Icons.category,
-                        WessexColors.leafGreen,
+                        WessexColors.secondaryAction,
                         () => Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -270,7 +270,7 @@ class DirectivaDashboard extends StatelessWidget {
                         'Actas de Reunión',
                         'Gestionar actas y minutas de reuniones',
                         Icons.description,
-                        WessexColors.deepRoyalBlue,
+                        WessexColors.accentAction,
                         () => Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -288,53 +288,35 @@ class DirectivaDashboard extends StatelessWidget {
                 const SizedBox(height: 12),
 
                 // Fila para información pública
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildActionCard(
-                        'Información Pública',
-                        'Gestionar noticias, auspiciadores y merchandising',
-                        Icons.public,
-                        WessexColors.leafGreen,
-                        () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder:
-                                (context) =>
-                                    const GestionInformacionPublicaScreen(),
-                          ),
-                        ),
-                        isDesktop: isDesktop,
-                        isTablet: isTablet,
-                      ),
+                _buildActionCard(
+                  'Información Pública',
+                  'Gestionar noticias, auspiciadores y merchandising',
+                  Icons.public,
+                  WessexColors.secondaryAction,
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          const GestionInformacionPublicaScreen(),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(child: Container()), // Espacio vacío
-                  ],
+                  ),
+                  isDesktop: isDesktop,
+                  isTablet: isTablet,
                 ),
 
                 const SizedBox(height: 12),
 
-                // Fila para configuración
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildActionCard(
-                        'Configuración',
-                        'Ajustes generales del sistema',
-                        Icons.settings,
-                        WessexColors.darkGrape,
-                        () => _showComingSoon(
-                          context,
-                          'Configuración del Sistema',
-                        ),
-                        isDesktop: isDesktop,
-                        isTablet: isTablet,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(child: Container()), // Espacio vacío
-                  ],
+                _buildActionCard(
+                  'Configuración',
+                  'Ajustes generales del sistema',
+                  Icons.settings,
+                  WessexColors.secondaryAction,
+                  () => _showComingSoon(
+                    context,
+                    'Configuración del Sistema',
+                  ),
+                  isDesktop: isDesktop,
+                  isTablet: isTablet,
                 ),
 
                 const SizedBox(height: 32),
@@ -354,7 +336,7 @@ class DirectivaDashboard extends StatelessWidget {
                         'Eventos',
                         'Planificar actividades del club',
                         Icons.event,
-                        WessexColors.crimsonAlert,
+                        WessexColors.primaryAction,
                         () => Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -371,7 +353,7 @@ class DirectivaDashboard extends StatelessWidget {
                         'Reportes',
                         'Análisis y estadísticas',
                         Icons.analytics,
-                        WessexColors.darkGrape,
+                        WessexColors.secondaryAction,
                         () => _showComingSoon(context, 'Reportes'),
                         isDesktop: isDesktop,
                         isTablet: isTablet,
@@ -389,7 +371,7 @@ class DirectivaDashboard extends StatelessWidget {
                         'Comunicaciones',
                         'Mensajería y notificaciones',
                         Icons.message,
-                        WessexColors.midnightNavy,
+                        WessexColors.accentAction,
                         () => _showComingSoon(context, 'Comunicaciones'),
                         isDesktop: isDesktop,
                         isTablet: isTablet,
@@ -401,7 +383,7 @@ class DirectivaDashboard extends StatelessWidget {
                         'Configuración',
                         'Ajustes del sistema',
                         Icons.settings,
-                        WessexColors.leafGreen,
+                        WessexColors.secondaryAction,
                         () => _showComingSoon(context, 'Configuración'),
                         isDesktop: isDesktop,
                         isTablet: isTablet,
@@ -459,7 +441,7 @@ class DirectivaDashboard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: isDesktop ? 18 : (isTablet ? 16 : 14),
                         fontWeight: FontWeight.bold,
-                        color: WessexColors.darkGrape,
+                        color: WessexColors.crestShadow,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -467,7 +449,7 @@ class DirectivaDashboard extends StatelessWidget {
                       subtitle,
                       style: TextStyle(
                         fontSize: isDesktop ? 14 : (isTablet ? 13 : 12),
-                        color: WessexColors.darkGrape.withOpacity(0.7),
+                        color: WessexColors.crestSlate.withOpacity(0.7),
                       ),
                     ),
                   ],
@@ -475,7 +457,7 @@ class DirectivaDashboard extends StatelessWidget {
               ),
               Icon(
                 Icons.chevron_right,
-                color: WessexColors.darkGrape.withOpacity(0.3),
+                color: WessexColors.crestSlate.withOpacity(0.3),
                 size: isDesktop ? 20 : (isTablet ? 18 : 16),
               ),
             ],
@@ -521,7 +503,7 @@ class DirectivaDashboard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: isDesktop ? 18 : (isTablet ? 16 : 14),
                   fontWeight: FontWeight.bold,
-                  color: WessexColors.darkGrape,
+                  color: WessexColors.crestShadow,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -530,7 +512,7 @@ class DirectivaDashboard extends StatelessWidget {
                 subtitle,
                 style: TextStyle(
                   fontSize: isDesktop ? 14 : (isTablet ? 13 : 12),
-                  color: WessexColors.darkGrape.withOpacity(0.7),
+                  color: WessexColors.crestSlate.withOpacity(0.7),
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -545,7 +527,7 @@ class DirectivaDashboard extends StatelessWidget {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('$module - En desarrollo'),
-        backgroundColor: WessexColors.deepRoyalBlue,
+  backgroundColor: WessexColors.primaryAction,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),

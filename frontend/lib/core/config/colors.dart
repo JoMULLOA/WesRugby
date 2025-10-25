@@ -1,89 +1,111 @@
 import 'package:flutter/material.dart';
 
-/// Paleta de colores corporativos de Wessex Rugby
-/// Basada en la guía de identidad visual 5.3.3
+/// Paleta de colores corporativos inspirada en el escudo de Wessex Rugby.
 class WessexColors {
-  // ========== COLORES PRINCIPALES ==========
+  // ========== PALETA BASE ==========
 
-  /// Crimson Alert (#B02A2E) - Para botones y elementos interactivos
-  static const Color crimsonAlert = Color(0xFFB02A2E);
+  /// Verde principal del escudo (#1F4D2C)
+  static const Color crestPrimaryGreen = Color(0xFF1F4D2C);
 
-  /// Deep Royal Blue (#090976) - Para botones y enlaces
-  static const Color deepRoyalBlue = Color(0xFF090976);
+  /// Verde profundo complementario (#12361F)
+  static const Color crestDeepGreen = Color(0xFF12361F);
 
-  /// Dark Grape (#100B0D) - Para textos principales
-  static const Color darkGrape = Color(0xFF100B0D);
+  /// Azul marino de la camiseta (#0B2E57)
+  static const Color crestNavyBlue = Color(0xFF0B2E57);
 
-  /// Misty Rose Gray (#F0EAEB) - Para fondos de formularios suaves
-  static const Color mistyRoseGray = Color(0xFFF0EAEB);
+  /// Azul celeste de la franja (#1B86B6)
+  static const Color crestSkyBlue = Color(0xFF1B86B6);
 
-  // ========== COLORES SECUNDARIOS ==========
+  /// Marfil claro para fondos (#F6F7F1)
+  static const Color crestIvory = Color(0xFFF6F7F1);
 
-  /// Leaf Green (#057233) - Para acciones afirmativas (Enviar, Aceptar)
-  static const Color leafGreen = Color(0xFF057233);
+  /// Gris pizarra para textos (#4E5A54)
+  static const Color crestSlate = Color(0xFF4E5A54);
 
-  /// Maximum Gray Mint (#D2DEDC) - Para elementos neutrales y tarjetas
-  static const Color maximumGrayMint = Color(0xFFD2DEDC);
+  /// Negro suave para alto contraste (#1D2320)
+  static const Color crestShadow = Color(0xFF1D2320);
 
-  /// Midnight Navy (#041540) - Para fondos y encabezados
-  static const Color midnightNavy = Color(0xFF041540);
+  /// Rojo institucional para alertas (#B02A2E)
+  static const Color alertRed = Color(0xFFB02A2E);
+
+  // ========== ACCIONES Y ESTADOS ==========
+
+  /// Color principal para acciones y botones
+  static const Color primaryAction = crestNavyBlue;
+
+  /// Color secundario para acciones alternativas
+  static const Color secondaryAction = crestPrimaryGreen;
+
+  /// Color de realce para elementos destacados
+  static const Color accentAction = crestSkyBlue;
+
+  /// Alias manteniendo compatibilidad retroactiva
+  static const Color crimsonAlert = primaryAction;
+  static const Color deepRoyalBlue = crestNavyBlue;
+  static const Color darkGrape = crestShadow;
+  static const Color mistyRoseGray = crestIvory;
+  static const Color leafGreen = crestPrimaryGreen;
+  static const Color maximumGrayMint = Color(0xFFD6DED6);
+  static const Color midnightNavy = crestDeepGreen;
 
   // ========== COLORES UTILITARIOS ==========
 
-  /// Blanco para contraste
   static const Color white = Colors.white;
-
-  /// Negro para texto secundario
   static const Color black = Colors.black;
-
-  /// Gris claro para divisores
   static const Color lightGray = Color(0xFFE5E5E5);
-
-  /// Gris carbón para textos secundarios
-  static const Color charcoalGray = Color(0xFF424242);
-
-  /// Gris ceniza para elementos deshabilitados
-  static const Color ashGray = Color(0xFF9E9E9E);
-
-  /// Amarillo dorado para destacar elementos
-  static const Color goldenYellow = Color(0xFFFFD700);
-
-  /// Azul marino profundo para fondos alternativos
-  static const Color deepNavyBlue = Color(0xFF1A237E);
+  static const Color charcoalGray = Color(0xFF414A46);
+  static const Color ashGray = Color(0xFF8A938E);
+  static const Color goldenYellow = Color(0xFFE7C46A);
+  static const Color deepNavyBlue = crestNavyBlue;
 
   // ========== TEMA PERSONALIZADO ==========
 
   static ThemeData get lightTheme {
     return ThemeData(
-      primarySwatch: createMaterialColor(deepRoyalBlue),
-      primaryColor: deepRoyalBlue,
-      scaffoldBackgroundColor: mistyRoseGray,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: crestPrimaryGreen,
+        primary: crestPrimaryGreen,
+        secondary: crestSkyBlue,
+        tertiary: crestNavyBlue,
+        surface: white,
+        background: crestIvory,
+        onPrimary: white,
+        onSecondary: white,
+        onTertiary: white,
+        onSurface: crestShadow,
+        onBackground: crestShadow,
+        error: alertRed,
+        onError: white,
+      ),
+      primarySwatch: createMaterialColor(crestPrimaryGreen),
+      primaryColor: crestPrimaryGreen,
+      scaffoldBackgroundColor: crestIvory,
       appBarTheme: const AppBarTheme(
-        backgroundColor: midnightNavy,
+        backgroundColor: crestDeepGreen,
         foregroundColor: white,
         elevation: 2,
         centerTitle: true,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: crimsonAlert,
+          backgroundColor: primaryAction,
           foregroundColor: white,
           elevation: 3,
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: deepRoyalBlue,
-          side: const BorderSide(color: deepRoyalBlue, width: 1.5),
+          foregroundColor: secondaryAction,
+          side: const BorderSide(color: secondaryAction, width: 1.5),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: deepRoyalBlue,
+          foregroundColor: accentAction,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         ),
       ),
@@ -91,26 +113,26 @@ class WessexColors {
         color: white,
         elevation: 4,
         margin: const EdgeInsets.all(8),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: white,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: lightGray),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: maximumGrayMint),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: lightGray),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: maximumGrayMint),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: deepRoyalBlue, width: 2),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: primaryAction, width: 2),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: crimsonAlert, width: 2),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: alertRed, width: 2),
         ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
@@ -119,37 +141,37 @@ class WessexColors {
       ),
       textTheme: const TextTheme(
         headlineLarge: TextStyle(
-          color: darkGrape,
+          color: crestShadow,
           fontSize: 28,
           fontWeight: FontWeight.bold,
         ),
         headlineMedium: TextStyle(
-          color: darkGrape,
+          color: crestShadow,
           fontSize: 24,
           fontWeight: FontWeight.w600,
         ),
         headlineSmall: TextStyle(
-          color: darkGrape,
+          color: crestShadow,
           fontSize: 20,
           fontWeight: FontWeight.w500,
         ),
         bodyLarge: TextStyle(
-          color: darkGrape,
+          color: crestSlate,
           fontSize: 16,
           fontWeight: FontWeight.normal,
         ),
         bodyMedium: TextStyle(
-          color: darkGrape,
+          color: crestSlate,
           fontSize: 14,
           fontWeight: FontWeight.normal,
         ),
         bodySmall: TextStyle(
-          color: darkGrape,
+          color: crestSlate,
           fontSize: 12,
           fontWeight: FontWeight.normal,
         ),
       ),
-      dividerTheme: const DividerThemeData(color: lightGray, thickness: 1),
+      dividerTheme: const DividerThemeData(color: maximumGrayMint, thickness: 1),
       drawerTheme: const DrawerThemeData(backgroundColor: white, elevation: 8),
     );
   }
@@ -185,7 +207,7 @@ extension WessexColorExtensions on WessexColors {
   static Color get warning => const Color(0xFFFFA726);
 
   /// Color para errores
-  static Color get error => WessexColors.crimsonAlert;
+  static Color get error => WessexColors.alertRed;
 
   /// Color para información
   static Color get info => WessexColors.deepRoyalBlue;

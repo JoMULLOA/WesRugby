@@ -118,7 +118,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('No se pudo leer el archivo seleccionado.'),
-            backgroundColor: WessexColors.crimsonAlert,
+            backgroundColor: WessexColors.alertRed,
           ),
         );
       }
@@ -149,7 +149,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Foto de perfil actualizada.'),
-            backgroundColor: WessexColors.leafGreen,
+            backgroundColor: WessexColors.secondaryAction,
           ),
         );
       }
@@ -160,7 +160,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('No se pudo actualizar la foto: $e'),
-            backgroundColor: WessexColors.crimsonAlert,
+            backgroundColor: WessexColors.alertRed,
           ),
         );
       }
@@ -233,7 +233,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
                               height: 28,
                               width: 28,
                               decoration: BoxDecoration(
-                                color: WessexColors.crimsonAlert,
+                                color: WessexColors.primaryAction,
                                 shape: BoxShape.circle,
                                 border: Border.all(
                                   color: Colors.white,
@@ -344,11 +344,11 @@ class _CustomDrawerState extends State<CustomDrawer> {
               color: WessexColors.mistyRoseGray,
             ),
             child: ListTile(
-              leading: Icon(Icons.logout, color: WessexColors.crimsonAlert),
+              leading: Icon(Icons.logout, color: WessexColors.primaryAction),
               title: Text(
                 'Cerrar Sesión',
                 style: TextStyle(
-                  color: WessexColors.crimsonAlert,
+                  color: WessexColors.primaryAction,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -468,7 +468,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
       _buildMenuItem(
         icon: Icons.payment,
         title: 'Planes de Pago',
-        color: WessexColors.crimsonAlert,
+  color: WessexColors.primaryAction,
         onTap: () => _navigateToModule('planes-pago'),
         isTablet: isTablet,
       ),
@@ -510,7 +510,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
       _buildMenuItem(
         icon: Icons.shopping_cart,
         title: 'Ventas',
-        color: WessexColors.crimsonAlert,
+  color: WessexColors.primaryAction,
         onTap: () => _navigateToModule('ventas'),
         isTablet: isTablet,
       ),
@@ -531,7 +531,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
       _buildMenuItem(
         icon: Icons.payment,
         title: 'Planes de Pago',
-        color: WessexColors.crimsonAlert,
+  color: WessexColors.primaryAction,
         onTap: () => _navigateToModule('planes-pago'),
         isTablet: isTablet,
       ),
@@ -587,7 +587,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
       _buildMenuItem(
         icon: Icons.event,
         title: 'Eventos',
-        color: WessexColors.crimsonAlert,
+  color: WessexColors.primaryAction,
         onTap: () => _navigateToModule('eventos'),
         isTablet: isTablet,
       ),
@@ -622,7 +622,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
       _buildMenuItem(
         icon: Icons.receipt,
         title: 'Mis Pagos',
-        color: WessexColors.crimsonAlert,
+  color: WessexColors.primaryAction,
         onTap: () => _navigateToModule('mis-pagos'),
         isTablet: isTablet,
       ),
