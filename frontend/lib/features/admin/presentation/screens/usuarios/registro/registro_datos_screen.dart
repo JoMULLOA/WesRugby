@@ -1,11 +1,12 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:excel/excel.dart' as ExcelLib;
+import 'package:flutter/material.dart';
+import 'package:excel/excel.dart' as excel_lib;
+import 'package:intl/intl.dart';
+import 'package:spreadsheet_decoder/spreadsheet_decoder.dart';
 import 'package:wesrugby/shared/widgets/layout/wessex_widgets.dart';
 import 'package:wesrugby/core/config/colors.dart';
 import 'package:wesrugby/data/services/estudiante_service.dart';
 import 'package:wesrugby/data/services/refresh_service.dart';
-import 'dart:typed_data';
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html' as html;
 
@@ -194,18 +195,33 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
             child: Column(
               children: [
                 _buildColumnRow(
-                  'Nombre Completo',
+                  'Nombre',
                   'Nombre completo del estudiante',
                   true,
                 ),
                 _buildColumnRow(
+                  'Fecha Nacimiento',
+                  'Formato recomendado: DD-MM-AAAA (ej: 05-04-2019)',
+                  true,
+                ),
+                _buildColumnRow(
                   'RUN',
-                  'RUN del estudiante (ej: 12345678-9)',
+                  'RUN del estudiante con guión y dígito verificador',
+                  true,
+                ),
+                _buildColumnRow(
+                  'Categoria',
+                  'Categoría deportiva (ej: M12, M14, M16)',
+                  true,
+                ),
+                _buildColumnRow(
+                  'Ficha',
+                  'Indica SI/NO si cuenta con ficha médica completa',
                   true,
                 ),
                 _buildColumnRow(
                   'Curso',
-                  'Categoría deportiva (ej: Sub-16, Sub-18)',
+                  'Curso académico actual (ej: 6° Básico, II Medio)',
                   true,
                 ),
                 _buildColumnRow(
@@ -214,8 +230,13 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
                   false,
                 ),
                 _buildColumnRow(
-                  'Telefono Madre',
-                  'Número de teléfono de la madre',
+                  'N° Telefono Madre',
+                  'Número de teléfono de la madre (solo dígitos)',
+                  false,
+                ),
+                _buildColumnRow(
+                  'Correo Electrónico Madre',
+                  'Correo de contacto de la madre',
                   false,
                 ),
                 _buildColumnRow(
@@ -224,24 +245,125 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
                   false,
                 ),
                 _buildColumnRow(
-                  'Telefono Padre',
-                  'Número de teléfono del padre',
+                  'N° Teléfono Padre',
+                  'Número de teléfono del padre (solo dígitos)',
                   false,
                 ),
                 _buildColumnRow(
-                  'Validez',
-                  'Estado del registro (Vigente/No Vigente)',
-                  true,
+                  'Correo Electrónico Padre',
+                  'Correo de contacto del padre',
+                  false,
                 ),
                 _buildColumnRow(
-                  'Responsable',
-                  'Nombre del responsable del registro',
-                  true,
+                  'Hermanos',
+                  'RUN de hermanos en el club separados por coma',
+                  false,
                 ),
                 _buildColumnRow(
-                  'RUN Responsable',
-                  'RUN del apoderado (ej: 12345678-9)',
-                  true,
+                  'Enfermedad',
+                  'Antecedentes médicos relevantes',
+                  false,
+                ),
+                _buildColumnRow(
+                  'Talla',
+                  'Talla de polera/polera deportiva',
+                  false,
+                ),
+                _buildColumnRow(
+                  'Dorsal Nombre',
+                  'Nombre que llevará en la camiseta',
+                  false,
+                ),
+                _buildColumnRow(
+                  'Alumno Nuevo',
+                  'Usar SI/NO para identificar ingresos recientes',
+                  false,
+                ),
+                _buildColumnRow(
+                  'Asistencia',
+                  'Porcentaje de asistencia anual si está disponible',
+                  false,
+                ),
+                _buildColumnRow(
+                  'Matricula',
+                  'Estado o monto de matrícula',
+                  false,
+                ),
+                _buildColumnRow(
+                  'Marzo',
+                  'Pago o deuda del mes de marzo',
+                  false,
+                ),
+                _buildColumnRow(
+                  'Abril',
+                  'Pago o deuda del mes de abril',
+                  false,
+                ),
+                _buildColumnRow('Mayo', 'Pago o deuda del mes de mayo', false),
+                _buildColumnRow(
+                  'Junio',
+                  'Pago o deuda del mes de junio',
+                  false,
+                ),
+                _buildColumnRow(
+                  'Julio',
+                  'Pago o deuda del mes de julio',
+                  false,
+                ),
+                _buildColumnRow(
+                  'Agosto',
+                  'Pago o deuda del mes de agosto',
+                  false,
+                ),
+                _buildColumnRow(
+                  'Septiembre',
+                  'Pago o deuda del mes de septiembre',
+                  false,
+                ),
+                _buildColumnRow(
+                  'Octubre',
+                  'Pago o deuda del mes de octubre',
+                  false,
+                ),
+                _buildColumnRow(
+                  'Noviembre',
+                  'Pago o deuda del mes de noviembre',
+                  false,
+                ),
+                _buildColumnRow(
+                  'Diciembre',
+                  'Pago o deuda del mes de diciembre',
+                  false,
+                ),
+                _buildColumnRow(
+                  'Total Año',
+                  'Total cancelado o adeudado en el año',
+                  false,
+                ),
+                _buildColumnRow(
+                  'Poleron',
+                  'Estado o entrega de polerón',
+                  false,
+                ),
+                _buildColumnRow(
+                  'Calcetas',
+                  'Estado o entrega de calcetas',
+                  false,
+                ),
+                _buildColumnRow(
+                  'Protector Bucal',
+                  'Estado o entrega de protector bucal',
+                  false,
+                ),
+                _buildColumnRow(
+                  'Uniforme',
+                  'Estado o entrega de uniforme',
+                  false,
+                ),
+                _buildColumnRow(
+                  'Anadido',
+                  'Observaciones adicionales de la directiva',
+                  false,
                 ),
               ],
             ),
@@ -284,7 +406,6 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
                 Text(
                   '• Los nombres de las columnas deben ser exactamente como se muestran arriba\n'
                   '• El RUT debe incluir guión y dígito verificador\n'
-                  '• VALIDEZ acepta: "Activo", "Inactivo", "Vigente", "No Vigente"\n'
                   '• No debe haber filas vacías entre los datos\n'
                   '• Máximo 500 registros por archivo',
                   style: TextStyle(color: WessexColors.leafGreen, fontSize: 12),
@@ -555,10 +676,10 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
                 headingRowColor: MaterialStateProperty.all(
                   WessexColors.deepRoyalBlue.withOpacity(0.1),
                 ),
-                columns: [
+                columns: const [
                   DataColumn(
                     label: Text(
-                      'NOMBRE COMPLETO',
+                      'NOMBRE',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 11,
@@ -567,7 +688,34 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
                   ),
                   DataColumn(
                     label: Text(
-                      'RUN',
+                      'FECHA NAC.',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ),
+                  DataColumn(
+                    label: Text(
+                      'RUT',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ),
+                  DataColumn(
+                    label: Text(
+                      'CATEGORIA',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ),
+                  DataColumn(
+                    label: Text(
+                      'FICHA',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 11,
@@ -583,154 +731,65 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
                       ),
                     ),
                   ),
-                  DataColumn(
-                    label: Text(
-                      'MADRE',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ),
-                  DataColumn(
-                    label: Text(
-                      'TEL. MADRE',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ),
-                  DataColumn(
-                    label: Text(
-                      'PADRE',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ),
-                  DataColumn(
-                    label: Text(
-                      'TEL. PADRE',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ),
-                  DataColumn(
-                    label: Text(
-                      'VALIDEZ',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ),
-                  DataColumn(
-                    label: Text(
-                      'RESPONSABLE',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ),
-                  DataColumn(
-                    label: Text(
-                      'RUN RESP.',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ),
                 ],
                 rows:
                     _previewData.take(10).map((student) {
+                      final fichaValor = student['ficha'];
+                      final fichaTexto =
+                          fichaValor == null ||
+                                  fichaValor.toString().trim().isEmpty
+                              ? 'NO'
+                              : fichaValor.toString().trim().toUpperCase();
+                      final fichaColor = _getFichaColor(fichaValor);
+
                       return DataRow(
                         cells: [
                           DataCell(
-                            Container(
-                              width: 120,
+                            SizedBox(
+                              width: 160,
                               child: Text(
-                                student['nombreCompleto'] ??
-                                    student['nombrecompleto'] ??
-                                    '',
-                                style: TextStyle(fontSize: 11),
+                                student['nombre']?.toString() ?? '',
                                 overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             ),
                           ),
                           DataCell(
                             Text(
-                              student['run'] ?? '',
-                              style: TextStyle(fontSize: 11),
+                              student['fechaNacimiento']?.toString() ?? '',
+                              style: const TextStyle(fontSize: 11),
                             ),
                           ),
                           DataCell(
                             Text(
-                              student['curso'] ?? '',
-                              style: TextStyle(fontSize: 11),
-                            ),
-                          ),
-                          DataCell(
-                            Container(
-                              width: 100,
-                              child: Text(
-                                student['nombreMadre'] ??
-                                    student['nombremadre'] ??
-                                    '',
-                                style: TextStyle(fontSize: 11),
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                              student['rut']?.toString() ?? '',
+                              style: const TextStyle(fontSize: 11),
                             ),
                           ),
                           DataCell(
                             Text(
-                              student['telefonoMadre'] ??
-                                  student['telefonomadre'] ??
+                              student['categoria']?.toString().toUpperCase() ??
                                   '',
-                              style: TextStyle(fontSize: 11),
-                            ),
-                          ),
-                          DataCell(
-                            Container(
-                              width: 100,
-                              child: Text(
-                                student['nombrePadre'] ??
-                                    student['nombrepadre'] ??
-                                    '',
-                                style: TextStyle(fontSize: 11),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ),
-                          DataCell(
-                            Text(
-                              student['telefonoPadre'] ??
-                                  student['telefonopadre'] ??
-                                  '',
-                              style: TextStyle(fontSize: 11),
+                              style: const TextStyle(fontSize: 11),
                             ),
                           ),
                           DataCell(
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
+                                horizontal: 10,
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: _getValidezColor(
-                                  student['validez'],
-                                ).withOpacity(0.1),
+                                color: fichaColor.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
-                                student['validez'] ?? '',
+                                fichaTexto,
                                 style: TextStyle(
-                                  color: _getValidezColor(student['validez']),
+                                  color: fichaColor,
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -738,21 +797,9 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
                             ),
                           ),
                           DataCell(
-                            Container(
-                              width: 100,
-                              child: Text(
-                                student['responsable'] ?? '',
-                                style: TextStyle(fontSize: 11),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ),
-                          DataCell(
                             Text(
-                              student['runResponsable'] ??
-                                  student['runresponsable'] ??
-                                  '',
-                              style: TextStyle(fontSize: 11),
+                              student['curso']?.toString() ?? '',
+                              style: const TextStyle(fontSize: 11),
                             ),
                           ),
                         ],
@@ -831,13 +878,13 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
           Row(
             children: [
               Icon(
-                Icons.error_outline,
-                color: WessexColors.crimsonAlert,
+                Icons.warning_amber_rounded,
+                color: WessexColors.goldenYellow,
                 size: 24,
               ),
               const SizedBox(width: 12),
               Text(
-                'Errores Encontrados',
+                'Advertencias de Formato',
                 style: TextStyle(
                   color: WessexColors.darkGrape,
                   fontSize: 18,
@@ -851,13 +898,13 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: WessexColors.crimsonAlert.withOpacity(0.1),
+                  color: WessexColors.goldenYellow.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  '${_errorMessages.length} errores',
+                  '${_errorMessages.length} advertencias',
                   style: TextStyle(
-                    color: WessexColors.crimsonAlert,
+                    color: WessexColors.darkGrape,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),
@@ -870,10 +917,10 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: WessexColors.crimsonAlert.withOpacity(0.1),
+              color: WessexColors.goldenYellow.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: WessexColors.crimsonAlert.withOpacity(0.3),
+                color: WessexColors.goldenYellow.withOpacity(0.4),
               ),
             ),
             child: Column(
@@ -888,7 +935,7 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
                           Text(
                             '• ',
                             style: TextStyle(
-                              color: WessexColors.crimsonAlert,
+                              color: WessexColors.darkGrape,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -896,7 +943,7 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
                             child: Text(
                               error,
                               style: TextStyle(
-                                color: WessexColors.crimsonAlert,
+                                color: WessexColors.darkGrape,
                                 fontSize: 14,
                               ),
                             ),
@@ -912,17 +959,17 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
     );
   }
 
-  Color _getValidezColor(String? validez) {
-    switch (validez?.toLowerCase()) {
-      case 'activo':
-      case 'vigente':
-        return WessexColors.leafGreen;
-      case 'inactivo':
-      case 'no vigente':
-        return WessexColors.crimsonAlert;
-      default:
-        return WessexColors.deepRoyalBlue;
+  Color _getFichaColor(dynamic ficha) {
+    if (ficha == true) return WessexColors.leafGreen;
+    if (ficha is String && ficha.toLowerCase() == 'si') {
+      return WessexColors.leafGreen;
     }
+    if (ficha == null ||
+        (ficha is String && ficha.trim().isEmpty) ||
+        ficha == false) {
+      return WessexColors.crimsonAlert;
+    }
+    return WessexColors.deepRoyalBlue;
   }
 
   Future<void> _pickFile() async {
@@ -971,7 +1018,7 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
         _showErrorSnackBar('Funcionalidad disponible solo en web por ahora');
       }
     } catch (e) {
-      print('Error al seleccionar archivo: $e');
+      debugPrint('Error al seleccionar archivo: $e');
       _showErrorSnackBar('Error al seleccionar archivo: ${e.toString()}');
     }
   }
@@ -996,187 +1043,164 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
     });
 
     try {
-      // Procesar archivo Excel real
-      var excel = ExcelLib.Excel.decodeBytes(_fileData!);
-
-      // Buscar la primera hoja con datos
-      String? firstSheetName;
-      for (var table in excel.tables.keys) {
-        if (excel.tables[table]!.rows.isNotEmpty) {
-          firstSheetName = table;
-          break;
-        }
-      }
-
-      if (firstSheetName == null) {
-        throw Exception(
-          'No se encontraron hojas con datos en el archivo Excel',
-        );
-      }
-
-      var sheet = excel.tables[firstSheetName]!;
-      List<Map<String, dynamic>> processedData = [];
-      List<String> errors = [];
-
-      // Obtener encabezados de la primera fila
-      if (sheet.rows.isEmpty) {
+      final rows = _decodeSpreadsheetRows(_fileData!);
+      if (rows.isEmpty) {
         throw Exception('El archivo Excel está vacío');
       }
 
-      var headerRow = sheet.rows[0];
-      List<String> headers = [];
+      final headerRow = rows.first;
+      final List<String> headersOriginal = [];
+      final List<String> headersNormalized = [];
 
-      for (var cell in headerRow) {
-        if (cell?.value != null) {
-          headers.add(cell!.value.toString().toLowerCase().trim());
-        }
+      for (final cell in headerRow) {
+        final cellText = _stringifyCellValue(cell, '');
+        if (cellText.isEmpty) continue;
+        headersOriginal.add(cellText);
+        headersNormalized.add(_normalizeHeaderKey(cellText));
       }
 
-      print('📋 Encabezados encontrados: $headers');
-
-      // Mapear encabezados EXACTAMENTE como aparecen en tu Excel (dos columnas separadas)
-      Map<String, String> headerMapping = {
-        'nombre completo': 'nombreCompleto', // Columna A del Excel
-        'run': 'run', // Columna B del Excel
-        'curso': 'curso', // Columna C del Excel
-        'nombre madre': 'nombreMadre', // Columna D del Excel
-        'telefono madre': 'telefonoMadre', // Columna E del Excel
-        'nombre padre': 'nombrePadre', // Columna F del Excel
-        'telefono padre': 'telefonoPadre', // Columna G del Excel
-        'validez': 'validez', // Columna H del Excel
-        'responsable': 'responsable', // Columna I del Excel
-        'run responsable': 'runResponsable', // Columna J del Excel
-        // Variantes adicionales por compatibilidad
-        'nombrecompleto': 'nombreCompleto',
-        'nombremadre': 'nombreMadre',
-        'telefonomadre': 'telefonoMadre',
-        'nombrepadre': 'nombrePadre',
-        'telefonopadre': 'telefonoPadre',
-        'runresponsable': 'runResponsable',
-        'rutresponsable': 'runResponsable',
-      };
-
-      // Debug: imprimir todos los headers encontrados
       if (kDebugMode) {
-        print('🔍 Headers encontrados en Excel:');
-        for (int i = 0; i < headers.length; i++) {
-          print('  $i: "${headers[i]}"');
-        }
+        debugPrint('📋 Encabezados encontrados: $headersNormalized');
       }
 
-      // Verificar que todos los campos obligatorios estén presentes
-      // Mapeamos desde los nombres del Excel a los campos internos (DOS columnas separadas)
-      Map<String, String> requiredFieldsMapping = {
-        'nombre completo': 'nombreCompleto', // Columna A
-        'run': 'run', // Columna B
-        'curso': 'curso', // Columna C
-        'validez': 'validez', // Columna H
-        'responsable': 'responsable', // Columna I
-        'run responsable': 'runResponsable', // Columna J
+      final Map<String, String> headerMapping = {
+        'nombrecompleto': 'nombre',
+        'nombre': 'nombre',
+        'fechanacimiento': 'fechaNacimiento',
+        'rut': 'rut',
+        'categoria': 'categoria',
+        'ficha': 'ficha',
+        'curso': 'curso',
+        'nombremadre': 'nombreMadre',
+        'ntelefonomadre': 'telefonoMadre',
+        'telefonomadre': 'telefonoMadre',
+        'correoelectronicomadre': 'emailMadre',
+        'correomadre': 'emailMadre',
+        'nombrepadre': 'nombrePadre',
+        'ntelefonopadre': 'telefonoPadre',
+        'telefonopadre': 'telefonoPadre',
+        'correoelectronicopadre': 'emailPadre',
+        'correopadre': 'emailPadre',
+        'responsable': 'responsable',
+        'hermanos': 'hermanos',
+        'enfermedad': 'enfermedad',
+        'talla': 'talla',
+        'dorsalnombre': 'dorsalNombre',
+        'alumnonuevo': 'alumnoNuevo',
+        'asistencia': 'asistencia',
+        'matricula': 'matricula',
+        'marzo': 'marzo',
+        'abril': 'abril',
+        'mayo': 'mayo',
+        'junio': 'junio',
+        'julio': 'julio',
+        'agosto': 'agosto',
+        'septiembre': 'septiembre',
+        'octubre': 'octubre',
+        'noviembre': 'noviembre',
+        'diciembre': 'diciembre',
+        'totalano': 'totalAnio',
+        'totalanio': 'totalAnio',
+        'totalanno': 'totalAnio',
+        'poleron': 'poleron',
+        'calcetas': 'calcetas',
+        'protectorbucal': 'protectorBucal',
+        'uniforme': 'uniforme',
+        'anadido': 'anadido',
       };
 
-      List<String> missingHeaders = [];
+      final Map<String, String> requiredFieldsMapping = {
+        'nombre': 'Nombre',
+        'fechanacimiento': 'Fecha nacimiento',
+        'rut': 'RUT',
+        'categoria': 'Categoria',
+        'curso': 'Curso',
+      };
 
-      for (String excelHeader in requiredFieldsMapping.keys) {
-        String internalField = requiredFieldsMapping[excelHeader]!;
+      final Set<String> availableFields =
+          headersNormalized
+              .map((header) => headerMapping[header] ?? header)
+              .toSet();
 
-        bool headerExists = headers.any(
-          (h) => h.toLowerCase().trim() == excelHeader,
-        );
-
-        if (!headerExists) {
-          missingHeaders.add(excelHeader);
+      final List<String> missingHeaders = [];
+      for (final entry in requiredFieldsMapping.entries) {
+        final requiredKey = headerMapping[entry.key] ?? entry.key;
+        if (!availableFields.contains(requiredKey)) {
+          missingHeaders.add(entry.value);
           if (kDebugMode) {
-            print('❌ Header obligatorio faltante en Excel: "$excelHeader"');
-          }
-        } else {
-          if (kDebugMode) {
-            print(
-              '✅ Header obligatorio encontrado: "$excelHeader" -> $internalField',
-            );
+            debugPrint('❌ Header obligatorio faltante: ${entry.value}');
           }
         }
       }
 
       if (missingHeaders.isNotEmpty) {
-        String expectedHeaders = requiredFieldsMapping.keys.join(', ');
-        String foundHeaders = headers.join(', ');
+        final foundHeaders = headersOriginal.join(', ');
         throw Exception(
           'Faltan las siguientes columnas: ${missingHeaders.join(', ')}\n\n'
-          'Columnas esperadas: $expectedHeaders\n'
           'Columnas encontradas: $foundHeaders',
         );
       }
 
-      // Procesar cada fila de datos (saltando la primera que son encabezados)
-      for (int i = 1; i < sheet.rows.length; i++) {
-        var row = sheet.rows[i];
+      final List<Map<String, dynamic>> processedData = [];
+      final List<String> warnings = [];
 
-        if (row.isEmpty || row.every((cell) => cell?.value == null)) {
-          continue; // Saltar filas vacías
+      for (int i = 1; i < rows.length; i++) {
+        final row = rows[i];
+
+        if (row.isEmpty || row.every((cell) => _cellIsEmpty(cell))) {
+          continue;
         }
 
-        Map<String, dynamic> studentData = {};
-        bool hasValidData = false;
+        final Map<String, dynamic> studentData = {};
+        bool hasAnyValue = false;
 
-        // Mapear datos de la fila actual
-        for (int j = 0; j < headers.length && j < row.length; j++) {
-          String originalHeader = headers[j];
-          String normalizedHeader = originalHeader.toLowerCase().trim();
-          var cellValue = row[j]?.value;
+        for (int j = 0; j < headersNormalized.length && j < row.length; j++) {
+          final rawCell = row[j];
+          final normalizedHeader = headersNormalized[j];
+          final value = _stringifyCellValue(rawCell, normalizedHeader);
+          if (value.isEmpty) continue;
 
-          if (cellValue != null) {
-            String value = cellValue.toString().trim();
-            if (value.isNotEmpty) {
-              // Buscar el campo mapeado correspondiente
-              String? mappedField = headerMapping[normalizedHeader];
-              if (mappedField != null) {
-                studentData[mappedField] = value;
-                hasValidData = true;
-                if (kDebugMode) {
-                  print(
-                    '📋 Mapeado: "$originalHeader" -> $mappedField = "$value"',
-                  );
-                }
-              } else {
-                // Si no hay mapeo directo, usar el header normalizado
-                String normalizedField = _normalizeHeaderName(originalHeader);
-                studentData[normalizedField] = value;
-                hasValidData = true;
-                if (kDebugMode) {
-                  print(
-                    '📋 Sin mapeo directo: "$originalHeader" -> $normalizedField = "$value"',
-                  );
-                }
-              }
-            }
+          final mappedField =
+              headerMapping[normalizedHeader] ?? normalizedHeader;
+          studentData[mappedField] = value;
+          hasAnyValue = true;
+
+          if (kDebugMode) {
+            debugPrint(
+              '📋 Mapeado: "${headersOriginal[j]}" -> $mappedField = "$value"',
+            );
           }
         }
 
-        if (hasValidData) {
-          // Validar campos obligatorios
-          if (_isValidStudentRow(studentData)) {
-            processedData.add(studentData);
-          } else {
-            errors.add('Fila ${i + 1}: Datos incompletos o inválidos');
+        if (hasAnyValue) {
+          _ensureResponsable(studentData);
+          processedData.add(studentData);
+
+          final rowIssues = _collectRowIssues(studentData);
+          if (rowIssues.isNotEmpty) {
+            warnings.add('Fila ${i + 1}: ${rowIssues.join(' · ')}');
           }
         }
       }
 
       setState(() {
         _previewData = processedData;
-        _errorMessages = errors;
+        _errorMessages = warnings;
         _showPreview = true;
         _isProcessing = false;
       });
 
       if (processedData.isNotEmpty) {
+        final warningMessage =
+            warnings.isNotEmpty
+                ? ' (con ${warnings.length} advertencias de formato)'
+                : '';
         _showSuccessSnackBar(
-          'Archivo procesado: ${processedData.length} registros válidos encontrados.',
+          'Archivo procesado: ${processedData.length} registros listos$warningMessage.',
         );
       } else {
         _showErrorSnackBar(
-          'No se encontraron registros válidos en el archivo.',
+          'No se encontraron registros con datos en el archivo.',
         );
       }
     } catch (e) {
@@ -1188,69 +1212,281 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
     }
   }
 
-  String _normalizeHeaderName(String header) {
-    // Solo normalizar a minúsculas y quitar espacios extra
+  List<List<dynamic>> _decodeSpreadsheetRows(Uint8List bytes) {
+    try {
+      final decoder = SpreadsheetDecoder.decodeBytes(bytes);
+      for (final table in decoder.tables.values) {
+        if (table.rows.isNotEmpty) {
+          return table.rows;
+        }
+      }
+      throw Exception('No se encontraron hojas con datos en el archivo Excel');
+    } catch (spreadsheetError) {
+      if (kDebugMode) {
+        debugPrint('⚠️ Error con SpreadsheetDecoder: $spreadsheetError');
+        debugPrint('Intentando fallback con package:excel');
+      }
+
+      try {
+        final excel = excel_lib.Excel.decodeBytes(bytes);
+        for (final key in excel.tables.keys) {
+          final table = excel.tables[key];
+          if (table != null && table.rows.isNotEmpty) {
+            return table.rows
+                .map((row) => row.map((cell) => cell?.value).toList())
+                .toList();
+          }
+        }
+        throw Exception(
+          'No se encontraron hojas con datos en el archivo Excel',
+        );
+      } catch (excelError) {
+        throw Exception(
+          'No se pudo leer el archivo Excel. Detalle: ${excelError.toString()}',
+        );
+      }
+    }
+  }
+
+  bool _cellIsEmpty(dynamic cell) {
+    if (cell == null) return true;
+    if (cell is String) return cell.trim().isEmpty;
+    if (cell is Iterable) return cell.every(_cellIsEmpty);
+    return false;
+  }
+
+  String _stringifyCellValue(dynamic value, String headerKey) {
+    if (value == null) {
+      return '';
+    }
+
+    if (value is DateTime) {
+      return DateFormat('dd-MM-yyyy').format(value.toLocal());
+    }
+
+    if (value is num) {
+      if (headerKey == 'fechanacimiento') {
+        final convertedDate = _excelSerialToDate(value);
+        if (convertedDate != null) {
+          return DateFormat('dd-MM-yyyy').format(convertedDate);
+        }
+      }
+
+      if (value % 1 == 0) {
+        return value.toInt().toString();
+      }
+      return value.toString();
+    }
+
+    final stringValue = value.toString().trim();
+    if (headerKey == 'fechanacimiento') {
+      final parsedDate = _parseFlexibleDate(stringValue);
+      if (parsedDate != null) {
+        return DateFormat('dd-MM-yyyy').format(parsedDate);
+      }
+    }
+
+    return stringValue;
+  }
+
+  void _ensureResponsable(Map<String, dynamic> data) {
+    final rawResponsable = data['responsable']?.toString().trim() ?? '';
+    if (rawResponsable.isNotEmpty) {
+      final normalized = rawResponsable.toLowerCase();
+      if (normalized == 'madre') {
+        data['responsable'] = 'Madre';
+        return;
+      }
+      if (normalized == 'padre') {
+        data['responsable'] = 'Padre';
+        return;
+      }
+
+      final formatted = rawResponsable
+          .split(RegExp(r'\s+'))
+          .where((segment) => segment.isNotEmpty)
+          .map((segment) {
+            final lower = segment.toLowerCase();
+            return lower.isEmpty
+                ? ''
+                : '${lower[0].toUpperCase()}${lower.substring(1)}';
+          })
+          .where((segment) => segment.isNotEmpty)
+          .join(' ');
+
+      data['responsable'] = formatted.isNotEmpty ? formatted : 'Madre';
+      return;
+    }
+
+    final madreNombre = data['nombreMadre']?.toString().trim() ?? '';
+    final padreNombre = data['nombrePadre']?.toString().trim() ?? '';
+
+    if (madreNombre.isNotEmpty) {
+      data['responsable'] = 'Madre';
+    } else if (padreNombre.isNotEmpty) {
+      data['responsable'] = 'Padre';
+    } else {
+      data['responsable'] = 'Madre';
+    }
+  }
+
+  DateTime? _excelSerialToDate(num rawValue) {
+    if (rawValue.isNaN) {
+      return null;
+    }
+
+    final baseDate = DateTime(1899, 12, 30);
+    final intDays = rawValue.floor();
+    final fractionalDay = rawValue - intDays;
+    final seconds = (fractionalDay * Duration.secondsPerDay).round();
+
+    try {
+      return baseDate
+          .add(Duration(days: intDays))
+          .add(Duration(seconds: seconds));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  DateTime? _parseFlexibleDate(String raw) {
+    if (raw.isEmpty) {
+      return null;
+    }
+
+    final directParsed = DateTime.tryParse(raw);
+    if (directParsed != null) {
+      return DateTime(directParsed.year, directParsed.month, directParsed.day);
+    }
+
+    final normalized =
+        raw
+            .replaceAll('.', '-')
+            .replaceAll('/', '-')
+            .replaceAll(RegExp(r'\s+'), '')
+            .trim();
+
+    final isoSplit = normalized.split('T');
+    final datePortion = isoSplit.isNotEmpty ? isoSplit.first : normalized;
+
+    final parts =
+        datePortion.split('-').where((segment) => segment.isNotEmpty).toList();
+
+    if (parts.length != 3) {
+      return null;
+    }
+
+    final day = int.tryParse(parts[0]);
+    final month = int.tryParse(parts[1]);
+    int? year = int.tryParse(parts[2]);
+
+    if (day == null || month == null || year == null) {
+      return null;
+    }
+
+    if (year < 100) {
+      year += year >= 50 ? 1900 : 2000;
+    }
+
+    try {
+      return DateTime(year, month, day);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String _normalizeHeaderKey(String header) {
     String normalized = header.toLowerCase().trim();
+    const replacements = {
+      'á': 'a',
+      'é': 'e',
+      'í': 'i',
+      'ó': 'o',
+      'ú': 'u',
+      'ä': 'a',
+      'ë': 'e',
+      'ï': 'i',
+      'ö': 'o',
+      'ü': 'u',
+      'ñ': 'n',
+    };
+
+    replacements.forEach((key, value) {
+      normalized = normalized.replaceAll(key, value);
+    });
+
+    normalized = normalized.replaceAll(RegExp(r'[^a-z0-9]'), '');
 
     if (kDebugMode) {
-      print('🔍 Header original: "$header" -> normalizado: "$normalized"');
+      debugPrint('🔍 Header original: "$header" -> normalizado: "$normalized"');
     }
 
     return normalized;
   }
 
-  bool _isValidStudentRow(Map<String, dynamic> data) {
-    // Debug: imprimir los datos de la fila para diagnóstico
+  List<String> _collectRowIssues(Map<String, dynamic> data) {
     if (kDebugMode) {
-      print('🔍 Validando fila con datos: ${data.keys.join(', ')}');
+      debugPrint('🔍 Validando fila con datos: ${data.keys.join(', ')}');
       data.forEach((key, value) {
-        print('  $key: "$value"');
+        debugPrint('  $key: "$value"');
       });
     }
 
-    // Campos obligatorios (dos columnas separadas: nombreCompleto y run)
-    List<String> requiredFields = [
-      'nombreCompleto',
-      'run',
-      'curso',
-      'validez',
-      'responsable',
-      'runResponsable',
-    ];
+    final List<String> issues = [];
 
-    for (String field in requiredFields) {
-      if (!data.containsKey(field) ||
-          data[field] == null ||
-          data[field].toString().trim().isEmpty) {
+    final nombre = data['nombre']?.toString().trim() ?? '';
+    if (nombre.isEmpty) {
+      issues.add('Nombre faltante');
+      if (kDebugMode) {
+        debugPrint('⚠️ Nombre faltante');
+      }
+    }
+
+    final rut = data['rut']?.toString().trim() ?? '';
+    if (rut.isEmpty) {
+      issues.add('RUT faltante');
+      if (kDebugMode) {
+        debugPrint('⚠️ RUT faltante');
+      }
+    } else if (!RegExp(r'^[0-9\.\-kK]+$').hasMatch(rut) || rut.length < 8) {
+      issues.add('RUT con formato inválido ($rut)');
+      if (kDebugMode) {
+        debugPrint('⚠️ RUT inválido: "$rut"');
+      }
+    }
+
+    final fecha = data['fechaNacimiento']?.toString().trim() ?? '';
+    if (fecha.isEmpty) {
+      issues.add('Fecha de nacimiento faltante');
+      if (kDebugMode) {
+        debugPrint('⚠️ Fecha de nacimiento faltante');
+      }
+    } else {
+      final fechaRegex = RegExp(r'^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$');
+      if (!fechaRegex.hasMatch(fecha)) {
+        issues.add('Fecha de nacimiento inválida ($fecha)');
         if (kDebugMode) {
-          print('❌ Campo obligatorio faltante o vacío: $field');
+          debugPrint('⚠️ Fecha de nacimiento inválida: "$fecha"');
         }
-        return false;
       }
     }
 
-    // Validación básica de RUN del estudiante
-    String runEstudiante = data['run']?.toString() ?? '';
-    if (!runEstudiante.contains('-') || runEstudiante.length < 9) {
-      if (kDebugMode) {
-        print('❌ RUN estudiante inválido: "$runEstudiante"');
+    final categoria = data['categoria']?.toString().trim();
+    if (categoria != null && categoria.isNotEmpty) {
+      final categoriaRegex = RegExp(r'^M\d{1,2}$', caseSensitive: false);
+      if (!categoriaRegex.hasMatch(categoria.toUpperCase())) {
+        issues.add('Categoria no reconocida ($categoria)');
+        if (kDebugMode) {
+          debugPrint('⚠️ Categoria no reconocida: "$categoria"');
+        }
       }
-      return false;
     }
 
-    // Validación básica de RUN del responsable
-    String runResponsable = data['runResponsable']?.toString() ?? '';
-    if (!runResponsable.contains('-') || runResponsable.length < 9) {
-      if (kDebugMode) {
-        print('❌ RUN responsable inválido: "$runResponsable"');
-      }
-      return false;
+    if (kDebugMode && issues.isEmpty) {
+      debugPrint('✅ Fila sin advertencias');
     }
 
-    if (kDebugMode) {
-      print('✅ Fila válida');
-    }
-    return true;
+    return issues;
   }
 
   Future<void> _importData() async {
@@ -1270,9 +1506,15 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
       if (result['success'] == true) {
         int estudiantesCreados = result['estudiantesCreados'] ?? 0;
         int apoderadosCreados = result['apoderadosCreados'] ?? 0;
+        int correosGenerados = result['correosApoderadoGenerados'] ?? apoderadosCreados;
         List<dynamic> errores = result['errores'] ?? [];
 
-        _showSuccessDialog(estudiantesCreados, apoderadosCreados, errores);
+        _showSuccessDialog(
+          estudiantesCreados,
+          apoderadosCreados,
+          correosGenerados,
+          errores,
+        );
 
         // Notificar que se han actualizado los usuarios
         RefreshService().notifyUsuariosChanged();
@@ -1314,6 +1556,7 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
   void _showSuccessDialog(
     int estudiantesCreados,
     int apoderadosCreados,
+    int correosGenerados,
     List<dynamic> errores,
   ) {
     showDialog(
@@ -1368,6 +1611,18 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
                   ),
                   textAlign: TextAlign.center,
                 ),
+                if (correosGenerados > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      '📧 Se generaron $correosGenerados correos institucionales para apoderados.',
+                      style: TextStyle(
+                        color: WessexColors.darkGrape.withOpacity(0.7),
+                        fontSize: 13,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
                 if (errores.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   Container(

@@ -6,130 +6,114 @@ class EstudianteService extends ChangeNotifier {
   factory EstudianteService() => _instance;
   EstudianteService._internal();
 
-  // Lista global de estudiantes para simular base de datos
   static List<Map<String, dynamic>> _estudiantes = [];
 
-  // Obtener todos los estudiantes
   List<Map<String, dynamic>> getAllStudents() {
-    return List.from(_estudiantes);
+    return List<Map<String, dynamic>>.from(_estudiantes);
   }
 
-  // Obtener estadísticas de estudiantes
   Map<String, dynamic> getStudentStatistics() {
-    int total = _estudiantes.length;
-    int activos =
+    final total = _estudiantes.length;
+    final conFicha =
         _estudiantes
             .where(
               (e) =>
-                  e['validez']?.toLowerCase() == 'activo' ||
-                  e['validez']?.toLowerCase() == 'vigente',
+                  (e['ficha'] == true) ||
+                  (e['ficha'] is String &&
+                      (e['ficha'] as String).toLowerCase() == 'si'),
             )
             .length;
-    int inactivos = total - activos;
+    final sinFicha = total - conFicha;
 
-    // Estadísticas por curso
-    Map<String, int> porCurso = {};
-    for (var estudiante in _estudiantes) {
-      String curso = estudiante['curso'] ?? 'Sin curso';
-      porCurso[curso] = (porCurso[curso] ?? 0) + 1;
+    final Map<String, int> porCurso = {};
+    final Map<String, int> porCategoria = {};
+    final Map<String, int> porEstado = {};
+
+    for (final estudiante in _estudiantes) {
+      final curso = (estudiante['curso'] as String?)?.trim();
+      if (curso != null && curso.isNotEmpty) {
+        porCurso[curso] = (porCurso[curso] ?? 0) + 1;
+      }
+
+      final categoria = (estudiante['categoria'] as String?)?.trim();
+      if (categoria != null && categoria.isNotEmpty) {
+        porCategoria[categoria] = (porCategoria[categoria] ?? 0) + 1;
+      }
+
+      final estado = (estudiante['estado'] as String?)?.trim().toLowerCase();
+      if (estado != null && estado.isNotEmpty) {
+        porEstado[estado] = (porEstado[estado] ?? 0) + 1;
+      }
     }
+
+    final activos = porEstado['activo'] ?? 0;
+    final inactivos = porEstado['inactivo'] ?? 0;
 
     return {
       'total': total,
+      'conFicha': conFicha,
+      'sinFicha': sinFicha,
+      'porCurso': porCurso,
+      'porCategoria': porCategoria,
+      'porEstado': porEstado,
       'activos': activos,
       'inactivos': inactivos,
-      'porCurso': porCurso,
     };
   }
 
-  // Obtener todos los estudiantes (para entrenadores/directiva)
+  Future<void> refreshStudentsFromAPI() async {
+    final estudiantes = await getAllStudentsFromAPI();
+    _estudiantes = estudiantes.map(_adaptEstudianteFromBackend).toList();
+    notifyListeners();
+  }
+
   Future<List<Map<String, dynamic>>> getAllStudentsFromAPI() async {
     try {
       final response = await ApiService.getAllEstudiantes();
 
-      if (kDebugMode) {
-        print('🔍 Response status code: ${response.statusCode}');
-        print('🔍 Response data type: ${response.data.runtimeType}');
-      }
-
       if (response.statusCode == 200 && response.data != null) {
         if (response.data is Map<String, dynamic> &&
             response.data['success'] == true) {
-          final estudiantes = List<Map<String, dynamic>>.from(
-            response.data['data'],
-          );
-          if (kDebugMode) {
-            print('✅ Todos los estudiantes obtenidos: ${estudiantes.length}');
-          }
-          return estudiantes;
-        } else if (response.data is List) {
-          final estudiantes = List<Map<String, dynamic>>.from(response.data);
-          if (kDebugMode) {
-            print(
-              '✅ Estudiantes obtenidos directamente: ${estudiantes.length}',
-            );
-          }
-          return estudiantes;
+          return List<Map<String, dynamic>>.from(response.data['data']);
+        }
+        if (response.data is List) {
+          return List<Map<String, dynamic>>.from(response.data);
         }
       }
       throw Exception(response.message ?? 'Error al obtener estudiantes');
-    } catch (e) {
+    } catch (error) {
       if (kDebugMode) {
-        print('❌ Error al obtener todos los estudiantes: $e');
+        print('❌ Error al obtener estudiantes: $error');
       }
-      throw Exception('Error al obtener estudiantes');
+      rethrow;
     }
   }
 
-  // Obtener estudiantes asignados a un apoderado
   Future<List<Map<String, dynamic>>> getMisEstudiantes() async {
     try {
-      // Agregar timestamp para evitar cache
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final response = await ApiService.get(
         '/estudiantes/mis-estudiantes?t=$timestamp',
       );
 
-      if (kDebugMode) {
-        print('🔍 Response status code: ${response.statusCode}');
-        print('🔍 Response data: ${response.data}');
-        print('🔍 Response data type: ${response.data.runtimeType}');
-      }
-
       if (response.statusCode == 200 && response.data != null) {
         if (response.data is Map<String, dynamic> &&
             response.data['success'] == true) {
-          final estudiantes = List<Map<String, dynamic>>.from(
-            response.data['data'],
-          );
-          if (kDebugMode) {
-            print(
-              '✅ Estudiantes parsed from success response: ${estudiantes.length}',
-            );
-            print('📊 Estudiantes data: $estudiantes');
-          }
-          return estudiantes;
-        } else if (response.data is List) {
-          final estudiantes = List<Map<String, dynamic>>.from(response.data);
-          if (kDebugMode) {
-            print(
-              '✅ Estudiantes parsed from direct list: ${estudiantes.length}',
-            );
-            print('📊 Estudiantes data: $estudiantes');
-          }
-          return estudiantes;
+          return List<Map<String, dynamic>>.from(response.data['data']);
+        }
+        if (response.data is List) {
+          return List<Map<String, dynamic>>.from(response.data);
         }
       }
       throw Exception(response.message ?? 'Error al obtener estudiantes');
-    } catch (e) {
+    } catch (error) {
       if (kDebugMode) {
-        print('❌ Error al obtener mis estudiantes: $e');
+        print('❌ Error al obtener mis estudiantes: $error');
       }
       throw Exception('Error al obtener estudiantes asignados');
     }
   }
 
-  // Importar estudiantes desde Excel (datos procesados)
   Future<Map<String, dynamic>> importStudentsFromExcel(
     List<Map<String, dynamic>> excelData,
   ) async {
@@ -138,52 +122,10 @@ class EstudianteService extends ChangeNotifier {
         throw Exception('No hay datos para importar');
       }
 
-      // Preparar datos para enviar al backend
-      List<Map<String, dynamic>> estudiantesParaImportar = [];
-
-      for (var row in excelData) {
-        if (_validateStudentData(row)) {
-          // Extraer datos del estudiante (dos campos separados: nombreCompleto y run)
-          String nombreCompleto = _cleanString(
-            row['nombreCompleto'] ?? row['Nombre Completo'] ?? '',
-          );
-          String run = _cleanString(row['run'] ?? row['RUN'] ?? '');
-          String curso = _cleanString(row['curso'] ?? row['Curso'] ?? '');
-          String nombreMadre = _cleanString(
-            row['nombreMadre'] ?? row['Nombre Madre'] ?? '',
-          );
-          String telefonoMadre = _cleanString(
-            row['telefonoMadre'] ?? row['Telefono Madre'] ?? '',
-          );
-          String nombrePadre = _cleanString(
-            row['nombrePadre'] ?? row['Nombre Padre'] ?? '',
-          );
-          String telefonoPadre = _cleanString(
-            row['telefonoPadre'] ?? row['Telefono Padre'] ?? '',
-          );
-          String validez = _cleanString(row['validez'] ?? row['Validez'] ?? '');
-          String responsable = _cleanString(
-            row['responsable'] ?? row['Responsable'] ?? '',
-          );
-          String runResponsable = _cleanString(
-            row['runResponsable'] ?? row['RUN Responsable'] ?? '',
-          );
-
-          // Preparar datos del estudiante para el backend (campos separados)
-          Map<String, dynamic> estudianteData = {
-            'nombreCompleto': nombreCompleto,
-            'run': run,
-            'curso': curso,
-            'nombreMadre': nombreMadre.isNotEmpty ? nombreMadre : null,
-            'telefonoMadre': telefonoMadre.isNotEmpty ? telefonoMadre : null,
-            'nombrePadre': nombrePadre.isNotEmpty ? nombrePadre : null,
-            'telefonoPadre': telefonoPadre.isNotEmpty ? telefonoPadre : null,
-            'validez': validez,
-            'responsable': responsable,
-            'runResponsable': runResponsable,
-          };
-
-          estudiantesParaImportar.add(estudianteData);
+      final List<Map<String, dynamic>> estudiantesParaImportar = [];
+      for (final fila in excelData) {
+        if (_validateStudentData(fila)) {
+          estudiantesParaImportar.add(Map<String, dynamic>.from(fila));
         }
       }
 
@@ -191,392 +133,340 @@ class EstudianteService extends ChangeNotifier {
         throw Exception('No se encontraron estudiantes válidos para importar');
       }
 
-      print(
-        '� Enviando ${estudiantesParaImportar.length} estudiantes al backend...',
-      );
-
-      // Enviar al backend usando la API de importación masiva
       final response = await ApiService.importEstudiantesFromExcel(
         estudiantesParaImportar,
       );
 
       if (response.statusCode == 201 && response.data != null) {
-        final results = response.data['data'];
+        final results = Map<String, dynamic>.from(response.data['data'] ?? {});
+        await refreshStudentsFromAPI();
 
-        // Actualizar la lista local con los estudiantes creados
-        if (results['estudiantesCreados'] != null) {
-          for (var estudiante in results['estudiantesCreados']) {
-            _estudiantes.add(_adaptEstudianteFromBackend(estudiante));
-          }
-        }
-
-        notifyListeners();
-
-        print('✅ Importación completada:');
-        print(
-          '   - Estudiantes creados: ${results['estudiantesCreados']?.length ?? 0}',
+        final creados =
+            (results['estudiantesCreados'] as List<dynamic>? ?? []).length;
+        final actualizados =
+            (results['estudiantesActualizados'] as List<dynamic>? ?? []).length;
+        final errores = List<Map<String, dynamic>>.from(
+          results['errores'] as List<dynamic>? ?? [],
         );
-        print(
-          '   - Apoderados creados: ${results['apoderadosCreados']?.length ?? 0}',
+        final advertencias = List<Map<String, dynamic>>.from(
+          results['advertencias'] as List<dynamic>? ?? [],
         );
-        print('   - Errores: ${results['errores']?.length ?? 0}');
+        final apoderadosGenerados = results['apoderadosCreados'] is num
+            ? (results['apoderadosCreados'] as num).toInt()
+            : 0;
+        final correosApoderado = results['correosApoderadoGenerados'] is num
+            ? (results['correosApoderadoGenerados'] as num).toInt()
+            : apoderadosGenerados;
 
         return {
           'success': true,
-          'estudiantesCreados': results['estudiantesCreados']?.length ?? 0,
-          'apoderadosCreados': results['apoderadosCreados']?.length ?? 0,
-          'errores': results['errores'] ?? [],
+          'estudiantesCreados': creados,
+          'estudiantesActualizados': actualizados,
+          'apoderadosCreados': apoderadosGenerados,
+          'correosApoderadoGenerados': correosApoderado,
+          'errores': errores,
+          'advertencias': advertencias,
           'message':
-              'Importación completada exitosamente. ${results['estudiantesCreados']?.length ?? 0} estudiantes y ${results['apoderadosCreados']?.length ?? 0} apoderados creados en la base de datos.',
+              'Importación completada. Nuevos: $creados, actualizados: $actualizados, correos de apoderado generados: $correosApoderado, cuentas de apoderado nuevas: $apoderadosGenerados.',
         };
-      } else {
-        throw Exception('Error del servidor: ${response.message}');
       }
-    } catch (e) {
-      print('❌ Error importando estudiantes: $e');
+
+      throw Exception(response.message ?? 'Error del servidor');
+    } catch (error) {
+      if (kDebugMode) {
+        print('❌ Error importando estudiantes: $error');
+      }
       return {
         'success': false,
-        'error': e.toString(),
-        'message': 'Error durante la importación: $e',
+        'message': 'Error durante la importación: $error',
+        'error': error.toString(),
       };
     }
   }
 
-  // Adaptar estudiante del backend al formato del frontend
   Map<String, dynamic> _adaptEstudianteFromBackend(
     Map<String, dynamic> backendEstudiante,
   ) {
-    return {
-      'id': 'EST${_estudiantes.length + 1}',
-      'rut': backendEstudiante['rut'] ?? '',
-      'nombre': backendEstudiante['nombre'] ?? '',
-      'curso': backendEstudiante['curso'] ?? '',
-      'telefono': backendEstudiante['telefono'] ?? '',
-      'direccion': backendEstudiante['direccion'] ?? '',
-      'contactoEmergencia': backendEstudiante['contactoEmergencia'] ?? '',
-      'telefonoEmergencia': backendEstudiante['telefonoEmergencia'] ?? '',
-      'rutResponsable': backendEstudiante['rutResponsable'] ?? '',
-      'responsable': backendEstudiante['nombreResponsable'] ?? '',
-      'nombreMadre': _extractFromObservaciones(
-        backendEstudiante['observaciones'],
-        'Madre',
-      ),
-      'nombrePadre': _extractFromObservaciones(
-        backendEstudiante['observaciones'],
-        'Padre',
-      ),
-      'validez':
-          backendEstudiante['estado'] == 'activo' ? 'Activo' : 'Inactivo',
-      'estado': 'Registrado',
-      'fechaRegistro': DateTime.now(),
-    };
-  }
+    final pagos =
+        backendEstudiante['pagos'] is Map
+            ? Map<String, dynamic>.from(backendEstudiante['pagos'])
+            : <String, dynamic>{};
+    final equipamiento =
+        backendEstudiante['equipamiento'] is Map
+            ? Map<String, dynamic>.from(backendEstudiante['equipamiento'])
+            : <String, dynamic>{};
 
-  // Extraer información de las observaciones
-  String _extractFromObservaciones(String? observaciones, String tipo) {
-    if (observaciones == null) return '';
-
-    final regex = RegExp('$tipo: ([^,]+)', caseSensitive: false);
-    final match = regex.firstMatch(observaciones);
-
-    if (match != null) {
-      String value = match.group(1)?.trim() ?? '';
-      return value != 'No especificada' && value != 'No especificado'
-          ? value
-          : '';
+    DateTime? fechaNacimiento;
+    final fechaRaw = backendEstudiante['fechaNacimiento'];
+    if (fechaRaw is String && fechaRaw.isNotEmpty) {
+      fechaNacimiento = DateTime.tryParse(fechaRaw);
+    } else if (fechaRaw is DateTime) {
+      fechaNacimiento = fechaRaw;
     }
 
-    return '';
+    DateTime? fechaRegistro;
+    final createdRaw = backendEstudiante['createdAt'];
+    if (createdRaw is String && createdRaw.isNotEmpty) {
+      fechaRegistro = DateTime.tryParse(createdRaw);
+    } else if (createdRaw is DateTime) {
+      fechaRegistro = createdRaw;
+    }
+
+    DateTime? fechaActualizacion;
+    final updatedRaw = backendEstudiante['updatedAt'];
+    if (updatedRaw is String && updatedRaw.isNotEmpty) {
+      fechaActualizacion = DateTime.tryParse(updatedRaw);
+    } else if (updatedRaw is DateTime) {
+      fechaActualizacion = updatedRaw;
+    }
+
+    return {
+      'id': backendEstudiante['rut'] ?? '',
+      'rut': backendEstudiante['rut'] ?? '',
+      'nombre': backendEstudiante['nombre'] ?? '',
+      'fechaNacimiento': fechaNacimiento,
+      'categoria': backendEstudiante['categoria'] ?? '',
+      'ficha': backendEstudiante['ficha'],
+      'curso': backendEstudiante['curso'] ?? '',
+      'correoApoderadoGenerado':
+          backendEstudiante['correoApoderadoGenerado'] ?? '',
+      'telefono': backendEstudiante['telefono'] ?? '',
+      'contactoEmergencia': backendEstudiante['contactoEmergencia'] ?? '',
+      'telefonoEmergencia': backendEstudiante['telefonoEmergencia'] ?? '',
+      'nombreResponsable': backendEstudiante['nombreResponsable'] ?? '',
+      'nombreMadre': backendEstudiante['nombreMadre'] ?? '',
+      'telefonoMadre': backendEstudiante['telefonoMadre'] ?? '',
+      'emailMadre': backendEstudiante['emailMadre'] ?? '',
+      'nombrePadre': backendEstudiante['nombrePadre'] ?? '',
+      'telefonoPadre': backendEstudiante['telefonoPadre'] ?? '',
+      'emailPadre': backendEstudiante['emailPadre'] ?? '',
+      'telefonoResponsable': backendEstudiante['telefono'] ?? '',
+      'hermanos': List<String>.from(
+        backendEstudiante['hermanos'] as List<dynamic>? ?? const [],
+      ),
+      'enfermedad': backendEstudiante['enfermedad'] ?? '',
+      'talla': backendEstudiante['talla'] ?? '',
+      'dorsalNombre': backendEstudiante['dorsalNombre'] ?? '',
+      'alumnoNuevo': backendEstudiante['alumnoNuevo'] ?? '',
+      'asistencia': backendEstudiante['asistencia'] ?? '',
+      'pagos': pagos,
+      'equipamiento': equipamiento,
+      'estado': backendEstudiante['estado'] ?? '',
+      'observaciones': backendEstudiante['observaciones'] ?? '',
+      'fechaRegistro': fechaRegistro ?? DateTime.now(),
+      'fechaActualizacion': fechaActualizacion,
+    };
   }
 
-  // Limpiar cadenas de texto
-  String _cleanString(dynamic value) {
-    if (value == null) return '';
-    return value.toString().trim();
-  }
-
-  // Validar datos de un estudiante (campos separados: nombreCompleto y run)
   bool _validateStudentData(Map<String, dynamic> data) {
-    // Verificar campos obligatorios (dos campos separados)
-    List<String> requiredFields = [
-      'nombreCompleto',
-      'run',
+    const requiredKeys = [
+      'nombre',
+      'fechanacimiento',
+      'rut',
+      'categoria',
       'curso',
-      'validez',
-      'responsable',
-      'runResponsable',
     ];
 
-    // También verificar variantes de nombres de columnas
-    Map<String, List<String>> fieldVariants = {
-      'nombreCompleto': ['nombreCompleto', 'Nombre Completo', 'nombrecompeto'],
-      'run': ['run', 'RUN', 'rut'],
-      'curso': ['curso', 'Curso'],
-      'validez': ['validez', 'Validez'],
-      'responsable': ['responsable', 'Responsable'],
-      'runResponsable': ['runResponsable', 'RUN Responsable', 'rutResponsable'],
-    };
+    for (final key in requiredKeys) {
+      final candidateKeys = <String>{key, _toTitleCase(key)};
 
-    for (String field in requiredFields) {
-      bool fieldFound = false;
-      List<String> variants = fieldVariants[field] ?? [field];
+      if (key == 'fechanacimiento') {
+        candidateKeys.addAll({'fechaNacimiento', 'FechaNacimiento'});
+      }
 
-      for (String variant in variants) {
-        if (data[variant] != null &&
-            data[variant].toString().trim().isNotEmpty) {
-          fieldFound = true;
+      dynamic value;
+      for (final candidate in candidateKeys) {
+        if (!data.containsKey(candidate)) {
+          continue;
+        }
+
+        final candidateValue = data[candidate];
+        if (candidateValue != null &&
+            candidateValue.toString().trim().isNotEmpty) {
+          value = candidateValue;
           break;
         }
       }
 
-      if (!fieldFound) {
+      if (value == null || value.toString().trim().isEmpty) {
         if (kDebugMode) {
-          print('❌ Campo obligatorio faltante: $field (variantes: $variants)');
+          print('❌ Campo obligatorio faltante: $key');
         }
         return false;
       }
     }
-
-    // Validar formato de RUN del responsable (básico)
-    String? runResponsable;
-    for (String variant in fieldVariants['runResponsable']!) {
-      if (data[variant] != null && data[variant].toString().trim().isNotEmpty) {
-        runResponsable = data[variant].toString();
-        break;
-      }
-    }
-
-    if (runResponsable != null &&
-        (!runResponsable.contains('-') || runResponsable.length < 9)) {
-      if (kDebugMode) {
-        print('❌ Formato de RUN inválido: $runResponsable');
-      }
-      return false;
-    }
-
-    // Validar validez
-    String? validez;
-    for (String variant in fieldVariants['validez']!) {
-      if (data[variant] != null && data[variant].toString().trim().isNotEmpty) {
-        validez = data[variant].toString().toLowerCase();
-        break;
-      }
-    }
-
-    if (validez != null) {
-      List<String> validValidez = [
-        'activo',
-        'inactivo',
-        'vigente',
-        'no vigente',
-        'válido',
-        'vencido',
-        'valido',
-      ];
-      if (!validValidez.contains(validez)) {
-        if (kDebugMode) {
-          print('❌ Validez inválida: $validez');
-        }
-        return false;
-      }
-    }
-
     return true;
   }
 
-  // Agregar estudiante individual (mantiene compatibilidad con formato anterior)
+  String _toTitleCase(String value) {
+    if (value.isEmpty) return value;
+    return value.substring(0, 1).toUpperCase() + value.substring(1);
+  }
+
   String addStudent({
     required String rut,
     required String nombre,
-    String? padre,
-    String? madre,
     required String curso,
-    required String validez,
-    required String responsable,
-    required String rutResponsable,
-    String? telefonoMadre,
-    String? telefonoPadre,
+    String? categoria,
+    bool ficha = false,
   }) {
-    try {
-      // Verificar si el RUT ya existe
-      bool exists = _estudiantes.any(
-        (e) => e['rut']?.toString().toLowerCase() == rut.toLowerCase(),
-      );
-
-      if (exists) {
-        throw Exception('El RUT ya está registrado en el sistema');
-      }
-
-      String newId =
-          'EST${(_estudiantes.length + 1).toString().padLeft(4, '0')}';
-      DateTime now = DateTime.now();
-
-      Map<String, dynamic> newStudent = {
-        'id': newId,
-        'rut': rut,
-        'nombre': nombre,
-        'padre': padre ?? '',
-        'madre': madre ?? '',
-        'nombrePadre': padre ?? '', // Nuevo campo
-        'nombreMadre': madre ?? '', // Nuevo campo
-        'telefonoPadre': telefonoPadre ?? '', // Nuevo campo
-        'telefonoMadre': telefonoMadre ?? '', // Nuevo campo
-        'curso': curso,
-        'validez': validez,
-        'responsable': responsable,
-        'rutResponsable': rutResponsable,
-        'fechaRegistro': now,
-        'estado': 'Registrado',
-      };
-
-      _estudiantes.add(newStudent);
-      notifyListeners();
-
-      print('📝 Estudiante registrado individualmente: $nombre ($rut)');
-      return newId;
-    } catch (e) {
-      print('Error al registrar estudiante: $e');
-      rethrow;
+    final exists = _estudiantes.any(
+      (e) => e['rut']?.toString().toLowerCase() == rut.toLowerCase(),
+    );
+    if (exists) {
+      throw Exception('El RUT ya está registrado en el sistema');
     }
+
+    final newStudent = {
+      'id': rut,
+      'rut': rut,
+      'nombre': nombre,
+      'curso': curso,
+      'categoria': categoria ?? '',
+      'ficha': ficha,
+      'fechaRegistro': DateTime.now(),
+      'estado': 'registrado',
+      'pagos': <String, dynamic>{},
+      'equipamiento': <String, dynamic>{},
+    };
+
+    _estudiantes.add(newStudent);
+    notifyListeners();
+    return rut;
   }
 
-  // Buscar estudiantes
   List<Map<String, dynamic>> searchStudents({
     String? query,
     String? curso,
-    String? validez,
+    String? ficha,
   }) {
-    List<Map<String, dynamic>> filtered = List.from(_estudiantes);
+    var filtered = List<Map<String, dynamic>>.from(_estudiantes);
 
     if (query != null && query.isNotEmpty) {
+      final lowerQuery = query.toLowerCase();
       filtered =
           filtered.where((student) {
-            return student['nombre']?.toLowerCase().contains(
-                      query.toLowerCase(),
-                    ) ==
-                    true ||
-                student['rut']?.toLowerCase().contains(query.toLowerCase()) ==
-                    true ||
-                student['padre']?.toLowerCase().contains(query.toLowerCase()) ==
-                    true ||
-                student['madre']?.toLowerCase().contains(query.toLowerCase()) ==
-                    true;
+            final nombre = student['nombre']?.toString().toLowerCase() ?? '';
+            final rut = student['rut']?.toString().toLowerCase() ?? '';
+            final categoria =
+                student['categoria']?.toString().toLowerCase() ?? '';
+            final cursoVal = student['curso']?.toString().toLowerCase() ?? '';
+            final madre =
+                student['nombreMadre']?.toString().toLowerCase() ?? '';
+            final padre =
+                student['nombrePadre']?.toString().toLowerCase() ?? '';
+            final responsable =
+                student['nombreResponsable']?.toString().toLowerCase() ?? '';
+            final correoApoderado =
+                student['correoApoderadoGenerado']?.toString().toLowerCase() ??
+                '';
+            return nombre.contains(lowerQuery) ||
+                rut.contains(lowerQuery) ||
+                categoria.contains(lowerQuery) ||
+                cursoVal.contains(lowerQuery) ||
+                madre.contains(lowerQuery) ||
+                padre.contains(lowerQuery) ||
+                responsable.contains(lowerQuery) ||
+                correoApoderado.contains(lowerQuery);
           }).toList();
     }
 
     if (curso != null && curso != 'Todos') {
       filtered =
-          filtered.where((student) => student['curso'] == curso).toList();
+          filtered
+              .where(
+                (student) =>
+                    student['curso']?.toString().toLowerCase() ==
+                    curso.toLowerCase(),
+              )
+              .toList();
     }
 
-    if (validez != null && validez != 'Todos') {
+    if (ficha != null && ficha != 'Todos') {
       filtered =
-          filtered.where((student) => student['validez'] == validez).toList();
+          filtered.where((student) {
+            final hasFicha =
+                student['ficha'] == true ||
+                (student['ficha'] is String &&
+                    (student['ficha'] as String).toLowerCase() == 'si');
+            if (ficha == 'Con ficha') return hasFicha;
+            if (ficha == 'Sin ficha') return !hasFicha;
+            return true;
+          }).toList();
     }
 
-    // Ordenar por fecha de registro (más recientes primero)
-    filtered.sort(
-      (a, b) => (b['fechaRegistro'] as DateTime).compareTo(
-        a['fechaRegistro'] as DateTime,
-      ),
-    );
+    filtered.sort((a, b) {
+      final fechaA = a['fechaRegistro'] as DateTime? ?? DateTime(2000, 1, 1);
+      final fechaB = b['fechaRegistro'] as DateTime? ?? DateTime(2000, 1, 1);
+      return fechaB.compareTo(fechaA);
+    });
 
     return filtered;
   }
 
-  // Obtener estudiante por ID
   Map<String, dynamic>? getStudentById(String id) {
     try {
       return _estudiantes.firstWhere((e) => e['id'] == id);
-    } catch (e) {
+    } catch (_) {
       return null;
     }
   }
 
-  // Obtener estudiante por RUT
   Map<String, dynamic>? getStudentByRut(String rut) {
     try {
       return _estudiantes.firstWhere(
         (e) => e['rut']?.toString().toLowerCase() == rut.toLowerCase(),
       );
-    } catch (e) {
+    } catch (_) {
       return null;
     }
   }
 
-  // Actualizar estudiante
   bool updateStudent(String id, Map<String, dynamic> updatedData) {
-    try {
-      int index = _estudiantes.indexWhere((e) => e['id'] == id);
-      if (index != -1) {
-        // Preservar campos del sistema
-        updatedData['id'] = _estudiantes[index]['id'];
-        updatedData['fechaRegistro'] = _estudiantes[index]['fechaRegistro'];
-        updatedData['fechaActualizacion'] = DateTime.now();
+    final index = _estudiantes.indexWhere((e) => e['id'] == id);
+    if (index == -1) return false;
 
-        _estudiantes[index] = updatedData;
-        notifyListeners();
+    updatedData['id'] = _estudiantes[index]['id'];
+    updatedData['fechaRegistro'] =
+        _estudiantes[index]['fechaRegistro'] ?? DateTime.now();
+    updatedData['fechaActualizacion'] = DateTime.now();
 
-        print(
-          '✏️ Estudiante actualizado: ${updatedData['nombre']} (${updatedData['rut']})',
-        );
-        return true;
-      }
-      return false;
-    } catch (e) {
-      print('Error al actualizar estudiante: $e');
-      return false;
-    }
+    _estudiantes[index] = updatedData;
+    notifyListeners();
+    return true;
   }
 
-  // Eliminar estudiante
   bool deleteStudent(String id) {
-    try {
-      int index = _estudiantes.indexWhere((e) => e['id'] == id);
-      if (index != -1) {
-        Map<String, dynamic> deleted = _estudiantes.removeAt(index);
-        notifyListeners();
-
-        print(
-          '🗑️ Estudiante eliminado: ${deleted['nombre']} (${deleted['rut']})',
-        );
-        return true;
-      }
-      return false;
-    } catch (e) {
-      print('Error al eliminar estudiante: $e');
-      return false;
-    }
+    final index = _estudiantes.indexWhere((e) => e['id'] == id);
+    if (index == -1) return false;
+    _estudiantes.removeAt(index);
+    notifyListeners();
+    return true;
   }
 
-  // Obtener cursos únicos
   List<String> getUniqueCourses() {
-    Set<String> courses =
-        _estudiantes.map((e) => e['curso'] as String? ?? 'Sin curso').toSet();
-    return ['Todos', ...courses.toList()..sort()];
-  }
-
-  // Obtener estados de validez únicos
-  List<String> getUniqueValidezStates() {
-    Set<String> states =
+    final courses =
         _estudiantes
-            .map((e) => e['validez'] as String? ?? 'Sin estado')
-            .toSet();
-    return ['Todos', ...states.toList()..sort()];
+            .map((e) => e['curso'] as String? ?? 'Sin curso')
+            .toSet()
+            .toList()
+          ..sort();
+    return ['Todos', ...courses];
   }
 
-  // Exportar datos (simulado)
+  List<String> getUniqueFichaStates() {
+    return const ['Todos', 'Con ficha', 'Sin ficha'];
+  }
+
   List<Map<String, dynamic>> exportStudentsData({
     String? curso,
-    String? validez,
+    String? ficha,
   }) {
-    return searchStudents(curso: curso, validez: validez);
+    return searchStudents(curso: curso, ficha: ficha);
   }
 
-  // Limpiar todos los datos (para testing)
   void clearAllData() {
     _estudiantes.clear();
     notifyListeners();
-    print('🧹 Todos los datos de estudiantes han sido limpiados');
   }
 }

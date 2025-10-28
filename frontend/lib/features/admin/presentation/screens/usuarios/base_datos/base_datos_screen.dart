@@ -14,7 +14,6 @@ class _BaseDatosScreenState extends State<BaseDatosScreen> {
   final TextEditingController _searchController = TextEditingController();
 
   String _selectedCurso = 'Todos';
-  String _selectedValidez = 'Todos';
   List<Map<String, dynamic>> _filteredEstudiantes = [];
   bool _isLoading = false;
 
@@ -28,13 +27,6 @@ class _BaseDatosScreenState extends State<BaseDatosScreen> {
     'Sub-14',
     'Sub-16',
     'Sub-18',
-  ];
-  final List<String> _validezOptions = [
-    'Todos',
-    'Válido',
-    'Vencido',
-    'Activo',
-    'Inactivo',
   ];
 
   @override
@@ -62,36 +54,25 @@ class _BaseDatosScreenState extends State<BaseDatosScreen> {
       _isLoading = true;
     });
 
-    List<Map<String, dynamic>> estudiantes =
-        _estudianteService.getAllStudents();
+    final query = _searchController.text.trim();
+    List<Map<String, dynamic>> estudiantes;
 
-    // Aplicar filtros
-    if (_selectedCurso != 'Todos') {
-      estudiantes =
-          estudiantes
-              .where(
-                (e) =>
-                    e['curso']?.toString().toLowerCase() ==
-                    _selectedCurso.toLowerCase(),
-              )
-              .toList();
-    }
-
-    if (_selectedValidez != 'Todos') {
-      estudiantes =
-          estudiantes
-              .where(
-                (e) =>
-                    e['validez']?.toString().toLowerCase() ==
-                    _selectedValidez.toLowerCase(),
-              )
-              .toList();
-    }
-
-    // Aplicar búsqueda
-    String query = _searchController.text.trim();
     if (query.isNotEmpty) {
       estudiantes = _estudianteService.searchStudents(query: query);
+    } else {
+      estudiantes = _estudianteService.getAllStudents();
+    }
+
+    if (_selectedCurso != 'Todos') {
+      final normalizedCurso = _selectedCurso.toLowerCase();
+      estudiantes =
+          estudiantes
+              .where(
+                (estudiante) =>
+                    estudiante['curso']?.toString().toLowerCase() ==
+                    normalizedCurso,
+              )
+              .toList();
     }
 
     setState(() {
@@ -287,7 +268,7 @@ class _BaseDatosScreenState extends State<BaseDatosScreen> {
 
           LayoutBuilder(
             builder: (context, constraints) {
-              bool isDesktop = constraints.maxWidth > 800;
+              final isDesktop = constraints.maxWidth > 800;
 
               if (isDesktop) {
                 return Row(
@@ -296,28 +277,20 @@ class _BaseDatosScreenState extends State<BaseDatosScreen> {
                     const SizedBox(width: 16),
                     Expanded(child: _buildCursoDropdown()),
                     const SizedBox(width: 16),
-                    Expanded(child: _buildValidezDropdown()),
-                    const SizedBox(width: 16),
-                    _buildRefreshButton(),
-                  ],
-                );
-              } else {
-                return Column(
-                  children: [
-                    _buildSearchField(),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(child: _buildCursoDropdown()),
-                        const SizedBox(width: 16),
-                        Expanded(child: _buildValidezDropdown()),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
                     _buildRefreshButton(),
                   ],
                 );
               }
+
+              return Column(
+                children: [
+                  _buildSearchField(),
+                  const SizedBox(height: 16),
+                  Row(children: [Expanded(child: _buildCursoDropdown())]),
+                  const SizedBox(height: 16),
+                  _buildRefreshButton(),
+                ],
+              );
             },
           ),
         ],
@@ -328,7 +301,7 @@ class _BaseDatosScreenState extends State<BaseDatosScreen> {
   Widget _buildSearchField() {
     return TextField(
       controller: _searchController,
-      onChanged: (value) => _loadEstudiantes(),
+      onChanged: (_) => _loadEstudiantes(),
       decoration: InputDecoration(
         labelText: 'Buscar estudiantes...',
         hintText: 'Nombre, RUT, padre, madre, responsable',
@@ -346,8 +319,9 @@ class _BaseDatosScreenState extends State<BaseDatosScreen> {
     return DropdownButtonFormField<String>(
       value: _selectedCurso,
       onChanged: (value) {
+        if (value == null) return;
         setState(() {
-          _selectedCurso = value!;
+          _selectedCurso = value;
         });
         _loadEstudiantes();
       },
@@ -362,30 +336,6 @@ class _BaseDatosScreenState extends State<BaseDatosScreen> {
       items:
           _cursos.map((curso) {
             return DropdownMenuItem(value: curso, child: Text(curso));
-          }).toList(),
-    );
-  }
-
-  Widget _buildValidezDropdown() {
-    return DropdownButtonFormField<String>(
-      value: _selectedValidez,
-      onChanged: (value) {
-        setState(() {
-          _selectedValidez = value!;
-        });
-        _loadEstudiantes();
-      },
-      decoration: InputDecoration(
-        labelText: 'Filtrar por Validez',
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 16,
-        ),
-      ),
-      items:
-          _validezOptions.map((validez) {
-            return DropdownMenuItem(value: validez, child: Text(validez));
           }).toList(),
     );
   }
@@ -506,7 +456,13 @@ class _BaseDatosScreenState extends State<BaseDatosScreen> {
                 ),
                 DataColumn(
                   label: Text(
-                    'VALIDEZ',
+                    'RESPONSABLE',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                ),
+                DataColumn(
+                  label: Text(
+                    'CORREO APODERADO',
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                   ),
                 ),
@@ -547,8 +503,12 @@ class _BaseDatosScreenState extends State<BaseDatosScreen> {
                           ),
                         ),
                         DataCell(_buildCursoChip(estudiante['curso'] ?? '')),
+                        DataCell(_buildResponsableCell(estudiante)),
                         DataCell(
-                          _buildValidezChip(estudiante['validez'] ?? ''),
+                          Text(
+                            _formatValue(estudiante['correoApoderadoGenerado']),
+                            style: const TextStyle(fontSize: 12),
+                          ),
                         ),
                         DataCell(
                           Container(
@@ -605,36 +565,96 @@ class _BaseDatosScreenState extends State<BaseDatosScreen> {
     );
   }
 
-  Widget _buildValidezChip(String validez) {
-    Color color;
-    switch (validez.toLowerCase()) {
-      case 'válido':
-      case 'activo':
-        color = WessexColors.leafGreen;
-        break;
-      case 'vencido':
-      case 'inactivo':
-        color = WessexColors.crimsonAlert;
-        break;
-      default:
-        color = WessexColors.mistyRoseGray;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Text(
-        validez.toUpperCase(),
-        style: TextStyle(
-          color: color,
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
+  Widget _buildResponsableCell(Map<String, dynamic> estudiante) {
+    final responsable = _formatValue(
+      estudiante['nombreResponsable'] ?? estudiante['responsable'],
     );
+    final telefonoResponsable = _formatValue(
+      estudiante['telefonoResponsable'] ??
+          estudiante['telefono'] ??
+          estudiante['telefonoEmergencia'],
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          responsable,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: WessexColors.darkGrape,
+          ),
+        ),
+        if (telefonoResponsable != 'Sin información')
+          Text(
+            'Tel: $telefonoResponsable',
+            style: TextStyle(
+              fontSize: 11,
+              color: WessexColors.darkGrape.withOpacity(0.7),
+            ),
+          ),
+      ],
+    );
+  }
+
+  String _formatValue(dynamic value) {
+    if (value == null) return 'Sin información';
+    final stringValue = value.toString().trim();
+    if (stringValue.isEmpty) return 'Sin información';
+    final normalized = stringValue.toLowerCase();
+    if (normalized == 'n/a' || normalized == 'null') {
+      return 'Sin información';
+    }
+    return stringValue;
+  }
+
+  String _formatFicha(dynamic value) {
+    if (value == null) return 'Sin información';
+    if (value is bool) {
+      return value ? 'Sí' : 'No';
+    }
+    final normalized = value.toString().trim().toLowerCase();
+    if (normalized.isEmpty || normalized == 'n/a') {
+      return 'Sin información';
+    }
+    if (['si', 'sí', 'true', '1'].contains(normalized)) {
+      return 'Sí';
+    }
+    if (['no', 'false', '0'].contains(normalized)) {
+      return 'No';
+    }
+    return value.toString();
+  }
+
+  String _formatEstado(dynamic value) {
+    final estado = _formatValue(value);
+    if (estado == 'Sin información') {
+      return estado;
+    }
+    return estado[0].toUpperCase() + estado.substring(1).toLowerCase();
+  }
+
+  String _formatContactBlock(dynamic nombre, dynamic telefono, dynamic correo) {
+    final parts = <String>[];
+    final nombreFmt = _formatValue(nombre);
+    if (nombreFmt != 'Sin información') {
+      parts.add(nombreFmt);
+    }
+    final telefonoFmt = _formatValue(telefono);
+    if (telefonoFmt != 'Sin información') {
+      parts.add('Tel: $telefonoFmt');
+    }
+    final correoFmt = _formatValue(correo);
+    if (correoFmt != 'Sin información') {
+      parts.add('Mail: $correoFmt');
+    }
+    if (parts.isEmpty) {
+      return 'Sin información';
+    }
+    return parts.join('\n');
   }
 
   Widget _buildActionButtons(Map<String, dynamic> estudiante) {
@@ -660,11 +680,23 @@ class _BaseDatosScreenState extends State<BaseDatosScreen> {
   }
 
   String _formatDate(dynamic date) {
-    if (date == null) return 'N/A';
+    if (date == null) return 'Sin información';
+
     if (date is DateTime) {
       return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
     }
-    return date.toString();
+
+    final raw = date.toString().trim();
+    if (raw.isEmpty || raw.toLowerCase() == 'n/a') {
+      return 'Sin información';
+    }
+
+    final parsed = DateTime.tryParse(raw);
+    if (parsed != null) {
+      return '${parsed.day.toString().padLeft(2, '0')}/${parsed.month.toString().padLeft(2, '0')}/${parsed.year}';
+    }
+
+    return raw;
   }
 
   void _exportToExcel() {
@@ -700,141 +732,168 @@ class _BaseDatosScreenState extends State<BaseDatosScreen> {
   void _showStudentInfoDialog(Map<String, dynamic> estudiante) {
     showDialog(
       context: context,
-      builder:
-          (context) => Dialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Container(
-              width: MediaQuery.of(context).size.width * 0.5,
-              constraints: const BoxConstraints(maxWidth: 600),
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: WessexColors.deepRoyalBlue.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(
-                          Icons.person,
-                          color: WessexColors.deepRoyalBlue,
-                          size: 24,
-                        ),
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Container(
+          width: MediaQuery.of(context).size.width * 0.5,
+          constraints: const BoxConstraints(maxWidth: 600, maxHeight: 720),
+          padding: const EdgeInsets.all(24),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: WessexColors.deepRoyalBlue.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              estudiante['nombre'] ?? 'N/A',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: WessexColors.darkGrape,
-                              ),
+                      child: Icon(
+                        Icons.person,
+                        color: WessexColors.deepRoyalBlue,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            estudiante['nombre'] ?? 'N/A',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: WessexColors.darkGrape,
                             ),
-                            Text(
-                              'RUT: ${estudiante['rut'] ?? 'N/A'}',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: WessexColors.darkGrape.withOpacity(0.7),
-                              ),
+                          ),
+                          Text(
+                            'RUT: ${estudiante['rut'] ?? 'N/A'}',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: WessexColors.darkGrape.withOpacity(0.7),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                      IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.close),
-                        color: WessexColors.darkGrape.withOpacity(0.5),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close),
+                      color: WessexColors.darkGrape.withOpacity(0.5),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                _buildInfoSection(
+                  'Información Académica',
+                  Icons.school,
+                  WessexColors.deepRoyalBlue,
+                  [
+                    _buildInfoRow('Curso:', estudiante['curso']),
+                    _buildInfoRow('Categoría:', estudiante['categoria']),
+                    _buildInfoRow(
+                      'Ficha médica:',
+                      _formatFicha(estudiante['ficha']),
+                    ),
+                    _buildInfoRow(
+                      'Fecha nacimiento:',
+                      _formatDate(estudiante['fechaNacimiento']),
+                    ),
+                    _buildInfoRow(
+                      'Fecha registro:',
+                      _formatDate(estudiante['fechaRegistro']),
+                    ),
+                    _buildInfoRow(
+                      'Estado registro:',
+                      _formatEstado(estudiante['estado']),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                _buildInfoSection(
+                  'Información de Padres',
+                  Icons.family_restroom,
+                  WessexColors.leafGreen,
+                  [
+                    _buildInfoRow(
+                      'Madre:',
+                      _formatContactBlock(
+                        estudiante['nombreMadre'],
+                        estudiante['telefonoMadre'],
+                        estudiante['emailMadre'],
                       ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Información Académica
-                  _buildInfoSection(
-                    'Información Académica',
-                    Icons.school,
-                    WessexColors.deepRoyalBlue,
-                    [
-                      _buildInfoRow('Curso:', estudiante['curso']),
-                      _buildInfoRow('Estado:', estudiante['validez']),
-                      _buildInfoRow(
-                        'Fecha Registro:',
-                        _formatDate(estudiante['fechaRegistro']),
+                    ),
+                    _buildInfoRow(
+                      'Padre:',
+                      _formatContactBlock(
+                        estudiante['nombrePadre'],
+                        estudiante['telefonoPadre'],
+                        estudiante['emailPadre'],
                       ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Información de Padres
-                  _buildInfoSection(
-                    'Información de Padres',
-                    Icons.family_restroom,
-                    WessexColors.leafGreen,
-                    [
-                      _buildInfoRow('Padre:', estudiante['padre']),
-                      _buildInfoRow('Madre:', estudiante['madre']),
-                    ],
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Información del Representante
-                  _buildInfoSection(
-                    'Representante/Apoderado',
-                    Icons.contact_phone,
-                    WessexColors.maximumGrayMint,
-                    [
-                      _buildInfoRow('Nombre:', estudiante['responsable']),
-                      _buildInfoRow('RUT:', estudiante['rutResponsable']),
-                      _buildInfoRow(
-                        'Estado:',
-                        estudiante['estado'] ?? 'Registrado',
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                _buildInfoSection(
+                  'Representante/Apoderado',
+                  Icons.contact_phone,
+                  WessexColors.maximumGrayMint,
+                  [
+                    _buildInfoRow('Nombre:', estudiante['nombreResponsable'] ?? estudiante['responsable']),
+                    _buildInfoRow(
+                      'Correo institucional:',
+                      estudiante['correoApoderadoGenerado'],
+                    ),
+                    _buildInfoRow(
+                      'Teléfono:',
+                      estudiante['telefonoResponsable'] ??
+                          estudiante['telefono'] ??
+                          estudiante['telefonoEmergencia'],
+                    ),
+                    _buildInfoRow(
+                      'Contacto emergencia:',
+                      estudiante['contactoEmergencia'],
+                    ),
+                    _buildInfoRow(
+                      'Observaciones:',
+                      estudiante['observaciones'],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Cerrar'),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _showEditStudentDialog(estudiante);
+                      },
+                      icon: const Icon(Icons.edit),
+                      label: const Text('Editar'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: WessexColors.deepRoyalBlue,
+                        foregroundColor: Colors.white,
                       ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Botones de acción
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Cerrar'),
-                      ),
-                      const SizedBox(width: 12),
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          _showEditStudentDialog(estudiante);
-                        },
-                        icon: const Icon(Icons.edit),
-                        label: const Text('Editar'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: WessexColors.deepRoyalBlue,
-                          foregroundColor: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
+        ),
+      ),
     );
   }
 
@@ -876,6 +935,7 @@ class _BaseDatosScreenState extends State<BaseDatosScreen> {
   }
 
   Widget _buildInfoRow(String label, dynamic value) {
+    final displayValue = _formatValue(value);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -893,8 +953,11 @@ class _BaseDatosScreenState extends State<BaseDatosScreen> {
           ),
           Expanded(
             child: Text(
-              value?.toString() ?? 'N/A',
-              style: TextStyle(color: WessexColors.darkGrape.withOpacity(0.8)),
+              displayValue,
+              style: TextStyle(
+                color: WessexColors.darkGrape.withOpacity(0.8),
+              ),
+              softWrap: true,
             ),
           ),
         ],

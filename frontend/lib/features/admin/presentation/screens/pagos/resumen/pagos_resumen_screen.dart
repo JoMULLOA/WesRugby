@@ -1,0 +1,708 @@
+import 'package:flutter/material.dart';
+import 'package:wesrugby/core/config/colors.dart';
+import 'package:wesrugby/data/services/estudiante_service.dart';
+import 'package:wesrugby/shared/widgets/layout/wessex_widgets.dart';
+
+class PagosResumenScreen extends StatefulWidget {
+  const PagosResumenScreen({super.key});
+
+  @override
+  State<PagosResumenScreen> createState() => _PagosResumenScreenState();
+}
+
+class _PagosResumenScreenState extends State<PagosResumenScreen> {
+  final EstudianteService _estudianteService = EstudianteService();
+
+  final List<String> _meses = const [
+    'marzo',
+    'abril',
+    'mayo',
+    'junio',
+    'julio',
+    'agosto',
+    'septiembre',
+    'octubre',
+    'noviembre',
+    'diciembre',
+  ];
+
+  List<Map<String, dynamic>> _todosEstudiantes = [];
+  List<Map<String, dynamic>> _estudiantesFiltrados = [];
+  List<String> _cursosDisponibles = ['Todos'];
+  List<String> _categoriasDisponibles = ['Todas'];
+
+  String _cursoSeleccionado = 'Todos';
+  String _categoriaSeleccionada = 'Todas';
+  bool _soloPendientes = false;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _estudianteService.addListener(_recargarDesdeServicio);
+    _recargarDesdeServicio();
+  }
+
+  @override
+  void dispose() {
+    _estudianteService.removeListener(_recargarDesdeServicio);
+    super.dispose();
+  }
+
+  void _recargarDesdeServicio() {
+    final estudiantes = _estudianteService.getAllStudents();
+    final cursos =
+        <String>{}..addAll(
+          estudiantes
+              .map((e) => (e['curso']?.toString().trim() ?? ''))
+              .where((value) => value.isNotEmpty),
+        );
+    final categorias =
+        <String>{}..addAll(
+          estudiantes
+              .map(
+                (e) => (e['categoria']?.toString().trim().toUpperCase() ?? ''),
+              )
+              .where((value) => value.isNotEmpty),
+        );
+
+    setState(() {
+      _todosEstudiantes = estudiantes;
+      _cursosDisponibles = ['Todos', ...cursos.toList()..sort()];
+      _categoriasDisponibles = ['Todas', ...categorias.toList()..sort()];
+      _estudiantesFiltrados = _aplicarFiltros(estudiantes);
+      _isLoading = false;
+    });
+  }
+
+  List<Map<String, dynamic>> _aplicarFiltros(
+    List<Map<String, dynamic>> origen,
+  ) {
+    return origen.where((estudiante) {
+      if (_cursoSeleccionado != 'Todos') {
+        final curso = estudiante['curso']?.toString().toLowerCase() ?? '';
+        if (curso != _cursoSeleccionado.toLowerCase()) {
+          return false;
+        }
+      }
+
+      if (_categoriaSeleccionada != 'Todas') {
+        final categoria =
+            estudiante['categoria']?.toString().toLowerCase() ?? '';
+        if (categoria != _categoriaSeleccionada.toLowerCase()) {
+          return false;
+        }
+      }
+
+      if (_soloPendientes && !_tienePagosPendientes(estudiante)) {
+        return false;
+      }
+
+      return true;
+    }).toList();
+  }
+
+  bool _tienePagosPendientes(Map<String, dynamic> estudiante) {
+    final pagos = (estudiante['pagos'] as Map<String, dynamic>?) ?? const {};
+    if (_esPendiente(pagos['matricula'])) {
+      return true;
+    }
+    final meses = (pagos['meses'] as Map<String, dynamic>?) ?? const {};
+    for (final mes in _meses) {
+      if (_esPendiente(_obtenerValorMes(meses, mes))) {
+        return true;
+      }
+    }
+    if (_esPendiente(pagos['totalAnio'])) {
+      return true;
+    }
+    return false;
+  }
+
+  bool _esPendiente(dynamic valor) {
+    final texto = valor?.toString().trim().toLowerCase() ?? '';
+    if (texto.isEmpty) return true;
+    if (texto.contains('no') ||
+        texto.contains('pend') ||
+        texto.contains('deuda')) {
+      return true;
+    }
+    if (texto.contains('sin')) {
+      return true;
+    }
+    return false;
+  }
+
+  bool _esPagado(dynamic valor) {
+    final texto = valor?.toString().trim().toLowerCase() ?? '';
+    if (texto.isEmpty) return false;
+    if (texto.contains('si') || texto.contains('sí') || texto.contains('pag')) {
+      return true;
+    }
+    if (texto.contains('al dia') || texto.contains('al día')) {
+      return true;
+    }
+    return false;
+  }
+
+  String _obtenerValorMes(Map<String, dynamic> meses, String mes) {
+    if (meses.containsKey(mes)) {
+      return _formatearValor(meses[mes]);
+    }
+    final claveCoincidente = meses.keys.firstWhere(
+      (key) => key.toString().toLowerCase() == mes,
+      orElse: () => mes,
+    );
+    return _formatearValor(meses[claveCoincidente]);
+  }
+
+  String _mesTitulo(String mes) {
+    if (mes.isEmpty) return mes;
+    return mes[0].toUpperCase() + mes.substring(1);
+  }
+
+  int get _totalPendientes =>
+      _estudiantesFiltrados.where(_tienePagosPendientes).length;
+
+  int get _totalMatriculaAlDia =>
+      _estudiantesFiltrados
+          .where(
+            (estudiante) => _esPagado(
+              ((estudiante['pagos'] ?? const {}) as Map)['matricula'],
+            ),
+          )
+          .length;
+
+  void _onCursoChanged(String? value) {
+    setState(() {
+      _cursoSeleccionado = value ?? 'Todos';
+      _estudiantesFiltrados = _aplicarFiltros(_todosEstudiantes);
+    });
+  }
+
+  void _onCategoriaChanged(String? value) {
+    setState(() {
+      _categoriaSeleccionada = value ?? 'Todas';
+      _estudiantesFiltrados = _aplicarFiltros(_todosEstudiantes);
+    });
+  }
+
+  void _onPendientesChanged(bool value) {
+    setState(() {
+      _soloPendientes = value;
+      _estudiantesFiltrados = _aplicarFiltros(_todosEstudiantes);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Resumen de Pagos'),
+        backgroundColor: WessexColors.midnightNavy,
+        foregroundColor: Colors.white,
+      ),
+      backgroundColor: WessexColors.mistyRoseGray,
+      body:
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildResumenGeneral(),
+                    const SizedBox(height: 24),
+                    _buildFiltros(),
+                    const SizedBox(height: 24),
+                    if (_estudiantesFiltrados.isEmpty)
+                      _buildEmptyState()
+                    else
+                      Column(
+                        children:
+                            _estudiantesFiltrados
+                                .map(_buildTarjetaEstudiante)
+                                .toList(),
+                      ),
+                  ],
+                ),
+              ),
+    );
+  }
+
+  Widget _buildResumenGeneral() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final crossAxisCount =
+            constraints.maxWidth > 900
+                ? 3
+                : constraints.maxWidth > 600
+                ? 2
+                : 1;
+        final tarjetas = [
+          _buildResumenCard(
+            titulo: 'Estudiantes',
+            valor: _estudiantesFiltrados.length.toString(),
+            icono: Icons.people,
+            color: WessexColors.deepRoyalBlue,
+            detalle: '${_todosEstudiantes.length} registrados en total',
+          ),
+          _buildResumenCard(
+            titulo: 'Pagos pendientes',
+            valor: _totalPendientes.toString(),
+            icono: Icons.error_outline,
+            color: WessexColors.crimsonAlert,
+            detalle:
+                _soloPendientes
+                    ? 'Mostrando únicamente pendientes'
+                    : 'Activa el filtro para ver solo pendientes',
+          ),
+          _buildResumenCard(
+            titulo: 'Matrícula al día',
+            valor: _totalMatriculaAlDia.toString(),
+            icono: Icons.verified_user,
+            color: WessexColors.leafGreen,
+            detalle: 'Pagos de matrícula marcados como pagados',
+          ),
+        ];
+
+        return GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: crossAxisCount,
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 16,
+          childAspectRatio: 3.8,
+          children: tarjetas,
+        );
+      },
+    );
+  }
+
+  Widget _buildResumenCard({
+    required String titulo,
+    required String valor,
+    required IconData icono,
+    required Color color,
+    required String detalle,
+  }) {
+    return WessexCard(
+      padding: const EdgeInsets.all(20),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icono, color: color, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  valor,
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: WessexColors.darkGrape,
+                  ),
+                ),
+                Text(
+                  titulo,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: WessexColors.darkGrape.withOpacity(0.8),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  detalle,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: WessexColors.darkGrape.withOpacity(0.6),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFiltros() {
+    return WessexCard(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Filtros',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: WessexColors.darkGrape,
+            ),
+          ),
+          const SizedBox(height: 16),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth > 720;
+              if (isWide) {
+                return Row(
+                  children: [
+                    Expanded(child: _buildCursoDropdown()),
+                    const SizedBox(width: 16),
+                    Expanded(child: _buildCategoriaDropdown()),
+                  ],
+                );
+              }
+              return Column(
+                children: [
+                  _buildCursoDropdown(),
+                  const SizedBox(height: 16),
+                  _buildCategoriaDropdown(),
+                ],
+              );
+            },
+          ),
+          SwitchListTile.adaptive(
+            value: _soloPendientes,
+            onChanged: _onPendientesChanged,
+            activeColor: WessexColors.crimsonAlert,
+            title: const Text('Mostrar solo estudiantes con pagos pendientes'),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ],
+      ),
+    );
+  }
+
+  DropdownButtonFormField<String> _buildCursoDropdown() {
+    return DropdownButtonFormField<String>(
+      value: _cursoSeleccionado,
+      onChanged: _onCursoChanged,
+      decoration: InputDecoration(
+        labelText: 'Curso',
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
+      ),
+      items:
+          _cursosDisponibles
+              .map(
+                (curso) => DropdownMenuItem(value: curso, child: Text(curso)),
+              )
+              .toList(),
+    );
+  }
+
+  DropdownButtonFormField<String> _buildCategoriaDropdown() {
+    return DropdownButtonFormField<String>(
+      value: _categoriaSeleccionada,
+      onChanged: _onCategoriaChanged,
+      decoration: InputDecoration(
+        labelText: 'Categoría',
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
+      ),
+      items:
+          _categoriasDisponibles
+              .map(
+                (categoria) =>
+                    DropdownMenuItem(value: categoria, child: Text(categoria)),
+              )
+              .toList(),
+    );
+  }
+
+  Widget _buildTarjetaEstudiante(Map<String, dynamic> estudiante) {
+    final pagos = (estudiante['pagos'] as Map<String, dynamic>?) ?? const {};
+    final pagosMeses = (pagos['meses'] as Map<String, dynamic>?) ?? const {};
+    final equipamiento =
+        (estudiante['equipamiento'] as Map<String, dynamic>?) ?? const {};
+    final matricula = _formatearValor(pagos['matricula']);
+    final totalAnio = _formatearValor(pagos['totalAnio']);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: WessexCard(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        estudiante['nombre'] ?? 'Sin nombre',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: WessexColors.darkGrape,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'RUT: ${estudiante['rut'] ?? 'Sin RUT'}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: WessexColors.darkGrape.withOpacity(0.7),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 8,
+                        children: [
+                          _buildEtiquetaDetalle('Curso', estudiante['curso']),
+                          _buildEtiquetaDetalle(
+                            'Categoría',
+                            estudiante['categoria'],
+                          ),
+                          _buildEtiquetaDetalle(
+                            'Responsable',
+                            estudiante['nombreResponsable'],
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                if (estudiante['correoApoderadoGenerado'] != null &&
+                    estudiante['correoApoderadoGenerado'].toString().isNotEmpty)
+                  Chip(
+                    avatar: const Icon(Icons.alternate_email, size: 18),
+                    label: Text(estudiante['correoApoderadoGenerado']),
+                    backgroundColor: WessexColors.deepRoyalBlue.withOpacity(
+                      0.1,
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                _buildPagoEstatusChip('Matrícula', matricula),
+                _buildPagoEstatusChip('Total año', totalAnio),
+              ],
+            ),
+            const SizedBox(height: 20),
+            _buildMesesGrid(pagosMeses),
+            if (equipamiento.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              Text(
+                'Equipamiento',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: WessexColors.darkGrape,
+                ),
+              ),
+              const SizedBox(height: 8),
+              _buildEquipamientoResumen(equipamiento),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEtiquetaDetalle(String titulo, dynamic valor) {
+    final texto = _formatearValor(valor);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: WessexColors.maximumGrayMint.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        '$titulo: $texto',
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: WessexColors.darkGrape.withOpacity(0.8),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPagoEstatusChip(String titulo, String valor) {
+    final color = _colorEstado(valor);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            titulo,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            valor,
+            style: TextStyle(
+              fontSize: 12,
+              color: WessexColors.darkGrape.withOpacity(0.8),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMesesGrid(Map<String, dynamic> meses) {
+    return WessexCard(
+      padding: const EdgeInsets.all(16),
+      backgroundColor: Colors.white,
+      child: Wrap(
+        spacing: 12,
+        runSpacing: 12,
+        children:
+            _meses.map((mes) {
+              final valor = _obtenerValorMes(meses, mes);
+              final color = _colorEstado(valor);
+              return SizedBox(
+                width: 140,
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: color.withOpacity(0.3)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _mesTitulo(mes),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: color,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        valor,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: WessexColors.darkGrape.withOpacity(0.85),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildEquipamientoResumen(Map<String, dynamic> equipamiento) {
+    final items = <String, dynamic>{
+      'Polerón': equipamiento['poleron'],
+      'Calcetas': equipamiento['calcetas'],
+      'Protector Bucal': equipamiento['protectorBucal'],
+      'Uniforme': equipamiento['uniforme'],
+      'Añadido': equipamiento['anadido'],
+    };
+
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children:
+          items.entries.map((entry) {
+            final valor = _formatearValor(entry.value);
+            final color = _colorEstado(valor);
+            return Chip(
+              label: Text('${entry.key}: $valor'),
+              backgroundColor: color.withOpacity(0.12),
+              shape: StadiumBorder(
+                side: BorderSide(color: color.withOpacity(0.4)),
+              ),
+            );
+          }).toList(),
+    );
+  }
+
+  Color _colorEstado(String valor) {
+    final texto = valor.toLowerCase();
+    if (_esPendiente(texto)) {
+      return WessexColors.crimsonAlert;
+    }
+    if (_esPagado(texto)) {
+      return WessexColors.leafGreen;
+    }
+    return WessexColors.maximumGrayMint;
+  }
+
+  String _formatearValor(dynamic valor) {
+    if (valor == null) return 'Sin información';
+    final texto = valor.toString().trim();
+    if (texto.isEmpty) return 'Sin información';
+    if (texto.toLowerCase() == 'n/a' || texto.toLowerCase() == 'null') {
+      return 'Sin información';
+    }
+    return texto;
+  }
+
+  Widget _buildEmptyState() {
+    return WessexCard(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.wallet_outlined,
+            size: 48,
+            color: WessexColors.maximumGrayMint,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No hay registros para los filtros seleccionados',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: WessexColors.darkGrape,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Ajusta los filtros o verifica que los datos de pagos estén cargados correctamente.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: WessexColors.darkGrape.withOpacity(0.7)),
+          ),
+        ],
+      ),
+    );
+  }
+}

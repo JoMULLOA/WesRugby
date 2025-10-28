@@ -17,14 +17,30 @@ const EstudianteSchema = new EntitySchema({
       length: 255,
       nullable: false,
     },
+    categoria: {
+      type: "varchar",
+      length: 10,
+      nullable: true,
+    },
+    ficha: {
+      type: "boolean",
+      nullable: true,
+    },
     curso: {
       type: "varchar",
-      length: 50,
+      length: 10,
       nullable: false,
     },
     fechaNacimiento: {
       type: "date",
       nullable: true,
+    },
+    correoApoderadoGenerado: {
+      type: "varchar",
+      length: 255,
+      nullable: true,
+      unique: true,
+      comment: "Correo institucional generado para el apoderado",
     },
     telefono: {
       type: "varchar",
@@ -40,6 +56,75 @@ const EstudianteSchema = new EntitySchema({
       length: 255,
       nullable: true,
       unique: true,
+    },
+    nombreMadre: {
+      type: "varchar",
+      length: 120,
+      nullable: true,
+    },
+    telefonoMadre: {
+      type: "varchar",
+      length: 15,
+      nullable: true,
+    },
+    emailMadre: {
+      type: "varchar",
+      length: 255,
+      nullable: true,
+    },
+    nombrePadre: {
+      type: "varchar",
+      length: 120,
+      nullable: true,
+    },
+    telefonoPadre: {
+      type: "varchar",
+      length: 15,
+      nullable: true,
+    },
+    emailPadre: {
+      type: "varchar",
+      length: 255,
+      nullable: true,
+    },
+    hermanos: {
+      type: "jsonb",
+      nullable: true,
+      comment: "Lista de RUTs asociados como hermanos",
+    },
+    enfermedad: {
+      type: "text",
+      nullable: true,
+    },
+    talla: {
+      type: "varchar",
+      length: 5,
+      nullable: true,
+    },
+    dorsalNombre: {
+      type: "varchar",
+      length: 120,
+      nullable: true,
+    },
+    alumnoNuevo: {
+      type: "varchar",
+      length: 50,
+      nullable: true,
+    },
+    asistencia: {
+      type: "varchar",
+      length: 50,
+      nullable: true,
+    },
+    pagos: {
+      type: "jsonb",
+      nullable: true,
+      comment: "Información de matrícula, mensualidades y total anual",
+    },
+    equipamiento: {
+      type: "jsonb",
+      nullable: true,
+      comment: "Registro de poleron, calcetas, protector bucal, uniforme y añadidos",
     },
     contactoEmergencia: {
       type: "varchar",
@@ -120,6 +205,14 @@ const EstudianteSchema = new EntitySchema({
     {
       name: "IDX_ESTUDIANTE_CURSO",
       columns: ["curso"],
+    },
+    {
+      name: "IDX_ESTUDIANTE_CATEGORIA",
+      columns: ["categoria"],
+    },
+    {
+      name: "IDX_ESTUDIANTE_FICHA",
+      columns: ["ficha"],
     },
   ],
 });

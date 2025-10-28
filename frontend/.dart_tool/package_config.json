@@ -518,6 +518,12 @@
       "languageVersion": "3.1"
     },
     {
+      "name": "spreadsheet_decoder",
+      "rootUri": "file:///C:/Users/manri/AppData/Local/Pub/Cache/hosted/pub.dev/spreadsheet_decoder-2.3.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
+    },
+    {
       "name": "sprintf",
       "rootUri": "file:///C:/Users/manri/AppData/Local/Pub/Cache/hosted/pub.dev/sprintf-7.0.0",
       "packageUri": "lib/",

@@ -1,8 +1,9 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:wesrugby/shared/widgets/navigation/custom_drawer.dart';
 import 'package:wesrugby/shared/widgets/layout/wessex_widgets.dart';
 import 'package:wesrugby/core/config/colors.dart';
 import 'package:wesrugby/features/admin/presentation/screens/pagos/gestion/gestion_vouchers_screen.dart';
+import 'package:wesrugby/features/admin/presentation/screens/pagos/resumen/pagos_resumen_screen.dart';
 import 'package:wesrugby/features/admin/presentation/screens/actas/visualizar/visualizar_actas_reunion_screen.dart';
 
 class TesoreraDashboard extends StatelessWidget {
@@ -105,6 +106,23 @@ class TesoreraDashboard extends StatelessWidget {
                   isTablet: isTablet,
                 ),
 
+                const SizedBox(height: 16),
+
+                _buildActionCard(
+                  'Resumen de Pagos',
+                  'Ver matrícula y mensualidades por estudiante',
+                  Icons.table_chart,
+                  WessexColors.leafGreen,
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const PagosResumenScreen(),
+                    ),
+                  ),
+                  isDesktop: isDesktop,
+                  isTablet: isTablet,
+                ),
+
                 const SizedBox(height: 32),
 
                 const WessexSectionTitle(
@@ -122,8 +140,8 @@ class TesoreraDashboard extends StatelessWidget {
                   () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) =>
-                          const VisualizarActasReunionScreen(),
+                      builder:
+                          (context) => const VisualizarActasReunionScreen(),
                     ),
                   ),
                   isDesktop: isDesktop,
@@ -204,5 +222,4 @@ class TesoreraDashboard extends StatelessWidget {
       ),
     );
   }
-
 }
