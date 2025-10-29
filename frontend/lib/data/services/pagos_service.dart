@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:wesrugby/data/services/api_service.dart';
@@ -149,6 +150,8 @@ class PagosService {
     required double montoTotal,
     required DateTime fechaPago,
     required String mesCorrespondiente,
+    required List<String> estudiantesSeleccionados,
+    required bool aplicarATodos,
     String? bancoOrigen,
     String? numeroOperacion,
     String? observacionesApoderado,
@@ -176,6 +179,9 @@ class PagosService {
         request.fields['montoTotal'] = montoTotal.toString();
         request.fields['fechaPago'] = fechaPago.toIso8601String().split('T')[0];
         request.fields['mesCorrespondiente'] = mesCorrespondiente;
+        request.fields['aplicarATodos'] = aplicarATodos ? 'true' : 'false';
+        request.fields['estudiantesSeleccionados'] =
+            jsonEncode(estudiantesSeleccionados);
 
         if (bancoOrigen != null) request.fields['bancoOrigen'] = bancoOrigen;
         if (numeroOperacion != null)
@@ -217,6 +223,8 @@ class PagosService {
           'montoTotal': montoTotal,
           'fechaPago': fechaPago.toIso8601String().split('T')[0],
           'mesCorrespondiente': mesCorrespondiente,
+          'aplicarATodos': aplicarATodos,
+          'estudiantesSeleccionados': estudiantesSeleccionados,
           'bancoOrigen': bancoOrigen,
           'numeroOperacion': numeroOperacion,
           'observacionesApoderado': observacionesApoderado,

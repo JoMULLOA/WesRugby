@@ -39,7 +39,6 @@ const EstudianteSchema = new EntitySchema({
       type: "varchar",
       length: 255,
       nullable: true,
-      unique: true,
       comment: "Correo institucional generado para el apoderado",
     },
     telefono: {

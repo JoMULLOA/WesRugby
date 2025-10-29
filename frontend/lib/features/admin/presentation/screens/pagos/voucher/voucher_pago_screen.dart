@@ -20,16 +20,17 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
   final _descripcionController = TextEditingController();
   String? _selectedMonth;
   String? _selectedMetodoPago;
-  String? _selectedEstudiante;
   String? _archivoNombre;
   Uint8List? _webFile;
   bool _isUploading = false;
   bool _isLoadingEstudiantes = true;
   bool _isLoadingUserData = true;
+  bool _aplicarATodos = true;
   Map<String, dynamic>? _userData;
   final VoucherService _voucherService = VoucherService();
   final EstudianteService _estudianteService = EstudianteService();
   List<Map<String, dynamic>> _misEstudiantes = [];
+  final Set<String> _estudiantesSeleccionados = <String>{};
 
   @override
   void initState() {
@@ -96,6 +97,10 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
         setState(() {
           _misEstudiantes = estudiantes;
           _isLoadingEstudiantes = false;
+          _aplicarATodos = _misEstudiantes.length <= 1
+              ? true
+              : _aplicarATodos;
+          _sincronizarSeleccion();
         });
         print('✅ Estudiantes cargados en UI: ${_misEstudiantes.length}');
       }
@@ -106,6 +111,31 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
           _isLoadingEstudiantes = false;
         });
         _showErrorSnackBar('Error al cargar estudiantes asignados');
+      }
+    }
+  }
+
+  void _sincronizarSeleccion() {
+    final idsDisponibles = _misEstudiantes
+        .map((estudiante) => estudiante['rut']?.toString() ?? '')
+        .where((rut) => rut.isNotEmpty)
+        .toList();
+
+    if (idsDisponibles.isEmpty) {
+      _estudiantesSeleccionados.clear();
+      return;
+    }
+
+    if (_aplicarATodos) {
+      _estudiantesSeleccionados
+        ..clear()
+        ..addAll(idsDisponibles);
+    } else {
+      _estudiantesSeleccionados
+          .removeWhere((rut) => !idsDisponibles.contains(rut));
+
+      if (_estudiantesSeleccionados.isEmpty) {
+        _estudiantesSeleccionados.add(idsDisponibles.first);
       }
     }
   }
@@ -226,82 +256,139 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                _selectedEstudiante != null
-                                    ? 'Voucher para:'
-                                    : 'Selecciona un estudiante',
-                                style: TextStyle(
-                                  color: WessexColors.darkGrape.withOpacity(
-                                    0.7,
-                                  ),
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              if (_selectedEstudiante != null) ...[
-                                Builder(
-                                  builder: (context) {
-                                    final estudianteSeleccionado =
-                                        _misEstudiantes.firstWhere(
-                                          (e) =>
-                                              e['rut'] == _selectedEstudiante,
-                                          orElse: () => {},
-                                        );
+                              Builder(
+                                builder: (context) {
+                                  if (_isLoadingUserData) {
                                     return Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          '${estudianteSeleccionado['nombres']} ${estudianteSeleccionado['apellidos']}',
+                                          'Cargando datos del apoderado...',
                                           style: TextStyle(
-                                            color: WessexColors.darkGrape,
+                                            color: WessexColors.darkGrape
+                                                .withOpacity(0.6),
+                                            fontStyle: FontStyle.italic,
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  }
+
+                                  final seleccionados = _misEstudiantes
+                                      .where((estudiante) =>
+                                          _estudiantesSeleccionados.contains(
+                                            estudiante['rut']?.toString() ??
+                                                '',
+                                          ))
+                                      .toList();
+
+                                  if (seleccionados.isEmpty) {
+                                    return Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Selecciona al menos un estudiante',
+                                          style: TextStyle(
+                                            color:
+                                                WessexColors.darkGrape.withOpacity(
+                                              0.5,
+                                            ),
                                             fontSize: 16,
-                                            fontWeight: FontWeight.bold,
+                                            fontStyle: FontStyle.italic,
                                           ),
                                         ),
                                         Text(
-                                          'Estudiante - ${estudianteSeleccionado['curso'] ?? 'Sin curso'}',
+                                          'Enviado por: ${_userData?['nombreCompleto'] ?? 'Apoderado'}',
                                           style: TextStyle(
                                             color: WessexColors.deepRoyalBlue,
                                             fontSize: 12,
                                             fontWeight: FontWeight.w500,
                                           ),
                                         ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          'Enviado por: ${_userData?['nombreCompleto'] ?? 'Apoderado'}',
-                                          style: TextStyle(
-                                            color: WessexColors.darkGrape
-                                                .withOpacity(0.6),
-                                            fontSize: 11,
-                                            fontStyle: FontStyle.italic,
-                                          ),
-                                        ),
                                       ],
                                     );
-                                  },
-                                ),
-                              ] else ...[
-                                Text(
-                                  'Primero selecciona un estudiante',
-                                  style: TextStyle(
-                                    color: WessexColors.darkGrape.withOpacity(
-                                      0.5,
-                                    ),
-                                    fontSize: 16,
-                                    fontStyle: FontStyle.italic,
-                                  ),
-                                ),
-                                Text(
-                                  'Enviado por: ${_userData?['nombreCompleto'] ?? 'Apoderado'}',
-                                  style: TextStyle(
-                                    color: WessexColors.deepRoyalBlue,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
+                                  }
+
+                                  return Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        seleccionados.length == 1
+                                            ? 'Voucher para:'
+                                            : 'Voucher para ${seleccionados.length} estudiantes:',
+                                        style: TextStyle(
+                                          color:
+                                              WessexColors.darkGrape.withOpacity(
+                                            0.7,
+                                          ),
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Wrap(
+                                        spacing: 8,
+                                        runSpacing: 8,
+                                        children: seleccionados.map((item) {
+                                          final nombre =
+                                              '${item['nombres']} ${item['apellidos']}';
+                                          final curso =
+                                              item['curso'] ?? 'Sin curso';
+                                          return Chip(
+                                            label: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  nombre,
+                                                  style: TextStyle(
+                                                    color:
+                                                        WessexColors.darkGrape,
+                                                    fontWeight:
+                                                        FontWeight.w600,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  'Curso: $curso',
+                                                  style: TextStyle(
+                                                    color:
+                                                        WessexColors.darkGrape
+                                                            .withOpacity(0.6),
+                                                    fontSize: 11,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            backgroundColor:
+                                                WessexColors.deepRoyalBlue
+                                                    .withOpacity(0.08),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 12,
+                                              vertical: 6,
+                                            ),
+                                          );
+                                        }).toList(),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Enviado por: ${_userData?['nombreCompleto'] ?? 'Apoderado'}',
+                                        style: TextStyle(
+                                          color:
+                                              WessexColors.darkGrape.withOpacity(
+                                            0.6,
+                                          ),
+                                          fontSize: 11,
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              ),
                             ],
                           ),
                         ),
@@ -400,41 +487,125 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
                             ),
                           )
                         else
-                          DropdownButtonFormField<String>(
-                            value: _selectedEstudiante,
-                            decoration: InputDecoration(
-                              labelText: 'Estudiante',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              prefixIcon: Icon(
-                                Icons.person,
-                                color: WessexColors.crimsonAlert,
-                              ),
-                            ),
-                            isExpanded: true,
-                            hint: const Text('Selecciona un estudiante'),
-                            items:
-                                _misEstudiantes
-                                    .map(
-                                      (estudiante) => DropdownMenuItem<String>(
-                                        value: estudiante['rut'] as String,
-                                        child: Text(
-                                          '${estudiante['nombres']} ${estudiante['apellidos']} (${estudiante['curso'] ?? 'Sin curso'})',
-                                          style: const TextStyle(fontSize: 14),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    )
-                                    .toList(),
-                            onChanged:
-                                (value) =>
-                                    setState(() => _selectedEstudiante = value),
-                            validator:
-                                (value) =>
-                                    value == null
-                                        ? 'Selecciona un estudiante'
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              SwitchListTile(
+                                value: _aplicarATodos,
+                                contentPadding: EdgeInsets.zero,
+                                title: Text(
+                                  'Aplicar el pago a todos mis hijos',
+                                  style: TextStyle(
+                                    color: WessexColors.darkGrape,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  _misEstudiantes.length > 1
+                                      ? 'Activa esta opción si el comprobante cubre a todos tus estudiantes.'
+                                      : 'Solo hay un estudiante registrado para tu cuenta.',
+                                  style: TextStyle(
+                                    color: WessexColors.darkGrape.withOpacity(0.65),
+                                  ),
+                                ),
+                                onChanged:
+                                    _misEstudiantes.length > 1
+                                        ? (value) {
+                                            setState(() {
+                                              _aplicarATodos = value;
+                                              _sincronizarSeleccion();
+                                            });
+                                          }
                                         : null,
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                _misEstudiantes.length > 1
+                                    ? 'Selecciona los estudiantes cubiertos por el pago:'
+                                    : 'Este voucher se asociará automáticamente al estudiante disponible:',
+                                style: TextStyle(
+                                  color: WessexColors.darkGrape,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              ..._misEstudiantes.map((estudiante) {
+                                final rut = estudiante['rut']?.toString() ?? '';
+                                final seleccionado =
+                                    _estudiantesSeleccionados.contains(rut);
+                                return CheckboxListTile(
+                                  value: seleccionado,
+                                  contentPadding: EdgeInsets.zero,
+                                  controlAffinity:
+                                      ListTileControlAffinity.leading,
+                                  title: Text(
+                                    '${estudiante['nombres']} ${estudiante['apellidos']}',
+                                    style: TextStyle(
+                                      color: WessexColors.darkGrape,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  subtitle: Text(
+                                    'Curso: ${estudiante['curso'] ?? 'Sin curso'}',
+                                    style: TextStyle(
+                                      color: WessexColors.darkGrape.withOpacity(0.6),
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  onChanged: (checked) {
+                                    setState(() {
+                                      if (checked == true) {
+                                        if (rut.isNotEmpty) {
+                                          _estudiantesSeleccionados.add(rut);
+                                        }
+                                      } else {
+                                        _estudiantesSeleccionados.remove(rut);
+                                      }
+
+                                      if (_estudiantesSeleccionados.isEmpty &&
+                                          _misEstudiantes.isNotEmpty) {
+                                        final primerRut =
+                                            _misEstudiantes.first['rut']
+                                                ?.toString();
+                                        if (primerRut != null &&
+                                            primerRut.isNotEmpty) {
+                                          _estudiantesSeleccionados
+                                              .add(primerRut);
+                                        }
+                                      }
+
+                                      _aplicarATodos =
+                                          _estudiantesSeleccionados.length ==
+                                              _misEstudiantes.length;
+                                      if (_aplicarATodos) {
+                                        _sincronizarSeleccion();
+                                      }
+                                    });
+                                  },
+                                );
+                              }).toList(),
+                              if (_misEstudiantes.length > 1 &&
+                                  _estudiantesSeleccionados.length <= 1)
+                                Container(
+                                  width: double.infinity,
+                                  margin: const EdgeInsets.only(top: 8),
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color:
+                                        WessexColors.deepRoyalBlue.withOpacity(
+                                      0.08,
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    'Marca todos los estudiantes que están cubiertos por este voucher.',
+                                    style: TextStyle(
+                                      color: WessexColors.darkGrape,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                       ],
                     ),
@@ -854,8 +1025,8 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
       return;
     }
 
-    if (_selectedEstudiante == null) {
-      _showErrorSnackBar('Debes seleccionar un estudiante');
+    if (_estudiantesSeleccionados.isEmpty) {
+      _showErrorSnackBar('Debes seleccionar al menos un estudiante');
       return;
     }
 
@@ -864,24 +1035,44 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
     });
 
     try {
-      // Buscar el estudiante seleccionado para obtener su información completa
-      final estudianteSeleccionado = _misEstudiantes.firstWhere(
-        (e) => e['rut'] == _selectedEstudiante,
-      );
+      final seleccionados = _misEstudiantes
+          .where((estudiante) => _estudiantesSeleccionados.contains(
+                estudiante['rut']?.toString() ?? '',
+              ))
+          .toList();
 
-      // Crear descripción que incluya la información del estudiante
-      String descripcionCompleta =
-          'Estudiante: ${estudianteSeleccionado['nombres']} ${estudianteSeleccionado['apellidos']} (RUT: ${_selectedEstudiante})';
-      if (_descripcionController.text.isNotEmpty) {
-        descripcionCompleta +=
-            '\nDescripción adicional: ${_descripcionController.text}';
+      if (seleccionados.isEmpty) {
+        throw Exception('No se encontraron datos de los estudiantes seleccionados');
       }
 
-      // Enviar voucher usando el servicio
+      final nombresCompletos = seleccionados
+          .map((item) => '${item['nombres']} ${item['apellidos']}')
+          .toList();
+      final resumenEstudiantes = seleccionados
+          .map(
+            (item) =>
+                '- ${item['nombres']} ${item['apellidos']} (RUT: ${item['rut']}, Curso: ${item['curso'] ?? 'Sin curso'})',
+          )
+          .join('\n');
+
+      String descripcionCompleta =
+          'Estudiantes cubiertos por este voucher:\n$resumenEstudiantes';
+      if (_descripcionController.text.isNotEmpty) {
+        descripcionCompleta +=
+            '\n\nDescripción adicional: ${_descripcionController.text}';
+      }
+
+      final etiquetaUsuario = nombresCompletos.length == 1
+          ? nombresCompletos.first
+          : '${nombresCompletos.first} +${nombresCompletos.length - 1}';
+
+      final etiquetaRol = nombresCompletos.length == 1
+          ? 'Estudiante - ${seleccionados.first['curso'] ?? 'Sin curso'}'
+          : 'Estudiantes (${nombresCompletos.length})';
+
       String voucherId = _voucherService.addVoucher(
-        usuario:
-            '${estudianteSeleccionado['nombres']} ${estudianteSeleccionado['apellidos']}',
-        rol: 'Estudiante - ${estudianteSeleccionado['curso'] ?? 'Sin curso'}',
+        usuario: etiquetaUsuario,
+        rol: etiquetaRol,
         mes: _selectedMonth!,
         monto: double.parse(_montoController.text),
         metodoPago: _selectedMetodoPago!,
@@ -894,10 +1085,8 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
       _voucherService.notifyTesoreria(voucherId);
 
       print('Apoderado: ${_userData?['nombreCompleto'] ?? 'Usuario'}');
-      print(
-        'Estudiante: ${estudianteSeleccionado['nombres']} ${estudianteSeleccionado['apellidos']}',
-      );
-      print('RUT Estudiante: $_selectedEstudiante');
+      print('Estudiantes vinculados: ${nombresCompletos.join(', ')}');
+      print('Aplicar a todos: $_aplicarATodos');
       print('Voucher ID: $voucherId');
       print('Archivo seleccionado: $_archivoNombre');
       print('Tamaño del archivo: ${_webFile!.length} bytes');

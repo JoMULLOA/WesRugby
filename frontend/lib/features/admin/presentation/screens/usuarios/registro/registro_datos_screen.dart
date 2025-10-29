@@ -1507,12 +1507,14 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
         int estudiantesCreados = result['estudiantesCreados'] ?? 0;
         int apoderadosCreados = result['apoderadosCreados'] ?? 0;
         int correosGenerados = result['correosApoderadoGenerados'] ?? apoderadosCreados;
+        int hermanosSincronizados = result['hermanosSincronizados'] ?? 0;
         List<dynamic> errores = result['errores'] ?? [];
 
         _showSuccessDialog(
           estudiantesCreados,
           apoderadosCreados,
           correosGenerados,
+          hermanosSincronizados,
           errores,
         );
 
@@ -1557,6 +1559,7 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
     int estudiantesCreados,
     int apoderadosCreados,
     int correosGenerados,
+    int hermanosSincronizados,
     List<dynamic> errores,
   ) {
     showDialog(
@@ -1616,6 +1619,18 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
                       '📧 Se generaron $correosGenerados correos institucionales para apoderados.',
+                      style: TextStyle(
+                        color: WessexColors.darkGrape.withOpacity(0.7),
+                        fontSize: 13,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                if (hermanosSincronizados > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      '🤝 Se sincronizaron $hermanosSincronizados hermanos con el mismo apoderado.',
                       style: TextStyle(
                         color: WessexColors.darkGrape.withOpacity(0.7),
                         fontSize: 13,

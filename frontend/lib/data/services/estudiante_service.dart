@@ -157,6 +157,9 @@ class EstudianteService extends ChangeNotifier {
         final correosApoderado = results['correosApoderadoGenerados'] is num
             ? (results['correosApoderadoGenerados'] as num).toInt()
             : apoderadosGenerados;
+    final hermanosSincronizados = results['hermanosSincronizados'] is num
+      ? (results['hermanosSincronizados'] as num).toInt()
+      : 0;
 
         return {
           'success': true,
@@ -164,10 +167,11 @@ class EstudianteService extends ChangeNotifier {
           'estudiantesActualizados': actualizados,
           'apoderadosCreados': apoderadosGenerados,
           'correosApoderadoGenerados': correosApoderado,
+      'hermanosSincronizados': hermanosSincronizados,
           'errores': errores,
           'advertencias': advertencias,
           'message':
-              'Importación completada. Nuevos: $creados, actualizados: $actualizados, correos de apoderado generados: $correosApoderado, cuentas de apoderado nuevas: $apoderadosGenerados.',
+        'Importación completada. Nuevos: $creados, actualizados: $actualizados, correos de apoderado generados: $correosApoderado, cuentas de apoderado nuevas: $apoderadosGenerados, hermanos sincronizados: $hermanosSincronizados.',
         };
       }
 

@@ -751,6 +751,10 @@ export async function importEstudiantesFromExcel(req, res) {
     const guardianEmailsBatch = new Set();
     const guardianUsersCache = new Map();
     const guardianRutsInUse = new Set();
+  const guardianAssignmentsByRut = new Map();
+  const guardianSiblingUpdates = new Map();
+  const processedStudentRuts = new Set();
+  const guardianSiblingUpdateDetails = [];
 
     const existingUsers = await userRepository.find();
     existingUsers.forEach((user) => {
@@ -775,16 +779,68 @@ export async function importEstudiantesFromExcel(req, res) {
     const guardianCreationDetails = [];
     let guardianEmailsGeneratedCount = 0;
     let guardianAccountsCreatedCount = 0;
+  let guardianSiblingLinksUpdatedCount = 0;
 
     for (let i = 0; i < estudiantes.length; i += 1) {
       const row = estudiantes[i];
       try {
         const { data, warnings } = normalizeRow(row);
+        const siblingRuts = Array.isArray(data.hermanos)
+          ? data.hermanos.filter((rutHermano) => typeof rutHermano === "string" && rutHermano.trim())
+          : [];
+        const lookupRuts = [data.rut, ...siblingRuts];
+
+        let cachedAssignment = null;
+        for (const candidateRut of lookupRuts) {
+          if (!candidateRut) continue;
+          const assignment = guardianAssignmentsByRut.get(candidateRut);
+          if (assignment) {
+            cachedAssignment = assignment;
+            break;
+          }
+        }
+
+        if (!cachedAssignment) {
+          for (const candidateRut of lookupRuts) {
+            if (!candidateRut) continue;
+            const estudianteRelacionado = estudiantesMap.get(candidateRut);
+            if (!estudianteRelacionado) continue;
+            const correoRelacionado = estudianteRelacionado.correoApoderadoGenerado
+              ? estudianteRelacionado.correoApoderadoGenerado.toLowerCase()
+              : null;
+            if (!correoRelacionado) continue;
+            cachedAssignment = {
+              email: correoRelacionado,
+              nombre: estudianteRelacionado.nombreResponsable || null,
+              rutResponsable: estudianteRelacionado.rutResponsable || null,
+              user: guardianUsersCache.get(correoRelacionado) ?? null,
+            };
+            break;
+          }
+        }
+
         const existingStudent = estudiantesMap.get(data.rut);
-        const existingGuardianEmail = existingStudent?.correoApoderadoGenerado
+        let existingGuardianEmail = existingStudent?.correoApoderadoGenerado
           ? existingStudent.correoApoderadoGenerado.toLowerCase()
           : null;
-        const guardianName = determineGuardianNameForEmail(data);
+
+        if (cachedAssignment?.email) {
+          existingGuardianEmail = cachedAssignment.email.toLowerCase();
+        }
+
+        if (!data.rutResponsable && cachedAssignment?.rutResponsable) {
+          data.rutResponsable = cachedAssignment.rutResponsable;
+        }
+
+        if (!data.nombreResponsable && cachedAssignment?.nombre) {
+          data.nombreResponsable = cachedAssignment.nombre;
+        }
+
+        let guardianName = determineGuardianNameForEmail(data);
+        if (!guardianName && cachedAssignment?.nombre) {
+          guardianName = cachedAssignment.nombre;
+        }
+
         const generatedEmail = generateGuardianEmail({
           guardianName,
           fallbackName: data.nombre,
@@ -795,7 +851,7 @@ export async function importEstudiantesFromExcel(req, res) {
         });
         const resolvedGuardianEmail = generatedEmail ?? existingGuardianEmail ?? null;
 
-        if (generatedEmail && generatedEmail !== existingGuardianEmail) {
+        if (generatedEmail && (!existingGuardianEmail || generatedEmail !== existingGuardianEmail)) {
           guardianEmailsGeneratedCount += 1;
         }
 
@@ -805,7 +861,7 @@ export async function importEstudiantesFromExcel(req, res) {
           warnings.push("No se pudo generar correo institucional de apoderado");
         }
 
-        let guardianUser = null;
+        let guardianUser = cachedAssignment?.user ?? null;
         let guardianUserCreated = false;
 
         if (resolvedGuardianEmail) {
@@ -820,7 +876,7 @@ export async function importEstudiantesFromExcel(req, res) {
             email: resolvedGuardianEmail,
             nombre: guardianDisplayName,
           });
-          guardianUser = ensured.user;
+          guardianUser = ensured.user ?? guardianUser;
           guardianUserCreated = ensured.created;
         }
 
@@ -831,15 +887,57 @@ export async function importEstudiantesFromExcel(req, res) {
             guardianAccountsCreatedCount += 1;
             guardianCreationDetails.push({
               estudianteRut: data.rut,
+              estudiantesAsociados: Array.from(new Set([data.rut, ...siblingRuts])),
               apoderadoRut: guardianUser.rut,
               apoderadoEmail: guardianUser.email,
               apoderadoNombre: guardianUser.nombreCompleto,
             });
           }
-        } else if (existingStudent?.rutResponsable) {
+        } else if (!data.rutResponsable && existingStudent?.rutResponsable) {
           data.rutResponsable = existingStudent.rutResponsable;
         } else if (!data.nombreResponsable && guardianName) {
           data.nombreResponsable = toTitleCase(guardianName);
+        }
+
+        if (data.correoApoderadoGenerado) {
+          const normalizedEmail = data.correoApoderadoGenerado.toLowerCase();
+          const assignmentForCache = {
+            email: normalizedEmail,
+            nombre:
+              data.nombreResponsable ||
+              guardianUser?.nombreCompleto ||
+              (guardianName ? toTitleCase(guardianName) : null) ||
+              cachedAssignment?.nombre ||
+              null,
+            rutResponsable:
+              data.rutResponsable ||
+              guardianUser?.rut ||
+              cachedAssignment?.rutResponsable ||
+              null,
+            user: guardianUser ?? null,
+          };
+          const uniqueRuts = new Set(
+            lookupRuts
+              .filter((rutARegistrar) => typeof rutARegistrar === "string" && rutARegistrar)
+              .map((rutARegistrar) => rutARegistrar.trim())
+              .filter(Boolean),
+          );
+          uniqueRuts.forEach((rutARegistrar) => {
+            guardianAssignmentsByRut.set(rutARegistrar, assignmentForCache);
+          });
+
+          if (assignmentForCache.email && assignmentForCache.rutResponsable) {
+            siblingRuts.forEach((hermanoRut) => {
+              if (typeof hermanoRut !== "string") return;
+              const trimmedHermano = hermanoRut.trim();
+              if (!trimmedHermano || trimmedHermano === data.rut) return;
+              guardianSiblingUpdates.set(trimmedHermano, {
+                rutResponsable: assignmentForCache.rutResponsable,
+                correoApoderadoGenerado: assignmentForCache.email,
+                nombreResponsable: assignmentForCache.nombre,
+              });
+            });
+          }
         }
 
         if (warnings.length > 0) {
@@ -872,6 +970,8 @@ export async function importEstudiantesFromExcel(req, res) {
           results.estudiantesCreados.push(estudiante);
         }
 
+        processedStudentRuts.add(data.rut);
+
         if (data.hermanos && data.hermanos.length > 0) {
           const set = siblingMap.get(data.rut) ?? new Set();
           data.hermanos.forEach((hermanoRut) => set.add(hermanoRut));
@@ -887,13 +987,80 @@ export async function importEstudiantesFromExcel(req, res) {
 
     await syncSiblingRelationships(siblingMap, estudianteRepository, results);
 
+    for (const [hermanoRut, updateInfo] of guardianSiblingUpdates.entries()) {
+      if (processedStudentRuts.has(hermanoRut)) continue;
+      try {
+        const hermano = estudiantesMap.get(hermanoRut);
+        if (!hermano) {
+          continue;
+        }
+
+        const updatePayload = {};
+        if (
+          updateInfo.rutResponsable &&
+          hermano.rutResponsable !== updateInfo.rutResponsable
+        ) {
+          updatePayload.rutResponsable = updateInfo.rutResponsable;
+        }
+        if (
+          updateInfo.correoApoderadoGenerado &&
+          (hermano.correoApoderadoGenerado || "").toLowerCase() !==
+            updateInfo.correoApoderadoGenerado.toLowerCase()
+        ) {
+          updatePayload.correoApoderadoGenerado = updateInfo.correoApoderadoGenerado;
+        }
+        if (
+          updateInfo.nombreResponsable &&
+          hermano.nombreResponsable !== updateInfo.nombreResponsable
+        ) {
+          updatePayload.nombreResponsable = updateInfo.nombreResponsable;
+        }
+
+        if (Object.keys(updatePayload).length === 0) {
+          continue;
+        }
+
+        const [hermanoActualizado, syncError] = await updateEstudianteService(
+          hermanoRut,
+          updatePayload,
+        );
+        if (syncError) {
+          results.advertencias.push({
+            estudiante: hermanoRut,
+            detalles: [`No se pudo sincronizar apoderado para hermano: ${syncError}`],
+          });
+          continue;
+        }
+
+        estudiantesMap.set(hermanoRut, hermanoActualizado);
+        processedStudentRuts.add(hermanoRut);
+        results.estudiantesActualizados.push(hermanoActualizado);
+        guardianSiblingLinksUpdatedCount += 1;
+        guardianSiblingUpdateDetails.push({
+          hermanoRut,
+          apoderadoRut: updateInfo.rutResponsable,
+          apoderadoEmail: updateInfo.correoApoderadoGenerado,
+          apoderadoNombre: updateInfo.nombreResponsable,
+        });
+      } catch (errorSync) {
+        results.advertencias.push({
+          estudiante: hermanoRut,
+          detalles: [`Error sincronizando apoderado para hermano: ${errorSync.message}`],
+        });
+      }
+    }
+
     results.apoderadosCreados = guardianAccountsCreatedCount;
     results.correosApoderadoGenerados = guardianEmailsGeneratedCount;
+    results.hermanosSincronizados = guardianSiblingLinksUpdatedCount;
     if (guardianCreationDetails.length > 0) {
       results.detalleApoderadosCreados = guardianCreationDetails;
     }
+    if (guardianSiblingUpdateDetails.length > 0) {
+      results.detalleHermanosSincronizados = guardianSiblingUpdateDetails;
+    }
 
-    const message = `Importacion completada. Nuevos: ${results.estudiantesCreados.length}, Actualizados: ${results.estudiantesActualizados.length}, Errores: ${results.errores.length}, Correos apoderado generados: ${guardianEmailsGeneratedCount}, Cuentas apoderado nuevas: ${guardianAccountsCreatedCount}`;
+    const message = `Importacion completada. Nuevos: ${results.estudiantesCreados.length}, Actualizados: ${results.estudiantesActualizados.length}, Errores: ${results.errores.length}, Correos apoderado generados: ${guardianEmailsGeneratedCount}, Cuentas apoderado nuevas: ${guardianAccountsCreatedCount}, Hermanos sincronizados: ${guardianSiblingLinksUpdatedCount}`;
 
     handleSuccess(res, 201, message, results);
   } catch (error) {

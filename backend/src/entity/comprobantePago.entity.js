@@ -10,62 +10,45 @@ const ComprobantePagoSchema = new EntitySchema({
       primary: true,
       generated: "uuid",
     },
-    // Referencias
-    inscripcionId: {
-      type: "uuid",
+    apoderadoRut: {
+      type: "varchar",
+      length: 12,
       nullable: false,
-      comment: "ID de la inscripción asociada",
+      comment: "RUT del apoderado responsable del pago",
     },
-    // Información del Pago
+    estudianteRut: {
+      type: "varchar",
+      length: 12,
+      nullable: false,
+      comment: "RUT del estudiante asociado al pago",
+    },
     numeroComprobante: {
       type: "varchar",
       length: 50,
       nullable: false,
       unique: true,
-      comment: "Número único del comprobante (ej: WR2024-001)",
+      comment: "Identificador legible del comprobante",
     },
     tipoPago: {
       type: "enum",
       enum: ["mensualidad", "matricula", "uniforme", "evento_especial", "multa", "otro"],
       nullable: false,
-      comment: "Tipo de pago",
+      default: "mensualidad",
+      comment: "Tipo de obligación cancelada",
     },
     metodoPago: {
       type: "enum",
       enum: ["transferencia", "deposito", "efectivo", "cheque", "tarjeta"],
       nullable: false,
-      comment: "Método de pago utilizado",
+      comment: "Método utilizado para el pago",
     },
-    // Montos
     montoTotal: {
       type: "decimal",
       precision: 10,
       scale: 2,
       nullable: false,
-      comment: "Monto total pagado",
+      comment: "Monto pagado informado",
     },
-    montoBase: {
-      type: "decimal",
-      precision: 10,
-      scale: 2,
-      nullable: false,
-      comment: "Monto base sin descuentos ni recargos",
-    },
-    descuentos: {
-      type: "decimal",
-      precision: 10,
-      scale: 2,
-      default: 0,
-      comment: "Descuentos aplicados",
-    },
-    recargos: {
-      type: "decimal",
-      precision: 10,
-      scale: 2,
-      default: 0,
-      comment: "Recargos por mora u otros conceptos",
-    },
-    // Fechas
     fechaPago: {
       type: "date",
       nullable: false,
@@ -74,20 +57,19 @@ const ComprobantePagoSchema = new EntitySchema({
     fechaVencimiento: {
       type: "date",
       nullable: true,
-      comment: "Fecha de vencimiento del pago",
+      comment: "Fecha de vencimiento asociada al pago",
     },
     mesCorrespondiente: {
       type: "varchar",
       length: 7,
       nullable: false,
-      comment: "Mes al que corresponde el pago (formato: YYYY-MM)",
+      comment: "Mes facturado en formato YYYY-MM",
     },
-    // Información Bancaria
     bancoOrigen: {
       type: "varchar",
       length: 100,
       nullable: true,
-      comment: "Banco desde donde se realizó la transferencia",
+      comment: "Banco de origen de la transferencia",
     },
     numeroOperacion: {
       type: "varchar",
@@ -101,89 +83,84 @@ const ComprobantePagoSchema = new EntitySchema({
       nullable: true,
       comment: "Cuenta de destino del club",
     },
-    // Archivos Adjuntos
     rutaComprobante: {
       type: "varchar",
       length: 500,
       nullable: true,
-      comment: "Ruta del archivo del comprobante subido",
+      comment: "Ruta relativa del archivo cargado",
     },
     nombreArchivoOriginal: {
       type: "varchar",
       length: 255,
       nullable: true,
-      comment: "Nombre original del archivo subido",
+      comment: "Nombre original del archivo adjunto",
     },
     tipoArchivo: {
       type: "varchar",
-      length: 10,
+      length: 20,
       nullable: true,
-      comment: "Extensión del archivo (jpg, png, pdf, etc)",
+      comment: "Tipo MIME del archivo",
     },
-    tamañoArchivo: {
+    tamanoArchivo: {
       type: "int",
       nullable: true,
       comment: "Tamaño del archivo en bytes",
     },
-    // Estado y Validación
     estado: {
       type: "enum",
       enum: ["pendiente", "validado", "rechazado", "observado"],
       default: "pendiente",
       nullable: false,
-      comment: "Estado del comprobante",
+      comment: "Estado de revisión del comprobante",
+    },
+    observacionesApoderado: {
+      type: "text",
+      nullable: true,
+      comment: "Notas ingresadas por el apoderado",
+    },
+    observacionesTesorera: {
+      type: "text",
+      nullable: true,
+      comment: "Notas ingresadas por tesorería",
+    },
+    motivoRechazo: {
+      type: "text",
+      nullable: true,
+      comment: "Motivo del rechazo cuando aplica",
     },
     fechaSubida: {
       type: "timestamp with time zone",
       default: () => "CURRENT_TIMESTAMP",
       nullable: false,
-      comment: "Cuándo se subió el comprobante",
+      comment: "Momento en que se subió el comprobante",
     },
     fechaValidacion: {
       type: "timestamp with time zone",
       nullable: true,
-      comment: "Cuándo se validó/rechazó el comprobante",
+      comment: "Momento en que se validó o rechazó",
     },
     validadoPorRut: {
       type: "varchar",
       length: 12,
       nullable: true,
-      comment: "RUT de quien validó el comprobante (tesorera/directiva)",
+      comment: "RUT del usuario que validó o rechazó",
     },
-    // Observaciones
-    observacionesApoderado: {
-      type: "text",
-      nullable: true,
-      comment: "Observaciones del apoderado al subir el comprobante",
-    },
-    observacionesTesorera: {
-      type: "text",
-      nullable: true,
-      comment: "Observaciones de la tesorera al validar",
-    },
-    motivoRechazo: {
-      type: "text",
-      nullable: true,
-      comment: "Motivo del rechazo si aplica",
-    },
-    // Quien Subió el Comprobante
     subidoPorRut: {
       type: "varchar",
       length: 12,
       nullable: false,
-      comment: "RUT de quien subió el comprobante (apoderado/directiva)",
+      comment: "RUT del usuario que registró el comprobante",
     },
-    // Notificaciones
     notificacionEnviada: {
       type: "boolean",
       default: false,
-      comment: "Si se envió notificación de validación",
+      comment: "Si se envió notificación posterior",
     },
     fechaNotificacion: {
       type: "timestamp with time zone",
       nullable: true,
+      comment: "Fecha de la notificación",
     },
-    // Metadatos
     createdAt: {
       type: "timestamp with time zone",
       default: () => "CURRENT_TIMESTAMP",
@@ -197,21 +174,32 @@ const ComprobantePagoSchema = new EntitySchema({
     },
   },
   relations: {
-    inscripcion: {
+    apoderado: {
       type: "many-to-one",
-      target: "Inscripcion",
-      joinColumn: { name: "inscripcionId" },
-      onDelete: "CASCADE",
+      target: "User",
+      joinColumn: { name: "apoderadoRut", referencedColumnName: "rut" },
+      onDelete: "SET NULL",
+      nullable: true,
+    },
+    estudiante: {
+      type: "many-to-one",
+      target: "Estudiante",
+      joinColumn: { name: "estudianteRut", referencedColumnName: "rut" },
+      onDelete: "SET NULL",
+      nullable: true,
     },
     subidoPor: {
       type: "many-to-one",
       target: "User",
       joinColumn: { name: "subidoPorRut", referencedColumnName: "rut" },
+      onDelete: "SET NULL",
+      nullable: true,
     },
     validadoPor: {
       type: "many-to-one",
       target: "User",
       joinColumn: { name: "validadoPorRut", referencedColumnName: "rut" },
+      onDelete: "SET NULL",
       nullable: true,
     },
   },
@@ -222,32 +210,24 @@ const ComprobantePagoSchema = new EntitySchema({
       unique: true,
     },
     {
-      name: "IDX_COMPROBANTE_INSCRIPCION",
-      columns: ["inscripcionId"],
+      name: "IDX_COMPROBANTE_APODERADO",
+      columns: ["apoderadoRut"],
+    },
+    {
+      name: "IDX_COMPROBANTE_ESTUDIANTE",
+      columns: ["estudianteRut"],
     },
     {
       name: "IDX_COMPROBANTE_ESTADO",
       columns: ["estado"],
     },
     {
-      name: "IDX_COMPROBANTE_FECHA_PAGO",
-      columns: ["fechaPago"],
-    },
-    {
       name: "IDX_COMPROBANTE_MES",
       columns: ["mesCorrespondiente"],
     },
     {
-      name: "IDX_COMPROBANTE_TIPO",
-      columns: ["tipoPago"],
-    },
-    {
-      name: "IDX_COMPROBANTE_SUBIDO_POR",
-      columns: ["subidoPorRut"],
-    },
-    {
-      name: "IDX_COMPROBANTE_VALIDADO_POR",
-      columns: ["validadoPorRut"],
+      name: "IDX_COMPROBANTE_FECHA",
+      columns: ["fechaPago"],
     },
   ],
 });

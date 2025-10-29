@@ -20,7 +20,11 @@ function sanitizeFileName(originalName) {
     .toLowerCase();
 }
 
-function createUploader(subDir, { fileSize }) {
+function createUploader(subDir, { fileSize, allowedMimeTypes }) {
+  const acceptedTypes =
+    Array.isArray(allowedMimeTypes) && allowedMimeTypes.length > 0
+      ? allowedMimeTypes
+      : ["image/jpeg", "image/png", "image/webp", "image/gif"];
   const storage = multer.diskStorage({
     destination: function (req, file, cb) {
       try {
@@ -38,11 +42,15 @@ function createUploader(subDir, { fileSize }) {
   });
 
   function fileFilter(req, file, cb) {
-    const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    const allowed = acceptedTypes;
     if (allowed.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error("Tipo de archivo no permitido. Use JPG, PNG, WEBP o GIF."));
+      cb(
+        new Error(
+          `Tipo de archivo no permitido. Tipos permitidos: ${allowed.join(", ")}.`,
+        ),
+      );
     }
   }
 
@@ -65,4 +73,15 @@ export const uploadAvatar = createUploader("avatars", {
 
 export const uploadAuspiciadorLogo = createUploader(path.join("imagenes", "auspiciadores"), {
   fileSize: 5 * 1024 * 1024,
+});
+
+export const uploadVoucherComprobante = createUploader(path.join("comprobantes"), {
+  fileSize: 10 * 1024 * 1024,
+  allowedMimeTypes: [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+    "application/pdf",
+  ],
 });

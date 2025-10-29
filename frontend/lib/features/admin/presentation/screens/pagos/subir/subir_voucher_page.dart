@@ -27,11 +27,12 @@ class _SubirVoucherPageState extends State<SubirVoucherPage> {
       false; // Cambiar a false para evitar loading inicial
 
   // Datos del formulario
-  String? _inscripcionSeleccionada;
   String _metodoPago = 'transferencia';
   DateTime _fechaPago = DateTime.now();
   String _mesCorrespondiente = '';
   File? _archivoVoucher;
+  bool _aplicarATodos = true;
+  final Set<String> _seleccionManual = <String>{};
 
   // Lista de inscripciones
   List<Inscripcion> _inscripciones = [];
@@ -61,14 +62,17 @@ class _SubirVoucherPageState extends State<SubirVoucherPage> {
           fechaInscripcion: DateTime.now(),
         ),
       ];
-      _inscripcionSeleccionada = _inscripciones.first.id;
       _isLoadingInscripciones = false; // FORZAR A FALSE
       _errorInscripciones = null;
+      _aplicarATodos = true;
+      _alinearSeleccionConInscripciones();
     });
 
     print('✅ DATOS LOCALES CREADOS - Inscripciones: ${_inscripciones.length}');
     print('📝 ESTADO FINAL - Loading: $_isLoadingInscripciones');
-    print('🎯 Inscripción seleccionada: $_inscripcionSeleccionada');
+    if (_inscripciones.isNotEmpty) {
+      print('🎯 Primer alumno disponible: ${_inscripciones.first.id}');
+    }
 
     // Intentar cargar datos reales en segundo plano (opcional)
     _cargarInscripcionesEnSegundoPlano();
@@ -102,7 +106,10 @@ class _SubirVoucherPageState extends State<SubirVoucherPage> {
           if (inscripcionesList.isNotEmpty && mounted) {
             setState(() {
               _inscripciones = inscripcionesList;
-              _inscripcionSeleccionada = _inscripciones.first.id;
+              if (_inscripciones.length <= 1) {
+                _aplicarATodos = true;
+              }
+              _alinearSeleccionConInscripciones();
             });
             print('✅ Inscripciones reales cargadas: ${_inscripciones.length}');
           }
@@ -118,6 +125,30 @@ class _SubirVoucherPageState extends State<SubirVoucherPage> {
     final ahora = DateTime.now();
     _mesCorrespondiente =
         '${ahora.year}-${ahora.month.toString().padLeft(2, '0')}';
+  }
+
+  void _alinearSeleccionConInscripciones() {
+    final idsDisponibles = _inscripciones
+        .map((inscripcion) => inscripcion.id)
+        .where((id) => id.isNotEmpty)
+        .toList();
+
+    if (idsDisponibles.isEmpty) {
+      _seleccionManual.clear();
+      return;
+    }
+
+    if (_aplicarATodos) {
+      _seleccionManual
+        ..clear()
+        ..addAll(idsDisponibles);
+    } else {
+      _seleccionManual.removeWhere((id) => !idsDisponibles.contains(id));
+
+      if (_seleccionManual.isEmpty) {
+        _seleccionManual.add(idsDisponibles.first);
+      }
+    }
   }
 
   Future<void> _cargarInscripciones() async {
@@ -171,11 +202,10 @@ class _SubirVoucherPageState extends State<SubirVoucherPage> {
           setState(() {
             _inscripciones = inscripcionesList;
             _isLoadingInscripciones = false;
-
-            // Auto-seleccionar si solo hay una
-            if (_inscripciones.length == 1) {
-              _inscripcionSeleccionada = _inscripciones.first.id;
+            if (_inscripciones.length <= 1) {
+              _aplicarATodos = true;
             }
+            _alinearSeleccionConInscripciones();
           });
 
           print('✅ Inscripciones procesadas: ${_inscripciones.length}');
@@ -187,64 +217,57 @@ class _SubirVoucherPageState extends State<SubirVoucherPage> {
           });
         }
       } else {
-        print(
-          '❌ Error en respuesta: ${response.statusCode} - ${response.message}',
-        );
-        setState(() {
-          _errorInscripciones =
-              response.message ?? 'Error cargando inscripciones';
-          _isLoadingInscripciones = false;
-        });
+        print('❌ Respuesta no exitosa: ${response.statusCode}');
+        if (mounted) {
+          setState(() {
+            _errorInscripciones =
+                response.message ?? 'No se pudieron cargar las inscripciones';
+            _isLoadingInscripciones = false;
+            if (_inscripciones.length <= 1) {
+              _aplicarATodos = true;
+            }
+            _alinearSeleccionConInscripciones();
+          });
+        }
       }
     } catch (e) {
-      print('❌ Error general cargando inscripciones: $e');
-      setState(() {
-        _errorInscripciones = 'Error de conexión: $e';
-        _isLoadingInscripciones = false;
-      });
-    }
-
-    // Timeout de seguridad - si después de 10 segundos aún está cargando, mostrar error
-    Future.delayed(Duration(seconds: 10), () {
-      if (_isLoadingInscripciones && mounted) {
-        print('⏰ Timeout - Deteniendo carga de inscripciones');
+      print('🚨 Error cargando inscripciones: $e');
+      if (mounted) {
         setState(() {
-          _errorInscripciones = 'Timeout: La carga tomó demasiado tiempo';
+          _errorInscripciones =
+              'Ocurrió un error al cargar las inscripciones del apoderado';
           _isLoadingInscripciones = false;
-          // Crear una inscripción de fallback
-          _inscripciones = [
-            Inscripcion(
-              id: 'demo-001',
-              nombre: 'Estudiante',
-              apellidos: 'Demo',
-              codigoAlumno: 'DEMO001',
-              fechaInscripcion: DateTime.now(),
-            ),
-          ];
-          _inscripcionSeleccionada = _inscripciones.first.id;
+          if (_inscripciones.length <= 1) {
+            _aplicarATodos = true;
+          }
+          _alinearSeleccionConInscripciones();
         });
       }
-    });
+    }
   }
 
   void _crearInscripcionDemo() {
     print('🎭 Creando inscripción demo por timeout/error');
-    if (mounted) {
-      setState(() {
-        _inscripciones = [
-          Inscripcion(
-            id: 'demo-${DateTime.now().millisecondsSinceEpoch}',
-            nombre: 'Estudiante',
-            apellidos: 'Demo',
-            codigoAlumno: 'DEMO001',
-            fechaInscripcion: DateTime.now(),
-          ),
-        ];
-        _inscripcionSeleccionada = _inscripciones.first.id;
-        _isLoadingInscripciones = false;
-        _errorInscripciones = null;
-      });
+    if (!mounted) {
+      return;
     }
+
+    setState(() {
+      _inscripciones = [
+        Inscripcion(
+          id: 'demo-${DateTime.now().millisecondsSinceEpoch}',
+          nombre: 'Estudiante',
+          apellidos: 'Demo',
+          codigoAlumno: 'DEMO001',
+          fechaInscripcion: DateTime.now(),
+        ),
+      ];
+
+      _isLoadingInscripciones = false;
+      _errorInscripciones = null;
+      _aplicarATodos = true;
+      _alinearSeleccionConInscripciones();
+    });
   }
 
   @override
@@ -353,7 +376,7 @@ class _SubirVoucherPageState extends State<SubirVoucherPage> {
                   const SizedBox(width: 12),
                   const Expanded(
                     child: Text(
-                      'Complete todos los campos para registrar su pago de mensualidad. Recibirá un comprobante electrónico por correo.',
+                      'Complete todos los campos para registrar su pago de mensualidad. El comprobante se asociará automáticamente a todos los alumnos vinculados a su cuenta y recibirá un comprobante electrónico por correo.',
                       style: TextStyle(fontSize: 14, height: 1.4),
                     ),
                   ),
@@ -489,44 +512,101 @@ class _SubirVoucherPageState extends State<SubirVoucherPage> {
       );
     }
 
-    return DropdownButtonFormField<String>(
-      value: _inscripcionSeleccionada,
-      decoration: InputDecoration(
-        labelText: 'Seleccionar Alumno',
-        prefixIcon: const Icon(Icons.person),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-      items:
-          _inscripciones.map((inscripcion) {
-            return DropdownMenuItem<String>(
-              value: inscripcion.id,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    inscripcion.nombreCompleto,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  Text(
-                    'Código: ${inscripcion.codigoAlumno}',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                  ),
-                ],
-              ),
-            );
-          }).toList(),
-      onChanged: (String? value) {
-        setState(() {
-          _inscripcionSeleccionada = value;
-        });
-      },
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Debe seleccionar un alumno';
-        }
-        return null;
-      },
+    final puedeAgrupar = _inscripciones.length > 1;
+    final totalInscripciones = _inscripciones.length;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Aplicar a todos mis hijos'),
+          subtitle: Text(
+            puedeAgrupar
+                ? 'Actívalo si el comprobante cubre a todos los alumnos asociados.'
+                : 'Solo se encontró un alumno asociado a su cuenta.',
+          ),
+          value: _aplicarATodos,
+          onChanged: puedeAgrupar
+              ? (value) {
+                  setState(() {
+                    _aplicarATodos = value;
+                    if (_aplicarATodos) {
+                      _seleccionManual
+                        ..clear()
+                        ..addAll(_inscripciones.map((ins) => ins.id));
+                    } else if (_seleccionManual.isEmpty &&
+                        _inscripciones.isNotEmpty) {
+                      _seleccionManual.add(_inscripciones.first.id);
+                    }
+                  });
+                }
+              : null,
+        ),
+        const SizedBox(height: 12),
+        Text(
+          puedeAgrupar
+              ? 'Selecciona los alumnos que cubre este pago:'
+              : 'Este comprobante se asociará automáticamente al alumno disponible:',
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 8),
+        ..._inscripciones.map((inscripcion) {
+          final seleccionado = _seleccionManual.contains(inscripcion.id);
+          return CheckboxListTile(
+            key: ValueKey(inscripcion.id),
+            value: seleccionado,
+            contentPadding: EdgeInsets.zero,
+            controlAffinity: ListTileControlAffinity.leading,
+            title: Text(
+              inscripcion.nombreCompleto,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            subtitle: Text(
+              'Código: ${inscripcion.codigoAlumno}',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            ),
+            onChanged: puedeAgrupar
+                ? (checked) {
+                    setState(() {
+                      if (checked == true) {
+                        _seleccionManual.add(inscripcion.id);
+                      } else {
+                        _seleccionManual.remove(inscripcion.id);
+                      }
+
+                      if (_seleccionManual.isEmpty &&
+                          _inscripciones.isNotEmpty) {
+                        _seleccionManual.add(_inscripciones.first.id);
+                      }
+
+                      _aplicarATodos =
+                          _seleccionManual.length == totalInscripciones;
+                      if (_aplicarATodos) {
+                        _seleccionManual
+                          ..clear()
+                          ..addAll(_inscripciones.map((ins) => ins.id));
+                      }
+                    });
+                  }
+                : null,
+          );
+        }).toList(),
+        if (puedeAgrupar && _seleccionManual.length == 1)
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.only(top: 8),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.blueGrey.shade50,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Text(
+              'Marca más de un alumno si el comprobante cubre a varios hermanos.',
+              style: TextStyle(fontSize: 12),
+            ),
+          ),
+      ],
     );
   }
 
@@ -821,15 +901,25 @@ class _SubirVoucherPageState extends State<SubirVoucherPage> {
       return;
     }
 
-    if (_inscripcionSeleccionada == null) {
+  final destinos = _aplicarATodos
+    ? _inscripciones.map((inscripcion) => inscripcion.id).toList()
+    : _inscripciones
+      .where((inscripcion) =>
+        _seleccionManual.contains(inscripcion.id))
+      .map((inscripcion) => inscripcion.id)
+      .toList();
+
+    if (destinos.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Debe seleccionar un alumno'),
+          content: Text('Debe seleccionar al menos un alumno'),
           backgroundColor: Colors.red,
         ),
       );
       return;
     }
+
+    final inscripcionPrincipal = destinos.first;
 
     setState(() {
       _isLoading = true;
@@ -837,7 +927,7 @@ class _SubirVoucherPageState extends State<SubirVoucherPage> {
 
     try {
       final response = await PagosService.subirVoucherMensualidad(
-        inscripcionId: _inscripcionSeleccionada!,
+        inscripcionId: inscripcionPrincipal,
         metodoPago: _metodoPago,
         montoTotal: double.parse(_montoController.text),
         fechaPago: _fechaPago,
@@ -853,6 +943,8 @@ class _SubirVoucherPageState extends State<SubirVoucherPage> {
                 ? _observacionesController.text
                 : null,
         archivoVoucher: _archivoVoucher,
+        estudiantesSeleccionados: destinos,
+        aplicarATodos: _aplicarATodos,
       );
 
       if (response.statusCode == 201) {
