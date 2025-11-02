@@ -124,6 +124,30 @@ class ApiService {
     }
   }
 
+  static Future<Uint8List> getBinary(String endpoint) async {
+    try {
+      final headers = await _getAuthHeaders();
+      final response = await http.get(
+        Uri.parse('$baseUrl$endpoint'),
+        headers: headers,
+      );
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return response.bodyBytes;
+      }
+      try {
+        final data = jsonDecode(response.body);
+        final message = data is Map<String, dynamic>
+            ? (data['message'] ?? data['error'])
+            : null;
+        throw Exception(message ?? 'Error al descargar recurso');
+      } catch (_) {
+        throw Exception('Error al descargar recurso (status ' + response.statusCode.toString() + ')');
+      }
+    } catch (e) {
+      throw Exception('Error de conexión: ' + e.toString());
+    }
+  }
+
   // DELETE request
   static Future<ApiResponse> delete(String endpoint) async {
     try {

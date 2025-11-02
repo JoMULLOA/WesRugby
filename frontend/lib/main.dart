@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:wesrugby/features/auth/presentation/screens/simple_login/simple_login.dart';
 import 'package:wesrugby/features/home/presentation/screens/home/home_screen.dart';
@@ -7,6 +7,7 @@ import 'package:wesrugby/features/admin/presentation/screens/dashboards/tesorera
 import 'package:wesrugby/features/admin/presentation/screens/dashboards/entrenador/entrenador_dashboard.dart';
 import 'package:wesrugby/features/admin/presentation/screens/dashboards/apoderado/apoderado_dashboard.dart';
 import 'package:wesrugby/features/admin/presentation/screens/rama_externa/rama_externa_screen.dart';
+import 'package:wesrugby/features/inventory/presentation/screens/simulator/inventory_simulator_screen.dart';
 import 'package:wesrugby/core/config/colors.dart';
 
 void main() async {
@@ -20,7 +21,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Wessex Rugby Club - Sistema de Gestión',
+      title: 'Wessex Rugby Club - Sistema de GestiÃ³n',
       debugShowCheckedModeBanner: false,
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
@@ -39,6 +40,7 @@ class MyApp extends StatelessWidget {
         '/dashboard/entrenador': (context) => const EntrenadorDashboard(),
         '/dashboard/apoderado': (context) => const ApoderadoDashboard(),
         '/dashboard/rama_externa': (context) => RamaExternaScreen(),
+        '/inventario/simulador': (context) => const InventorySimulatorScreen(),
       },
     );
   }

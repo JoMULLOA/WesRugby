@@ -1,10 +1,10 @@
-"use strict";
+﻿"use strict";
 import { Router } from "express";
 import userRoutes from "./user.routes.js";
 import authRoutes from "./auth.routes.js";
 import notificacionRoutes from "./notificacion.routes.js";
 
-// Rutas para módulos de rugby
+// Rutas para modulos de rugby
 import planPagoRoutes from "./planPago.routes.js";
 import asistenciaRoutes from "./asistencia.routes.js";
 import comprobantePagoRoutes from "./comprobantePago.routes.js";
@@ -18,12 +18,13 @@ import eventoRoutes from "./evento.routes.js";
 import tipoEventoRoutes from "./tipoEvento.routes.js";
 import actaReunionRoutes from "./actaReunion.routes.js";
 
-// Rutas para información pública
+// Rutas para informacion publica
 import noticiaRoutes from "./noticia.routes.js";
 import auspiciadorRoutes from "./auspiciador.routes.js";
 import merchandisingRoutes from "./merchandising.routes.js";
 import homepageRoutes from "./homepage.routes.js";
 import uploadRoutes from "./upload.routes.js";
+import inventoryRoutes from "./inventory.routes.js";
 
 const router = Router();
 
@@ -31,7 +32,7 @@ router
     .use("/auth", authRoutes)
     .use("/user", userRoutes)
     .use("/notificaciones", notificacionRoutes)
-    // Rutas módulos rugby
+    // Rutas modulos rugby
     .use("/planes-pago", planPagoRoutes)
     .use("/asistencia", asistenciaRoutes)
     .use("/comprobantes-pago", comprobantePagoRoutes)
@@ -44,11 +45,12 @@ router
     .use("/eventos", eventoRoutes)
     .use("/tipos-evento", tipoEventoRoutes)
     .use("/actas-reunion", actaReunionRoutes)
-    // Rutas información pública
+    // Rutas informacion publica
     .use("/noticias", noticiaRoutes)
     .use("/auspiciadores", auspiciadorRoutes)
     .use("/merchandising", merchandisingRoutes)
     .use("/homepage", homepageRoutes)
+    .use("/inventario", inventoryRoutes)
     .use("/upload", uploadRoutes);
 
 export default router;
