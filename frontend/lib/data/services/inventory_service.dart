@@ -24,7 +24,7 @@ class InventoryService {
       throw Exception(response.message ?? 'Error al obtener productos');
     }
     if (response.data is! List) {
-      throw Exception('Respuesta de productos no válida');
+      throw Exception('Respuesta de productos no vï¿½lida');
     }
     return (response.data as List<dynamic>)
         .map((item) => InventoryProductModel.fromJson(item as Map<String, dynamic>))
@@ -39,7 +39,7 @@ class InventoryService {
       throw Exception(response.message ?? 'Error al obtener productos');
     }
     if (response.data is! List) {
-      throw Exception('Respuesta de productos no válida');
+      throw Exception('Respuesta de productos no vï¿½lida');
     }
     return (response.data as List<dynamic>)
         .map((item) => InventoryProductModel.fromJson(item as Map<String, dynamic>))
@@ -55,16 +55,23 @@ class InventoryService {
   }
 
   static Future<void> deleteProduct(String id) async {
-    final response = await ApiService.delete('/inventario/products/');
+    final response = await ApiService.delete('/inventario/products/$id');
     if (!response.success) {
       throw Exception(response.message ?? 'Error al eliminar producto');
+    }
+  }
+
+  static Future<void> deleteProductPermanently(String id) async {
+    final response = await ApiService.delete('/inventario/products/$id/permanent');
+    if (!response.success) {
+      throw Exception(response.message ?? 'Error al eliminar producto permanentemente');
     }
   }
 
   static Future<String> reissueProductBarcode(String productId) async {
     final response = await ApiService.post('/inventario/barcodes/reissue/$productId', {});
     if (!response.success) {
-      throw Exception(response.message ?? 'Error al regenerar código');
+      throw Exception(response.message ?? 'Error al regenerar cï¿½digo');
     }
     final data = response.data as Map<String, dynamic>;
     return data['barcode'] as String;
@@ -97,7 +104,7 @@ class InventoryService {
       throw Exception(response.message ?? 'Error al obtener el resumen de ventas');
     }
     if (response.data is! List) {
-      throw Exception('Respuesta de resumen no válida');
+      throw Exception('Respuesta de resumen no vï¿½lida');
     }
 
     return (response.data as List<dynamic>)

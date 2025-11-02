@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:html' as html;
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:wesrugby/core/config/colors.dart';
@@ -259,6 +262,262 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen>
     }
   }
 
+  Future<void> _downloadSalesReport() async {
+    try {
+      // Generar nombre del archivo con fecha
+      final now = DateTime.now();
+      final fileName = 'reporte_ventas_${now.year}_${now.month.toString().padLeft(2, '0')}_${now.day.toString().padLeft(2, '0')}.csv';
+      
+      // Crear contenido CSV
+      final buffer = StringBuffer();
+      buffer.writeln('Producto,Categoria,Ventas,Unidades,Total (CLP),Ultima Venta,Codigo');
+      
+      for (final item in _salesSummary) {
+        buffer.writeln(
+          '"${item.productName}","${_categoryLabel(item.category)}",${item.totalSales},${item.totalQuantity},'
+          '${item.totalAmountCents},"${item.lastSaleAt != null ? _dateFormat.format(item.lastSaleAt!) : 'N/A'}","${item.barcode}"',
+        );
+      }
+      
+      // Agregar totales
+      buffer.writeln('');
+      buffer.writeln('TOTALES');
+      buffer.writeln('Total Ventas,${_salesSummary.length}');
+      buffer.writeln('Total Unidades,${_salesTotalQuantity}');
+      buffer.writeln('Total Monto,${_salesTotalAmount}');
+      
+      if (_summaryFrom != null && _summaryTo != null) {
+        buffer.writeln('');
+        buffer.writeln('FILTROS APLICADOS');
+        buffer.writeln('Desde,${_dateFormat.format(_summaryFrom!)}');
+        buffer.writeln('Hasta,${_dateFormat.format(_summaryTo!)}');
+      }
+      
+      // Descargar archivo
+      final bytes = utf8.encode(buffer.toString());
+      final blob = html.Blob([bytes]);
+      final url = html.Url.createObjectUrlFromBlob(blob);
+      final anchor = html.AnchorElement(href: url)
+        ..setAttribute('download', fileName)
+        ..click();
+      html.Url.revokeObjectUrl(url);
+      
+      _showSnackBar('Reporte descargado: $fileName', success: true);
+    } catch (error) {
+      _showSnackBar('Error al descargar reporte: $error');
+    }
+  }
+
+  void _showSalesChart() {
+    if (_salesSummary.isEmpty) {
+      _showSnackBar('No hay datos para mostrar en el grafico');
+      return;
+    }
+    
+    showDialog(
+      context: context,
+      builder:
+          (context) => Dialog(
+            child: Container(
+              width: MediaQuery.of(context).size.width * 0.8,
+              height: MediaQuery.of(context).size.height * 0.7,
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Grafico de Ventas',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          // Grafico de barras simple
+                          Container(
+                            height: 400,
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: WessexColors.lightGray.withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Ventas por Producto (Top 10)',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 16),
+                                Expanded(
+                                  child: _buildSimpleBarChart(),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          // Estadisticas adicionales
+                          Wrap(
+                            spacing: 16,
+                            runSpacing: 16,
+                            children: [
+                              _buildStatCard(
+                                'Total Ventas',
+                                _salesSummary.length.toString(),
+                                Icons.receipt_long,
+                                WessexColors.deepRoyalBlue,
+                              ),
+                              _buildStatCard(
+                                'Unidades Vendidas',
+                                _salesTotalQuantity.toString(),
+                                Icons.shopping_basket,
+                                WessexColors.leafGreen,
+                              ),
+                              _buildStatCard(
+                                'Ingresos Totales',
+                                _formatPesos(_salesTotalAmount),
+                                Icons.attach_money,
+                                WessexColors.darkGrape,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+    );
+  }
+
+  Widget _buildSimpleBarChart() {
+    final topProducts = _salesSummary.take(10).toList();
+    final maxValue = topProducts.isEmpty
+        ? 1.0
+        : topProducts.map((e) => e.totalAmountCents).reduce((a, b) => a > b ? a : b).toDouble();
+
+    return ListView.builder(
+      itemCount: topProducts.length,
+      itemBuilder: (context, index) {
+        final product = topProducts[index];
+        final percentage = (product.totalAmountCents / maxValue);
+        
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: Text(
+                      product.productName,
+                      style: const TextStyle(fontSize: 12),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 7,
+                    child: Stack(
+                      children: [
+                        Container(
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: WessexColors.maximumGrayMint.withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                        FractionallySizedBox(
+                          widthFactor: percentage,
+                          child: Container(
+                            height: 24,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  WessexColors.leafGreen,
+                                  WessexColors.deepRoyalBlue,
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: 80,
+                    child: Text(
+                      _formatPesos(product.totalAmountCents),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.right,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+    return Container(
+      width: 200,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 32),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 12,
+              color: color.withOpacity(0.8),
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _confirmDelete(InventoryProductModel product) async {
     if (product.category == 'varios') {
       _showSnackBar('El producto Varios no puede eliminarse');
@@ -294,6 +553,126 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen>
       _showSnackBar('Producto desactivado correctamente', success: true);
     } catch (error) {
       _showSnackBar('No se pudo desactivar el producto: $error');
+    }
+  }
+
+  Future<void> _toggleProductActive(InventoryProductModel product) async {
+    if (product.category == 'varios') {
+      _showSnackBar('El producto Varios no puede modificarse');
+      return;
+    }
+    
+    final newStatus = !product.active;
+    final action = newStatus ? 'activar' : 'desactivar';
+    
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: Text('${action.substring(0, 1).toUpperCase()}${action.substring(1)} producto'),
+            content: Text(
+              '¿Deseas $action el producto "${product.name}"?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancelar'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: newStatus ? WessexColors.leafGreen : WessexColors.maximumGrayMint,
+                ),
+                child: Text(action.substring(0, 1).toUpperCase() + action.substring(1)),
+              ),
+            ],
+          ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      final payload = {
+        'id': product.id,
+        'name': product.name,
+        'category': product.category,
+        'sourceType': product.sourceType,
+        'pricingMode': product.pricingMode,
+        'defaultPriceCents': product.defaultPriceCents,
+        'active': newStatus,
+      };
+      await InventoryService.saveProduct(payload);
+      await _loadProducts();
+      _showSnackBar('Producto ${newStatus ? "activado" : "desactivado"} correctamente', success: true);
+    } catch (error) {
+      _showSnackBar('No se pudo $action el producto: $error');
+    }
+  }
+
+  Future<void> _confirmDeletePermanent(InventoryProductModel product) async {
+    if (product.category == 'varios') {
+      _showSnackBar('El producto Varios no puede eliminarse');
+      return;
+    }
+    
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Eliminar producto permanentemente'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '¿Estas seguro de que deseas eliminar permanentemente el producto "${product.name}"?',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: WessexColors.crimsonAlert.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: WessexColors.crimsonAlert.withOpacity(0.3)),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.warning, color: WessexColors.crimsonAlert, size: 20),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Esta accion no se puede deshacer. Se eliminaran todos los registros asociados.',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancelar'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: WessexColors.crimsonAlert,
+                ),
+                child: const Text('Eliminar permanentemente'),
+              ),
+            ],
+          ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await InventoryService.deleteProductPermanently(product.id);
+      _showSnackBar('Producto eliminado permanentemente', success: true);
+      await _loadProducts();
+    } catch (error) {
+      _showSnackBar('No se pudo eliminar el producto: $error');
     }
   }
 
@@ -630,6 +1009,22 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen>
                       onPressed: _clearSummaryFilters,
                       child: const Text('Limpiar filtros'),
                     ),
+                    ElevatedButton.icon(
+                      onPressed: _downloadSalesReport,
+                      icon: const Icon(Icons.download),
+                      label: const Text('Descargar reporte'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: WessexColors.leafGreen,
+                      ),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: _showSalesChart,
+                      icon: const Icon(Icons.bar_chart),
+                      label: const Text('Ver grafico'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: WessexColors.deepRoyalBlue,
+                      ),
+                    ),
                     IconButton(
                       tooltip: 'Actualizar',
                       onPressed: _loadSalesSummary,
@@ -826,7 +1221,11 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen>
                           DataColumn(label: Text('Precio base')),
                           DataColumn(label: Text('Estado')),
                           DataColumn(label: Text('Codigo de barras')),
-                          DataColumn(label: Text('Acciones')),
+                          DataColumn(
+                            label: Center(
+                              child: Text('Acciones'),
+                            ),
+                          ),
                         ],
                         rows: products
                             .map(
@@ -852,29 +1251,41 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen>
                                       children: [
                                         IconButton(
                                           tooltip: 'Editar',
-                                          icon: const Icon(Icons.edit),
+                                          icon: const Icon(Icons.edit, size: 20),
                                           onPressed: () => _showProductDialog(product: product),
                                         ),
-                                        const SizedBox(width: 4),
                                         IconButton(
                                           tooltip: 'Regenerar codigo',
-                                          icon: const Icon(Icons.qr_code),
+                                          icon: const Icon(Icons.qr_code, size: 20),
                                           onPressed: () => _handleReissueBarcode(product),
                                         ),
-                                        const SizedBox(width: 4),
                                         IconButton(
                                           tooltip: 'Descargar etiqueta',
-                                          icon: const Icon(Icons.download),
+                                          icon: const Icon(Icons.download, size: 20),
                                           onPressed: () => _downloadSheetForProductId(product.id),
                                         ),
-                                        const SizedBox(width: 4),
                                         IconButton(
-                                          tooltip: 'Desactivar',
-                                          icon: const Icon(Icons.delete_outline),
+                                          tooltip: product.active ? 'Desactivar' : 'Activar',
+                                          icon: Icon(
+                                            product.active ? Icons.toggle_on : Icons.toggle_off,
+                                            size: 20,
+                                            color: product.active
+                                                ? WessexColors.leafGreen
+                                                : WessexColors.maximumGrayMint,
+                                          ),
                                           onPressed:
                                               product.category == 'varios'
                                                   ? null
-                                                  : () => _confirmDelete(product),
+                                                  : () => _toggleProductActive(product),
+                                        ),
+                                        IconButton(
+                                          tooltip: 'Eliminar',
+                                          icon: const Icon(Icons.delete_forever, size: 20),
+                                          color: WessexColors.crimsonAlert,
+                                          onPressed:
+                                              product.category == 'varios'
+                                                  ? null
+                                                  : () => _confirmDeletePermanent(product),
                                         ),
                                       ],
                                     ),

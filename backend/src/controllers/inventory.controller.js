@@ -5,6 +5,7 @@ import {
   listAllProducts,
   upsertProduct,
   deleteProduct as deleteProductService,
+  deleteProductPermanently as deleteProductPermanentlyService,
   reissueBarcode,
   generateSheetBuffer,
   listProductsByIds,
@@ -113,6 +114,22 @@ export async function deleteProduct(req, res, next) {
     }
     const product = await deleteProductService(id);
     res.json(product);
+  } catch (error) {
+    if (error.message === "PRODUCT_NOT_FOUND") {
+      return res.status(404).json({ error: error.message });
+    }
+    next(error);
+  }
+}
+
+export async function deleteProductPermanently(req, res, next) {
+  try {
+    const { id } = req.params;
+    if (!id) {
+      return res.status(400).json({ error: "PRODUCT_ID_REQUIRED" });
+    }
+    const result = await deleteProductPermanentlyService(id);
+    res.json(result);
   } catch (error) {
     if (error.message === "PRODUCT_NOT_FOUND") {
       return res.status(404).json({ error: error.message });

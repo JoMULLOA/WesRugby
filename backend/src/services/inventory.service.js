@@ -144,6 +144,21 @@ export async function deleteProduct(productId) {
   return repo.save(existing);
 }
 
+export async function deleteProductPermanently(productId) {
+  if (!productId) {
+    throw new Error("PRODUCT_ID_REQUIRED");
+  }
+  const repo = productRepository();
+  const existing = await repo.findOne({ where: { id: productId } });
+  if (!existing) {
+    throw new Error("PRODUCT_NOT_FOUND");
+  }
+  
+  // Eliminar permanentemente (CASCADE eliminara registros relacionados)
+  await repo.remove(existing);
+  return { deleted: true, productId };
+}
+
 export async function upsertProduct(payload) {
   const repo = productRepository();
   const data = normalizePayload(payload);

@@ -6,6 +6,7 @@ import {
   getManagementProducts,
   postProduct,
   deleteProduct,
+  deleteProductPermanently,
   postReissueBarcode,
   getBarcodeSheet,
   getSalesSummary,
@@ -21,6 +22,7 @@ router.get("/products", getProducts);
 router.get("/products/management", getManagementProducts);
 router.post("/products", postProduct);
 router.delete("/products/:id", deleteProduct);
+router.delete("/products/:id/permanent", deleteProductPermanently);
 router.post("/barcodes/reissue/:productId", postReissueBarcode);
 router.get("/barcodes/sheet", getBarcodeSheet);
 router.get("/sales/summary", getSalesSummary);
