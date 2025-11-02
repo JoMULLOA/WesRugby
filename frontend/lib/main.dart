@@ -7,7 +7,8 @@ import 'package:wesrugby/features/admin/presentation/screens/dashboards/tesorera
 import 'package:wesrugby/features/admin/presentation/screens/dashboards/entrenador/entrenador_dashboard.dart';
 import 'package:wesrugby/features/admin/presentation/screens/dashboards/apoderado/apoderado_dashboard.dart';
 import 'package:wesrugby/features/admin/presentation/screens/rama_externa/rama_externa_screen.dart';
-import 'package:wesrugby/features/inventory/presentation/screens/simulator/inventory_simulator_screen.dart';
+import 'package:wesrugby/features/inventory/presentation/screens/management/inventory_management_screen.dart';
+// import 'package:wesrugby/features/inventory/presentation/screens/simulator/inventory_simulator_screen.dart';
 import 'package:wesrugby/core/config/colors.dart';
 
 void main() async {
@@ -40,7 +41,8 @@ class MyApp extends StatelessWidget {
         '/dashboard/entrenador': (context) => const EntrenadorDashboard(),
         '/dashboard/apoderado': (context) => const ApoderadoDashboard(),
         '/dashboard/rama_externa': (context) => RamaExternaScreen(),
-        '/inventario/simulador': (context) => const InventorySimulatorScreen(),
+        // '/inventario/simulador': (context) => const InventorySimulatorScreen(),
+        '/inventario/gestion': (context) => const InventoryManagementScreen(),
       },
     );
   }

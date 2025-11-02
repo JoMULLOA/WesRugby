@@ -2,7 +2,9 @@
 import Joi from "joi";
 import {
   listActiveProducts,
+  listAllProducts,
   upsertProduct,
+  deleteProduct as deleteProductService,
   reissueBarcode,
   generateSheetBuffer,
   listProductsByIds,
@@ -10,6 +12,7 @@ import {
   processBulkScans,
   createVariosSale,
   ensureVariosProduct,
+  getSalesSummary as getSalesSummaryService,
 } from "../services/inventory.service.js";
 import { INVENTORY_PRICING_MODES, INVENTORY_PRODUCT_CATEGORIES, INVENTORY_SOURCE_TYPES } from "../entity/inventoryProduct.entity.js";
 
@@ -65,6 +68,16 @@ export async function getProducts(_req, res, next) {
   }
 }
 
+export async function getManagementProducts(req, res, next) {
+  try {
+    const includeInactive = req.query.includeInactive !== "false";
+    const products = includeInactive ? await listAllProducts() : await listActiveProducts();
+    res.json(products);
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function postProduct(req, res, next) {
   try {
     const payload = await productSchema.validateAsync(req.body, { abortEarly: false });
@@ -86,6 +99,23 @@ export async function postProduct(req, res, next) {
     if (error.message === "PRODUCT_NOT_FOUND") {
       res.status(404).json({ error: error.message });
       return;
+    }
+    next(error);
+  }
+}
+
+
+export async function deleteProduct(req, res, next) {
+  try {
+    const { id } = req.params;
+    if (!id) {
+      return res.status(400).json({ error: "PRODUCT_ID_REQUIRED" });
+    }
+    const product = await deleteProductService(id);
+    res.json(product);
+  } catch (error) {
+    if (error.message === "PRODUCT_NOT_FOUND") {
+      return res.status(404).json({ error: error.message });
     }
     next(error);
   }
@@ -146,6 +176,37 @@ export async function getBarcodeSheet(req, res, next) {
       res.status(400).json({ error: "VALIDATION_ERROR", details: error.details });
       return;
     }
+    next(error);
+  }
+}
+
+
+export async function getSalesSummary(req, res, next) {
+  try {
+    const { from, to, productId } = req.query;
+    const filters = {};
+
+    if (from) {
+      const fromDate = new Date(from);
+      if (!Number.isNaN(fromDate.getTime())) {
+        filters.from = fromDate.toISOString();
+      }
+    }
+
+    if (to) {
+      const toDate = new Date(to);
+      if (!Number.isNaN(toDate.getTime())) {
+        filters.to = toDate.toISOString();
+      }
+    }
+
+    if (productId) {
+      filters.productId = productId;
+    }
+
+    const summary = await getSalesSummaryService(filters);
+    res.json(summary);
+  } catch (error) {
     next(error);
   }
 }

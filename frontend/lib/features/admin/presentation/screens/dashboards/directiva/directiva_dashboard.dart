@@ -10,6 +10,7 @@ import 'package:wesrugby/features/admin/presentation/screens/eventos/gestion/ges
 import 'package:wesrugby/features/admin/presentation/screens/eventos/tipos/admin_tipos_evento_screen.dart';
 import 'package:wesrugby/features/admin/presentation/screens/actas/gestion/gestion_actas_reunion_screen.dart';
 import 'package:wesrugby/features/admin/presentation/screens/informacion_publica/gestion_informacion_publica_screen.dart';
+import 'package:wesrugby/features/inventory/presentation/screens/management/inventory_management_screen.dart';
 
 class DirectivaDashboard extends StatelessWidget {
   const DirectivaDashboard({super.key});
@@ -126,6 +127,23 @@ class DirectivaDashboard extends StatelessWidget {
                           context,
                           MaterialPageRoute(
                             builder: (context) => const GestionUsuariosScreen(),
+                          ),
+                        ),
+                        isDesktop: isDesktop,
+                        isTablet: isTablet,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildActionCard(
+                        'Inventario y Ventas',
+                        'Gestionar productos, ventas y códigos',
+                        Icons.storefront,
+                        WessexColors.leafGreen,
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const InventoryManagementScreen(),
                           ),
                         ),
                         isDesktop: isDesktop,

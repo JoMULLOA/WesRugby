@@ -1,12 +1,22 @@
-ï»¿import 'dart:typed_data';
+import 'dart:typed_data';
 
+import 'package:url_launcher/url_launcher.dart';
 import 'package:wesrugby/data/models/inventory_product_model.dart';
 import 'package:wesrugby/data/models/inventory_sale_model.dart';
+import 'package:wesrugby/data/models/inventory_sales_summary_model.dart';
 import 'package:wesrugby/data/models/inventory_scan_payload.dart';
 import 'package:wesrugby/data/services/api_service.dart';
 
 class InventoryService {
   const InventoryService._();
+
+  static String get _apiRoot {
+    final base = ApiService.baseUrl;
+    if (base.endsWith('/api')) {
+      return base.substring(0, base.length - 4);
+    }
+    return base;
+  }
 
   static Future<List<InventoryProductModel>> fetchProducts() async {
     final response = await ApiService.get('/inventario/products');
@@ -14,11 +24,50 @@ class InventoryService {
       throw Exception(response.message ?? 'Error al obtener productos');
     }
     if (response.data is! List) {
-      throw Exception('Respuesta de productos no vÃ¡lida');
+      throw Exception('Respuesta de productos no válida');
     }
     return (response.data as List<dynamic>)
         .map((item) => InventoryProductModel.fromJson(item as Map<String, dynamic>))
         .toList();
+  }
+
+  static Future<List<InventoryProductModel>> fetchManagementProducts({bool includeInactive = true}) async {
+    final params = <String, String>{'includeInactive': includeInactive.toString()};
+    final query = '?${Uri(queryParameters: params).query}';
+    final response = await ApiService.get('/inventario/products/management');
+    if (!response.success) {
+      throw Exception(response.message ?? 'Error al obtener productos');
+    }
+    if (response.data is! List) {
+      throw Exception('Respuesta de productos no válida');
+    }
+    return (response.data as List<dynamic>)
+        .map((item) => InventoryProductModel.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  static Future<InventoryProductModel> saveProduct(Map<String, dynamic> data) async {
+    final response = await ApiService.post('/inventario/products', data);
+    if (!response.success) {
+      throw Exception(response.message ?? 'Error al guardar producto');
+    }
+    return InventoryProductModel.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  static Future<void> deleteProduct(String id) async {
+    final response = await ApiService.delete('/inventario/products/');
+    if (!response.success) {
+      throw Exception(response.message ?? 'Error al eliminar producto');
+    }
+  }
+
+  static Future<String> reissueProductBarcode(String productId) async {
+    final response = await ApiService.post('/inventario/barcodes/reissue/$productId', {});
+    if (!response.success) {
+      throw Exception(response.message ?? 'Error al regenerar código');
+    }
+    final data = response.data as Map<String, dynamic>;
+    return data['barcode'] as String;
   }
 
   static Future<InventoryProductModel> fetchVariosProduct() async {
@@ -27,6 +76,33 @@ class InventoryService {
       throw Exception(response.message ?? 'Error al obtener producto varios');
     }
     return InventoryProductModel.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  static Future<List<InventorySalesSummaryModel>> fetchSalesSummary({DateTime? from, DateTime? to, String? productId}) async {
+    final params = <String, String>{};
+    if (from != null) {
+      params['from'] = from.toUtc().toIso8601String();
+    }
+    if (to != null) {
+      params['to'] = to.toUtc().toIso8601String();
+    }
+    if (productId != null && productId.isNotEmpty) {
+      params['productId'] = productId;
+    }
+    final query = params.isEmpty ? '' : '?${Uri(queryParameters: params).query}';
+    final endpoint = '/inventario/sales/summary$query';
+
+    final response = await ApiService.get(endpoint);
+    if (!response.success) {
+      throw Exception(response.message ?? 'Error al obtener el resumen de ventas');
+    }
+    if (response.data is! List) {
+      throw Exception('Respuesta de resumen no válida');
+    }
+
+    return (response.data as List<dynamic>)
+        .map((item) => InventorySalesSummaryModel.fromJson(item as Map<String, dynamic>))
+        .toList();
   }
 
   static Future<Uint8List> downloadBarcodeSheet({
@@ -56,11 +132,26 @@ class InventoryService {
       params['perPage'] = perPage.toString();
     }
 
-    final query = params.entries.map((entry) => '${entry.key}=${Uri.encodeComponent(entry.value)}').join('&');
-    final endpoint = query.isEmpty
-        ? '/inventario/barcodes/sheet'
-        : '/inventario/barcodes/sheet?$query';
+    final query = params.isEmpty ? '' : '?${Uri(queryParameters: params).query}';
+    final endpoint = '/inventario/barcodes/sheet$query';
     return ApiService.getBinary(endpoint);
+  }
+
+  static Future<void> openBarcodeSheetInBrowser({String? category, String? productId}) async {
+    final params = <String, String>{};
+    if (productId != null) {
+      params['ids'] = productId;
+      params['includeAll'] = 'false';
+    } else {
+      params['includeAll'] = 'true';
+    }
+    if (category != null && category.isNotEmpty) {
+      params['category'] = category;
+    }
+    final query = params.isEmpty ? '' : '?${Uri(queryParameters: params).query}';
+    final url = '$_apiRoot/api/inventario/barcodes/sheet$query';
+    final uri = Uri.parse(url);
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
   static Future<Map<String, dynamic>> syncScans(List<InventoryScanPayload> scans) async {

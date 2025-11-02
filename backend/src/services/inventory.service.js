@@ -1,4 +1,5 @@
 ﻿"use strict";
+// Service for inventory management - products, sales and barcode generation
 import { AppDataSource } from "../config/configDb.js";
 import { In } from "typeorm";
 import { INVENTORY_PRICING_MODES, INVENTORY_PRODUCT_CATEGORIES, INVENTORY_SOURCE_TYPES } from "../entity/inventoryProduct.entity.js";
@@ -76,6 +77,13 @@ function ingestRepository() {
   return AppDataSource.getRepository("InventoryScanIngest");
 }
 
+export async function listAllProducts() {
+  const repo = productRepository();
+  return repo.find({
+    order: { category: "ASC", name: "ASC" },
+  });
+}
+
 export async function listActiveProducts() {
   const repo = productRepository();
   return repo.find({
@@ -121,6 +129,19 @@ function normalizePayload(payload) {
     normalized.defaultPriceCents = null;
   }
   return normalized;
+}
+
+export async function deleteProduct(productId) {
+  if (!productId) {
+    throw new Error("PRODUCT_ID_REQUIRED");
+  }
+  const repo = productRepository();
+  const existing = await repo.findOne({ where: { id: productId } });
+  if (!existing) {
+    throw new Error("PRODUCT_NOT_FOUND");
+  }
+  existing.active = false;
+  return repo.save(existing);
 }
 
 export async function upsertProduct(payload) {
@@ -296,6 +317,59 @@ export async function processBulkScans(scans) {
   }
 
   return { acceptedIds, rejected };
+}
+
+
+export async function getSalesSummary(filters = {}) {
+  const manager = AppDataSource.manager;
+  const conditions = [];
+  const params = [];
+
+  if (filters.from) {
+    params.push(filters.from);
+    conditions.push(`sale."scannedAt" >= $${params.length}`);
+  }
+  if (filters.to) {
+    params.push(filters.to);
+    conditions.push(`sale."scannedAt" <= $${params.length}`);
+  }
+  if (filters.productId) {
+    params.push(filters.productId);
+    conditions.push(`sale.product_id = $${params.length}`);
+  }
+
+  const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+  const rows = await manager.query(
+    `SELECT
+       product.id AS "productId",
+       product.name AS "productName",
+       product.category AS "category",
+       product."pricingMode" AS "pricingMode",
+       product.barcode AS "barcode",
+       COALESCE(SUM(sale.quantity), 0) AS "totalQuantity",
+       COALESCE(SUM(sale."priceCents" * sale.quantity), 0) AS "totalAmountCents",
+       COUNT(*) AS "totalSales",
+       MAX(sale."scannedAt") AS "lastSaleAt"
+     FROM inventory_sales sale
+     INNER JOIN inventory_products product ON product.id = sale.product_id
+     ${whereClause}
+     GROUP BY product.id, product.name, product.category, product."pricingMode", product.barcode
+     ORDER BY "totalAmountCents" DESC, "totalSales" DESC`,
+    params,
+  );
+
+  return rows.map((row) => ({
+    productId: row.productId,
+    productName: row.productName,
+    category: row.category,
+    pricingMode: row.pricingMode,
+    barcode: row.barcode,
+    totalQuantity: Number.parseInt(row.totalQuantity, 10),
+    totalAmountCents: Number.parseInt(row.totalAmountCents, 10),
+    totalSales: Number.parseInt(row.totalSales, 10),
+    lastSaleAt: row.lastSaleAt,
+  }));
 }
 
 export async function createVariosSale(payload) {

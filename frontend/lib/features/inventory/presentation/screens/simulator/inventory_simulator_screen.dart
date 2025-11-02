@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 import 'package:wesrugby/data/models/inventory_product_model.dart';
@@ -15,6 +16,11 @@ class InventorySimulatorScreen extends StatefulWidget {
 }
 
 class _InventorySimulatorScreenState extends State<InventorySimulatorScreen> {
+  final NumberFormat _currencyFormat = NumberFormat.currency(
+    locale: 'es_CL',
+    symbol: r'\$ ',
+    decimalDigits: 0,
+  );
   late Future<List<InventoryProductModel>> _productsFuture;
   bool _downloading = false;
   bool _syncing = false;
@@ -59,11 +65,7 @@ class _InventorySimulatorScreenState extends State<InventorySimulatorScreen> {
     if (priceCents == null) {
       return 'Variable';
     }
-    final pesos = priceCents / 100;
-    if (pesos % 1 == 0) {
-      return '\$' + pesos.toStringAsFixed(0) + ' CLP';
-    }
-    return '\$' + pesos.toStringAsFixed(2) + ' CLP';
+    return _currencyFormat.format(priceCents);
   }
   Future<void> _downloadSheet({String? category}) async {
     setState(() {
@@ -107,7 +109,7 @@ class _InventorySimulatorScreenState extends State<InventorySimulatorScreen> {
             keyboardType: TextInputType.number,
             decoration: const InputDecoration(
               labelText: 'Precio en pesos chilenos',
-              helperText: 'Se convertirá automáticamente a centavos',
+              helperText: 'Ingresa el valor en pesos chilenos',
             ),
           ),
           actions: [
@@ -124,7 +126,7 @@ class _InventorySimulatorScreenState extends State<InventorySimulatorScreen> {
                   );
                   return;
                 }
-                Navigator.of(dialogContext).pop((value * 100).round());
+                Navigator.of(dialogContext).pop(value.round());
               },
               child: const Text('Confirmar'),
             ),
@@ -223,7 +225,7 @@ class _InventorySimulatorScreenState extends State<InventorySimulatorScreen> {
 
     try {
       final sale = await InventoryService.createVariosSale(
-        priceCents: (pricePesos * 100).round(),
+        priceCents: pricePesos.round(),
         quantity: quantity,
         deviceId: 'flutter-manual',
       );

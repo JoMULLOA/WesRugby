@@ -43,11 +43,13 @@ WesRugby es una aplicaciÃ³n mÃ³vil diseÃ±ada especÃ­ficamente para la ge
 ### Directiva
 - Dashboard ejecutivo con mÃ©tricas del club
 - GestiÃ³n de usuarios y roles
+- GestiÃ³n de inventario y ventas
 - Reportes financieros y de asistencia
 
 ### Tesorera
 - Control de pagos y cuotas
 - ValidaciÃ³n de vouchers
+- VisualizaciÃ³n de inventario y ventas consolidadas
 - Reportes financieros detallados
 
 ### Entrenador
