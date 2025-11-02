@@ -744,7 +744,24 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                       value: _eventos.length.toString(),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Container(
+                      width: 1.5,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.white.withOpacity(0.0),
+                            Colors.white.withOpacity(0.4),
+                            Colors.white.withOpacity(0.0),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                   Expanded(
                     child: _buildProfileMetric(
                       icon: Icons.emoji_events,

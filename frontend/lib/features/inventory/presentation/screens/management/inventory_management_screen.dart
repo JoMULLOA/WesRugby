@@ -189,11 +189,145 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen>
               end: now,
             );
 
-    final picked = await showDateRangePicker(
+    final picked = await showDialog<DateTimeRange>(
       context: context,
-      firstDate: DateTime(now.year - 2),
-      lastDate: DateTime(now.year + 1),
-      initialDateRange: initialRange,
+      builder: (BuildContext context) {
+        DateTime? tempStart;
+        DateTime? tempEnd;
+        
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Dialog(
+              child: Container(
+                width: 360,
+                constraints: const BoxConstraints(maxHeight: 520),
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Rango de fechas',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, size: 20),
+                          onPressed: () => Navigator.of(context).pop(),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    if (tempStart != null || tempEnd != null) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: WessexColors.deepRoyalBlue.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              tempStart != null ? _dateFormat.format(tempStart!) : '--',
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 8),
+                              child: Icon(Icons.arrow_forward, size: 16),
+                            ),
+                            Text(
+                              tempEnd != null ? _dateFormat.format(tempEnd!) : '--',
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                    Flexible(
+                      child: Theme(
+                        data: Theme.of(context).copyWith(
+                          datePickerTheme: DatePickerThemeData(
+                            headerBackgroundColor: WessexColors.deepRoyalBlue,
+                            headerForegroundColor: Colors.white,
+                            dayStyle: const TextStyle(fontSize: 12),
+                            yearStyle: const TextStyle(fontSize: 13),
+                          ),
+                        ),
+                        child: CalendarDatePicker(
+                          initialDate: tempStart ?? initialRange.start,
+                          firstDate: DateTime(now.year - 2),
+                          lastDate: DateTime(now.year + 1),
+                          onDateChanged: (date) {
+                            setDialogState(() {
+                              if (tempStart == null || (tempEnd != null)) {
+                                // Iniciar nuevo rango
+                                tempStart = date;
+                                tempEnd = null;
+                              } else {
+                                // Completar rango
+                                if (date.isBefore(tempStart!)) {
+                                  tempEnd = tempStart;
+                                  tempStart = date;
+                                } else {
+                                  tempEnd = date;
+                                }
+                              }
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Selecciona fecha inicio y fecha fin',
+                      style: TextStyle(fontSize: 11, color: Colors.grey),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () {
+                            setDialogState(() {
+                              tempStart = null;
+                              tempEnd = null;
+                            });
+                          },
+                          child: const Text('Limpiar'),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          onPressed:
+                              tempStart != null && tempEnd != null
+                                  ? () {
+                                    Navigator.of(context).pop(
+                                      DateTimeRange(start: tempStart!, end: tempEnd!),
+                                    );
+                                  }
+                                  : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: WessexColors.deepRoyalBlue,
+                          ),
+                          child: const Text('Aplicar'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
 
     if (picked != null) {

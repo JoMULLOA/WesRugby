@@ -31,6 +31,7 @@ export async function generateBarcodeSheet(labels, options = {}) {
   const usableHeight = doc.page.height - doc.page.margins.top - doc.page.margins.bottom;
   const cellWidth = usableWidth / columns;
   const cellHeight = usableHeight / rows;
+  const bottomMargin = 18; // Margen inferior adicional
 
   for (let index = 0; index < labels.length; index += 1) {
     const label = labels[index];
@@ -51,11 +52,17 @@ export async function generateBarcodeSheet(labels, options = {}) {
 
     const imageBuffer = await renderBarcode(label.barcode);
     const horizontalPadding = 24;
-    const nameTop = originY + 10;
-    const barcodeTop = originY + 44;
+    const nameTop = originY + 14;
+    const barcodeTop = originY + 48;
     const imageWidth = cellWidth - horizontalPadding * 2;
-    const imageHeight = Math.min(cellHeight / 2.6, 72);
+    const imageHeight = Math.min(cellHeight / 3.2, 60);
     const imageX = originX + (cellWidth - imageWidth) / 2;
+    const contentHeight = nameTop + 60 + imageHeight + 28; // altura total del contenido
+
+    // Verificar que el contenido no exceda la celda con el margen inferior
+    if (contentHeight + bottomMargin > cellHeight) {
+      console.warn(`Warning: Content may overflow cell at index ${index}`);
+    }
 
     doc.fillColor("#000000").fontSize(11).text(label.name, originX + horizontalPadding / 2, nameTop, {
       width: cellWidth - horizontalPadding,
@@ -67,8 +74,8 @@ export async function generateBarcodeSheet(labels, options = {}) {
       height: imageHeight,
     });
 
-    const codeY = barcodeTop + imageHeight + 14;
-    doc.fontSize(11).text(label.barcode, originX + horizontalPadding / 2, codeY, {
+    const codeY = barcodeTop + imageHeight + 10;
+    doc.fontSize(10).text(label.barcode, originX + horizontalPadding / 2, codeY, {
       width: cellWidth - horizontalPadding,
       align: "center",
     });
