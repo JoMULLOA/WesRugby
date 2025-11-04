@@ -1109,8 +1109,8 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen>
                             : '${_dateFormat.format(_summaryFrom!)} - ${_dateFormat.format(_summaryTo!)}',
                       ),
                     ),
-                    SizedBox(
-                      width: 260,
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 320),
                       child: DropdownButtonFormField<String>(
                         value: _summaryProductId ?? _allOptionValue,
                         decoration: const InputDecoration(
@@ -1269,8 +1269,8 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen>
               runSpacing: 16,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                SizedBox(
-                  width: 260,
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 320),
                   child: DropdownButtonFormField<String>(
                     value: _productCategoryFilter ?? _allOptionValue,
                     decoration: const InputDecoration(
