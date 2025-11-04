@@ -547,11 +547,11 @@ class ApiService {
   static Future<Map<String, dynamic>> editarParticipacion(
     int participacionId,
     int cantidadNinos,
-    String? listaInvitados,
+    String listaInvitados,
   ) async {
     final body = {
       'cantidadNinos': cantidadNinos,
-      if (listaInvitados != null) 'listaInvitados': listaInvitados,
+      'listaInvitados': listaInvitados,
     };
 
     final response = await put('/eventos/participacion/$participacionId', body);
@@ -637,6 +637,21 @@ class ApiService {
         response.message ?? 'Error al obtener participaciones del evento',
       );
     }
+  }
+
+  static Future<Uint8List> descargarParticipacionesPdf(
+    dynamic eventoId, {
+    List<String>? categorias,
+  }) async {
+    String endpoint = '/eventos/$eventoId/participaciones/pdf';
+    if (categorias != null && categorias.isNotEmpty) {
+      final joinedCategorias = categorias
+          .map((categoria) => Uri.encodeComponent(categoria))
+          .join(',');
+      endpoint += '?categorias=$joinedCategorias';
+    }
+
+    return getBinary(endpoint);
   }
 
   static Future<Map<String, dynamic>> subirMultimediaEventoDirectiva({

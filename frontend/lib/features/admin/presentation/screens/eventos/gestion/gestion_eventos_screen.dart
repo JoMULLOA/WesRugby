@@ -1,3 +1,5 @@
+import 'dart:html' as html;
+
 import 'package:flutter/material.dart';
 import 'package:wesrugby/data/services/api_service.dart';
 import 'package:wesrugby/core/config/colors.dart';
@@ -55,6 +57,36 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
   DateTime _convertirFechaUTCaChile(DateTime fechaUTC) {
     // Restar 3 horas para convertir de UTC a Chile (UTC-3)
     return fechaUTC.subtract(Duration(hours: 3));
+  }
+
+  String _generarNombreArchivoPdf(String titulo) {
+    final normalized = titulo
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
+        .replaceAll(RegExp(r'_+'), '_')
+        .replaceAll(RegExp(r'^_|_$'), '');
+    final now = DateTime.now();
+    final stamp =
+        '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
+    return '${normalized.isEmpty ? 'participaciones' : normalized}_$stamp.pdf';
+  }
+
+  Future<void> _descargarParticipacionesPdfArchivo({
+    required dynamic eventoId,
+    required String titulo,
+    List<String>? categorias,
+  }) async {
+    final bytes = await ApiService.descargarParticipacionesPdf(
+      eventoId,
+      categorias: categorias,
+    );
+    final fileName = _generarNombreArchivoPdf(titulo);
+    final blob = html.Blob([bytes], 'application/pdf');
+    final url = html.Url.createObjectUrlFromBlob(blob);
+    final anchor = html.AnchorElement(href: url)
+      ..setAttribute('download', fileName)
+      ..click();
+    html.Url.revokeObjectUrl(url);
   }
 
   @override
@@ -129,6 +161,7 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
         context: context,
         builder: (dialogContext) {
           bool isFiltering = false;
+          bool isExportingPdf = false;
           List<dynamic> estadisticasVisibles = List<dynamic>.from(
             estadisticasIniciales,
           );
@@ -189,6 +222,47 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
                       backgroundColor: WessexColors.crimsonAlert,
                     ),
                   );
+                }
+              }
+
+              Future<void> descargarPdf() async {
+                if (isExportingPdf) return;
+                setDialogState(() {
+                  isExportingPdf = true;
+                });
+
+                try {
+                  final categoriasParaPdf =
+                      categoriasDisponibles.isEmpty ||
+                              categoriasSeleccionadas.length ==
+                                  categoriasDisponibles.length
+                          ? null
+                          : categoriasSeleccionadas.toList();
+
+                  await _descargarParticipacionesPdfArchivo(
+                    eventoId: evento['id'],
+                    titulo: evento['titulo'] ?? evento['nombre'] ?? 'evento',
+                    categorias: categoriasParaPdf,
+                  );
+
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('PDF de participaciones generado'),
+                      ),
+                    );
+                  }
+                } catch (error) {
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                    SnackBar(
+                      content: Text('Error al descargar PDF: $error'),
+                      backgroundColor: WessexColors.crimsonAlert,
+                    ),
+                  );
+                } finally {
+                  setDialogState(() {
+                    isExportingPdf = false;
+                  });
                 }
               }
 
@@ -302,6 +376,34 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
                               style: const TextStyle(
                                 fontSize: 14,
                                 color: WessexColors.darkGrape,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            TextButton.icon(
+                              onPressed: descargarPdf,
+                              icon: isExportingPdf
+                                  ? SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation<Color>(
+                                          WessexColors.deepRoyalBlue,
+                                        ),
+                                      ),
+                                    )
+                                  : const Icon(
+                                      Icons.picture_as_pdf,
+                                      color: WessexColors.deepRoyalBlue,
+                                    ),
+                              label: Text(
+                                isExportingPdf
+                                    ? 'Generando...'
+                                    : 'Descargar PDF',
+                                style: const TextStyle(
+                                  color: WessexColors.deepRoyalBlue,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
                           ],

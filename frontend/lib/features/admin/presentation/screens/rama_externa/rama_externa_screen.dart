@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -1767,6 +1768,112 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
     );
   }
 
+  Future<void> _importarParticipantesDesdeCsv(
+    List<Map<String, dynamic>> participaciones,
+    List<String> categoriasDisponibles,
+    StateSetter setStateDialog,
+  ) async {
+    final result = await FilePicker.platform.pickFiles(
+      allowMultiple: false,
+      withData: true,
+      type: FileType.custom,
+      allowedExtensions: const ['csv'],
+    );
+
+    if (result == null || result.files.isEmpty) return;
+
+    try {
+      final file = result.files.first;
+      final bytes = await _obtenerBytesArchivo(file);
+      final contenido = utf8.decode(bytes, allowMalformed: true);
+      final datosCsv = _mapearParticipantesDesdeCsv(contenido);
+
+      if (datosCsv.isEmpty) {
+        _mostrarError(
+          'El archivo CSV no contiene filas válidas. Usa columnas "categoria" y "participantes".',
+        );
+        return;
+      }
+
+      final categoriasReferencia =
+          categoriasDisponibles.isEmpty
+              ? ['sub-8', 'sub-10', 'sub-12', 'sub-14', 'sub-16', 'sub-18']
+              : categoriasDisponibles;
+
+      final Map<String, String> lookup = {
+        for (final categoria in categoriasReferencia)
+          categoria.toLowerCase(): categoria,
+      };
+
+      int categoriasActualizadas = 0;
+      final desconocidas = <String>[];
+
+      setStateDialog(() {
+        datosCsv.forEach((categoriaCsv, participantes) {
+          final clave = categoriaCsv.toLowerCase();
+          final categoriaOficial = lookup[clave];
+          if (categoriaOficial == null) {
+            desconocidas.add(categoriaCsv);
+            return;
+          }
+
+          final indiceExistente = participaciones.indexWhere(
+            (participacion) =>
+                (participacion['categoria'] as String).toLowerCase() == clave,
+          );
+
+          final Map<String, dynamic> registro;
+          if (indiceExistente == -1) {
+            registro = {
+              'categoria': categoriaOficial,
+              'cantidad': TextEditingController(),
+              'invitados': TextEditingController(),
+            };
+            participaciones.add(registro);
+          } else {
+            registro = participaciones[indiceExistente];
+            registro['categoria'] = categoriaOficial;
+          }
+
+          final formatted = _formatearParticipantes(participantes);
+          (registro['cantidad'] as TextEditingController).text =
+              participantes.length.toString();
+          (registro['invitados'] as TextEditingController).text = formatted;
+          categoriasActualizadas++;
+        });
+      });
+
+      if (!mounted) return;
+
+      final mensajes = <String>[];
+      if (categoriasActualizadas > 0) {
+        mensajes.add(
+          categoriasActualizadas == 1
+              ? 'Se actualizó 1 categoría desde el CSV.'
+              : 'Se actualizaron $categoriasActualizadas categorías desde el CSV.',
+        );
+      }
+      if (desconocidas.isNotEmpty) {
+        mensajes.add('Categorías no reconocidas: ${desconocidas.join(', ')}');
+      }
+      if (mensajes.isEmpty) {
+        mensajes.add('No se encontraron categorías compatibles en el CSV.');
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(mensajes.join(' ')),
+          backgroundColor:
+              categoriasActualizadas > 0
+                  ? WessexColors.leafGreen
+                  : WessexColors.crimsonAlert,
+        ),
+      );
+    } catch (error) {
+      _mostrarError('Error al procesar el CSV: $error');
+    }
+  }
+
   Future<void> _subirImagenesRama(Map<String, dynamic> evento) async {
     final String eventoId = evento['id']?.toString() ?? '';
     if (eventoId.isEmpty) {
@@ -1885,6 +1992,88 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
     }
   }
 
+  List<String> _parseParticipantesDesdeTexto(String raw) {
+    if (raw.isEmpty) return const [];
+    final sanitized = raw.replaceAll(RegExp('[;|]'), ',');
+    return sanitized
+        .split(',')
+        .map((nombre) => nombre.replaceAll(RegExp('\\s+'), ' ').trim())
+        .where((nombre) => nombre.isNotEmpty)
+        .toList();
+  }
+
+  String _formatearParticipantes(List<String> participantes) {
+    return participantes.map((nombre) => nombre.trim()).join(', ');
+  }
+
+  List<String> _splitCsvRow(String row, {String delimiter = ','}) {
+    final values = <String>[];
+    final buffer = StringBuffer();
+    bool inQuotes = false;
+    final sanitizedRow = row.replaceAll('\ufeff', '');
+
+    for (int i = 0; i < sanitizedRow.length; i++) {
+      final char = sanitizedRow[i];
+      if (char == '"') {
+        if (inQuotes && i + 1 < sanitizedRow.length && sanitizedRow[i + 1] == '"') {
+          buffer.write('"');
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+        continue;
+      }
+
+      if (char == delimiter && !inQuotes) {
+        values.add(buffer.toString());
+        buffer.clear();
+        continue;
+      }
+
+      buffer.write(char);
+    }
+
+    values.add(buffer.toString());
+    return values;
+  }
+
+  Map<String, List<String>> _mapearParticipantesDesdeCsv(String content) {
+    final normalized = content.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+    final lineSplitter = const LineSplitter();
+    final lines = lineSplitter
+        .convert(normalized)
+        .map((line) => line.trim())
+        .where((line) => line.isNotEmpty)
+        .toList();
+
+    if (lines.isEmpty) return const {};
+
+    final delimiter =
+        lines.first.contains(';') && !lines.first.contains(',') ? ';' : ',';
+
+    final Map<String, List<String>> resultado = {};
+    for (final rawLine in lines) {
+      final cells = _splitCsvRow(rawLine, delimiter: delimiter);
+      if (cells.isEmpty) continue;
+
+      final categoria = cells.first.trim();
+      if (categoria.isEmpty || categoria.toLowerCase() == 'categoria') {
+        continue;
+      }
+
+      final participantesRaw =
+          cells.length > 1 ? cells.sublist(1).join(',').trim() : '';
+      if (participantesRaw.isEmpty) continue;
+
+      final participantes = _parseParticipantesDesdeTexto(participantesRaw);
+      if (participantes.isEmpty) continue;
+
+      resultado[categoria] = participantes;
+    }
+
+    return resultado;
+  }
+
   void _mostrarDialogoParticipacionEvento(Map<String, dynamic> evento) {
     // Extraer las categorias disponibles del evento
     List<String> categoriasDisponibles = [];
@@ -1971,12 +2160,48 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                           SizedBox(height: 24),
 
                           // Seccion de participaciones por categoria
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'Participaciones por Categoria:',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: WessexColors.deepRoyalBlue,
+                                  ),
+                                ),
+                              ),
+                              Tooltip(
+                                message:
+                                    'Importa un archivo CSV con columnas categoria y participantes',
+                                child: TextButton.icon(
+                                  onPressed: () => _importarParticipantesDesdeCsv(
+                                    participaciones,
+                                    categorias,
+                                    setStateDialog,
+                                  ),
+                                  icon: Icon(
+                                    Icons.upload_file,
+                                    color: WessexColors.darkGrape,
+                                  ),
+                                  label: Text(
+                                    'Importar CSV',
+                                    style: TextStyle(
+                                      color: WessexColors.darkGrape,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 8),
                           Text(
-                            'Participaciones por Categoria:',
+                            'Formato esperado: categoria,nombre1,nombre2... (los nombres se guardan separados por comas).',
                             style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: WessexColors.deepRoyalBlue,
+                              fontSize: 12,
+                              color: WessexColors.midnightNavy,
                             ),
                           ),
                           SizedBox(height: 16),
@@ -2079,14 +2304,18 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                                     controller: participacion['invitados'],
                                     decoration: InputDecoration(
                                       labelText:
-                                          'Lista de Invitados (Opcional)',
+                                          'Nombres de participantes (obligatorio)',
+                                      helperText:
+                                          'Ej: Ana Pérez, Juan Soto, Martina Ríos',
                                       border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       prefixIcon: Icon(Icons.people_outline),
-                                      hintText: 'Nombres separados por comas',
+                                      hintText: 'Escribe los nombres separados por comas',
                                     ),
-                                    maxLines: 2,
+                                    minLines: 2,
+                                    maxLines: 3,
+                                    textCapitalization: TextCapitalization.words,
                                   ),
                                 ],
                               ),
@@ -2299,27 +2528,59 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
     // Validar que todas las participaciones tengan datos validos
     List<String> errores = [];
 
+    final participacionesValidadas = <Map<String, dynamic>>[];
+
     for (int i = 0; i < participaciones.length; i++) {
       final participacion = participaciones[i];
-      final cantidad = participacion['cantidad'].text.trim();
+      final categoria = (participacion['categoria'] as String?) ?? 'sin categoria';
+      final cantidadTexto =
+          (participacion['cantidad'] as TextEditingController).text.trim();
+      final invitadosTexto =
+          (participacion['invitados'] as TextEditingController).text.trim();
 
-      if (cantidad.isEmpty) {
-        errores.add('La cantidad para la categoria ${i + 1} es obligatoria');
+      if (cantidadTexto.isEmpty) {
+        errores.add('La cantidad para la categoria ${categoria.toUpperCase()} es obligatoria');
         continue;
       }
 
-      final cantidadNinos = int.tryParse(cantidad);
+      final cantidadNinos = int.tryParse(cantidadTexto);
       if (cantidadNinos == null || cantidadNinos <= 0) {
-        errores.add('Cantidad invalida para la categoria ${i + 1}');
+        errores.add('Cantidad invalida para la categoria ${categoria.toUpperCase()}');
+        continue;
       }
+
+      if (invitadosTexto.isEmpty) {
+        errores.add('Ingresa los nombres de los participantes para ${categoria.toUpperCase()}');
+        continue;
+      }
+
+      final participantesNormalizados =
+          _parseParticipantesDesdeTexto(invitadosTexto);
+      if (participantesNormalizados.isEmpty) {
+        errores.add('La lista de nombres para ${categoria.toUpperCase()} no es válida');
+        continue;
+      }
+
+      if (participantesNormalizados.length != cantidadNinos) {
+        errores.add(
+          'La cantidad ingresada (${cantidadNinos}) no coincide con los ${participantesNormalizados.length} nombres en ${categoria.toUpperCase()}',
+        );
+        continue;
+      }
+
+      participacionesValidadas.add({
+        'categoria': categoria,
+        'cantidad': cantidadNinos,
+        'listaInvitados': _formatearParticipantes(participantesNormalizados),
+      });
     }
 
     // Validar categorias duplicadas
-    Set<String> categoriasUsadas = {};
-    for (int i = 0; i < participaciones.length; i++) {
-      final categoria = participaciones[i]['categoria'];
+    final Set<String> categoriasUsadas = {};
+    for (final participacion in participacionesValidadas) {
+      final categoria = (participacion['categoria'] as String).toLowerCase();
       if (categoriasUsadas.contains(categoria)) {
-        errores.add('La categoria $categoria esta duplicada');
+        errores.add('La categoria ${participacion['categoria']} esta duplicada');
       } else {
         categoriasUsadas.add(categoria);
       }
@@ -2332,15 +2593,12 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
 
     try {
       // Registrar cada participacion por separado
-      for (final participacion in participaciones) {
+      for (final participacion in participacionesValidadas) {
         final datos = {
           'eventoId': evento['id'],
-          'cantidadNinos': int.parse(participacion['cantidad'].text),
+          'cantidadNinos': participacion['cantidad'],
           'categoria': participacion['categoria'],
-          'listaInvitados':
-              participacion['invitados'].text.trim().isEmpty
-                  ? null
-                  : participacion['invitados'].text.trim(),
+          'listaInvitados': participacion['listaInvitados'],
         };
 
         await ApiService.participarEnEvento(datos);
@@ -2354,7 +2612,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            '${participaciones.length} participacion(es) registrada(s) exitosamente',
+            '${participacionesValidadas.length} participacion(es) registrada(s) exitosamente',
           ),
           backgroundColor: WessexColors.leafGreen,
         ),
@@ -2545,7 +2803,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                 ),
                 SizedBox(height: 16),
                 Text(
-                  'Lista de invitados (opcional):',
+                  'Nombres de participantes (obligatorio):',
                   style: TextStyle(
                     fontWeight: FontWeight.w500,
                     color: WessexColors.midnightNavy,
@@ -2559,7 +2817,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    hintText: 'Nombres de invitados separados por comas',
+                    hintText: 'Ej: Ana Pérez, Juan Soto, Martina Ríos',
                   ),
                 ),
                 SizedBox(height: 16),
@@ -2610,13 +2868,37 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                   return;
                 }
 
+                final participantesNormalizados =
+                    _parseParticipantesDesdeTexto(invitadosController.text);
+                if (participantesNormalizados.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Debes ingresar los nombres de los participantes separados por comas',
+                      ),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+
+                if (participantesNormalizados.length != cantidadNinos) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'La cantidad ingresada no coincide con los ${participantesNormalizados.length} nombres registrados',
+                      ),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+
                 Navigator.of(context).pop();
                 await _editarParticipacion(
                   participacion['id'],
                   cantidadNinos,
-                  invitadosController.text.trim().isEmpty
-                      ? null
-                      : invitadosController.text.trim(),
+                  _formatearParticipantes(participantesNormalizados),
                 );
               },
               style: ElevatedButton.styleFrom(
@@ -2635,7 +2917,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
   Future<void> _editarParticipacion(
     int participacionId,
     int cantidadNinos,
-    String? listaInvitados,
+    String listaInvitados,
   ) async {
     try {
       final response = await ApiService.editarParticipacion(

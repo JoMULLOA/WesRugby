@@ -9,6 +9,224 @@ import {
   handleSuccess,
 } from "../handlers/responseHandlers.js";
 import { In } from "typeorm";
+import { buildParticipacionesPdf } from "../utils/participacionesPdf.js";
+
+const sanitizeWhitespace = (value = "") => value.replace(/\s+/g, " ").trim();
+
+const normalizeParticipantsInput = (raw) => {
+  if (typeof raw !== "string") return [];
+  const sanitized = raw
+    .replace(/;/g, ",")
+    .split(",")
+    .map((name) => sanitizeWhitespace(name))
+    .filter((name) => name.length > 0);
+  return sanitized;
+};
+
+const formatParticipantsList = (participants = []) =>
+  participants.map((name) => sanitizeWhitespace(name)).join(", ");
+
+const esUUID = (str = "") => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+};
+
+const mapEventoMetadata = (evento, { esDeportivo = false } = {}) => {
+  if (!evento) return null;
+  const rawNombre = evento.nombre || evento.titulo || evento.evento || "Evento";
+  const tipoEventoRaw = evento.tipoEvento;
+  let tipo = null;
+  if (tipoEventoRaw) {
+    if (typeof tipoEventoRaw === "object") {
+      tipo = tipoEventoRaw.nombre || tipoEventoRaw.descripcion || null;
+    } else {
+      tipo = tipoEventoRaw;
+    }
+  } else if (esDeportivo) {
+    tipo = "Evento deportivo";
+  }
+
+  return {
+    id: evento.id,
+    nombre: rawNombre,
+    fecha: evento.fechaInicio || evento.fecha || null,
+    lugar: evento.lugar || null,
+    tipo,
+  };
+};
+
+async function fetchParticipacionesEventoData({ id, categorias }) {
+  const participacionRepository = AppDataSource.getRepository(ParticipacionEvento);
+  const eventoRepository = AppDataSource.getRepository(Evento);
+  const userRepository = AppDataSource.getRepository(User);
+
+  const { AppDataSource: dataSource } = await import("../config/configDb.js");
+  const ParticipacionEventoDeportivo = (await import("../entity/participacionEventoDeportivo.entity.js")).default;
+  const EventoDeportivo = (await import("../entity/eventoDeportivo.entity.js")).default;
+  const participacionDeportivaRepository = dataSource.getRepository(ParticipacionEventoDeportivo);
+  const eventoDeportivoRepository = dataSource.getRepository(EventoDeportivo);
+
+  let participaciones = [];
+  let eventoInfo = null;
+  let eventoEsDeportivo = false;
+
+  if (esUUID(id)) {
+    participaciones = await participacionDeportivaRepository.find({
+      where: { eventoDeportivoId: id },
+      order: { categoria: "ASC", createdAt: "DESC" },
+    });
+    eventoInfo = await eventoDeportivoRepository.findOne({
+      where: { id },
+      relations: ["tipoEvento"],
+    });
+    eventoEsDeportivo = true;
+  } else {
+    const eventoIdInt = parseInt(id, 10);
+    if (!Number.isNaN(eventoIdInt)) {
+      participaciones = await participacionRepository.find({
+        where: { eventoId: eventoIdInt },
+        order: { categoria: "ASC", createdAt: "DESC" },
+      });
+      eventoInfo = await eventoRepository.findOne({ where: { id: eventoIdInt } });
+    }
+  }
+
+  if (!participaciones.length) {
+    return {
+      evento: mapEventoMetadata(eventoInfo, { esDeportivo: eventoEsDeportivo }),
+      payload: {
+        categoriasDisponibles: [],
+        categoriasAplicadas: [],
+        participaciones: [],
+        estadisticasPorRama: [],
+        resumenCategorias: [],
+        totalGeneral: 0,
+        totalRamas: 0,
+      },
+    };
+  }
+
+  const rutParticipantes = Array.from(
+    new Set(
+      participaciones
+        .map((participacion) => participacion.rutRamaExterna)
+        .filter(Boolean),
+    ),
+  );
+
+  let usuariosMap = new Map();
+  if (rutParticipantes.length) {
+    const usuarios = await userRepository.findBy({ rut: In(rutParticipantes) });
+    usuariosMap = new Map(usuarios.map((usuario) => [usuario.rut, usuario]));
+  }
+
+  const categoriasDisponiblesSet = new Set(
+    participaciones
+      .map((participacion) => participacion.categoria)
+      .filter(Boolean),
+  );
+
+  let categoriasFiltroSet = null;
+  if (typeof categorias === "string" && categorias.trim().length > 0) {
+    const parsedCategorias = categorias
+      .split(",")
+      .map((categoria) => categoria.trim())
+      .filter(Boolean);
+
+    if (parsedCategorias.length > 0) {
+      categoriasFiltroSet = new Set(parsedCategorias.map((cat) => cat.toLowerCase()));
+    }
+  }
+
+  const participacionesFiltradas = [];
+  const estadisticasPorRamaMap = new Map();
+  const resumenCategoriasMap = new Map();
+  let totalGeneral = 0;
+
+  for (const participacion of participaciones) {
+    const categoriaOriginal = (participacion.categoria || "sin categoria").trim();
+    const categoriaKey = categoriaOriginal.toLowerCase();
+
+    if (categoriasFiltroSet && !categoriasFiltroSet.has(categoriaKey)) {
+      continue;
+    }
+
+    const cantidadNinos = Number(participacion.cantidadNinos) || 0;
+    const usuario = usuariosMap.get(participacion.rutRamaExterna);
+    const nombreRama = usuario?.nombreCompleto || "Rama no identificada";
+
+    const participacionExtendida = {
+      ...participacion,
+      ramaExterna: usuario || null,
+      nombreRama,
+    };
+
+    participacionesFiltradas.push(participacionExtendida);
+
+    if (!estadisticasPorRamaMap.has(nombreRama)) {
+      estadisticasPorRamaMap.set(nombreRama, {
+        nombreRama,
+        rut: participacion.rutRamaExterna,
+        participaciones: [],
+        totalPorCategoria: {},
+        totalRama: 0,
+      });
+    }
+
+    const ramaEntry = estadisticasPorRamaMap.get(nombreRama);
+    ramaEntry.participaciones.push(participacionExtendida);
+    ramaEntry.totalPorCategoria[categoriaOriginal] =
+      (ramaEntry.totalPorCategoria[categoriaOriginal] || 0) + cantidadNinos;
+    ramaEntry.totalRama += cantidadNinos;
+
+    if (!resumenCategoriasMap.has(categoriaOriginal)) {
+      resumenCategoriasMap.set(categoriaOriginal, {
+        categoria: categoriaOriginal,
+        totalNinos: 0,
+        ramasParticipantes: new Set(),
+      });
+    }
+
+    const resumenCategoria = resumenCategoriasMap.get(categoriaOriginal);
+    resumenCategoria.totalNinos += cantidadNinos;
+    resumenCategoria.ramasParticipantes.add(participacion.rutRamaExterna);
+
+    totalGeneral += cantidadNinos;
+  }
+
+  const estadisticasPorRama = Array.from(estadisticasPorRamaMap.values()).filter(
+    (registro) => registro.totalRama > 0,
+  );
+
+  const resumenCategorias = Array.from(resumenCategoriasMap.values())
+    .map((registro) => ({
+      categoria: registro.categoria,
+      totalNinos: registro.totalNinos,
+      ramasParticipantes: registro.ramasParticipantes.size,
+    }))
+    .sort((a, b) => a.categoria.localeCompare(b.categoria));
+
+  const categoriasAplicadas = categoriasFiltroSet
+    ? Array.from(categoriasDisponiblesSet).filter((categoria) =>
+        categoriasFiltroSet.has(categoria.toLowerCase()),
+      )
+    : [];
+
+  const payload = {
+    categoriasDisponibles: Array.from(categoriasDisponiblesSet).sort(),
+    categoriasAplicadas,
+    participaciones: participacionesFiltradas,
+    estadisticasPorRama,
+    resumenCategorias,
+    totalGeneral,
+    totalRamas: estadisticasPorRama.length,
+  };
+
+  return {
+    evento: mapEventoMetadata(eventoInfo, { esDeportivo: eventoEsDeportivo }),
+    payload,
+  };
+}
 
 // Crear un nuevo evento (solo directiva)
 export async function crearEvento(req, res) {
@@ -157,12 +375,22 @@ export async function editarParticipacion(req, res) {
     const { cantidadNinos, listaInvitados } = req.body;
     const rutRamaExterna = req.user.rut;
 
-    if (!cantidadNinos) {
+    const cantidadNormalizada = Number(cantidadNinos);
+    if (!Number.isFinite(cantidadNormalizada) || cantidadNormalizada <= 0) {
       return handleErrorClient(
         res,
         400,
         "Faltan campos obligatorios",
-        "La cantidad de niños es requerida"
+        "La cantidad de niños debe ser un número mayor a cero"
+      );
+    }
+
+    if (listaInvitados === undefined) {
+      return handleErrorClient(
+        res,
+        400,
+        "Faltan campos obligatorios",
+        "Debes proporcionar la lista de participantes separados por coma"
       );
     }
 
@@ -208,11 +436,28 @@ export async function editarParticipacion(req, res) {
       );
     }
 
-    // Actualizar los campos permitidos
-    participacion.cantidadNinos = cantidadNinos;
-    if (listaInvitados !== undefined) {
-      participacion.listaInvitados = listaInvitados;
+    const participantesNormalizados = normalizeParticipantsInput(listaInvitados);
+    if (!participantesNormalizados.length) {
+      return handleErrorClient(
+        res,
+        400,
+        "Lista de participantes inválida",
+        "Debes ingresar al menos un nombre, separados por comas"
+      );
     }
+
+    if (participantesNormalizados.length !== cantidadNormalizada) {
+      return handleErrorClient(
+        res,
+        400,
+        "Datos inconsistentes",
+        "La cantidad de niños debe coincidir con la cantidad de nombres ingresados"
+      );
+    }
+
+    // Actualizar los campos permitidos
+    participacion.cantidadNinos = cantidadNormalizada;
+    participacion.listaInvitados = formatParticipantsList(participantesNormalizados);
 
     let participacionActualizada;
     if (esEventoDeportivo) {
@@ -240,6 +485,44 @@ export async function participarEnEvento(req, res) {
         400,
         "Faltan campos obligatorios",
         "ID del evento, cantidad de niños y categoría son requeridos"
+      );
+    }
+
+    const cantidadNormalizada = Number(cantidadNinos);
+    if (!Number.isFinite(cantidadNormalizada) || cantidadNormalizada <= 0) {
+      return handleErrorClient(
+        res,
+        400,
+        "Cantidad inválida",
+        "La cantidad de niños debe ser un número mayor a cero"
+      );
+    }
+
+    if (typeof listaInvitados !== "string" || !listaInvitados.trim().length) {
+      return handleErrorClient(
+        res,
+        400,
+        "Lista obligatoria",
+        "Debes ingresar los nombres de los participantes separados por coma"
+      );
+    }
+
+    const participantesNormalizados = normalizeParticipantsInput(listaInvitados);
+    if (!participantesNormalizados.length) {
+      return handleErrorClient(
+        res,
+        400,
+        "Lista de participantes inválida",
+        "Debes ingresar al menos un nombre válido"
+      );
+    }
+
+    if (participantesNormalizados.length !== cantidadNormalizada) {
+      return handleErrorClient(
+        res,
+        400,
+        "Datos inconsistentes",
+        "La cantidad de niños debe coincidir con la cantidad de nombres ingresados"
       );
     }
 
@@ -338,9 +621,9 @@ export async function participarEnEvento(req, res) {
       const nuevaParticipacion = participacionDeportivaRepository.create({
         eventoDeportivoId: eventoId,
         rutRamaExterna,
-        cantidadNinos,
+        cantidadNinos: cantidadNormalizada,
         categoria,
-        listaInvitados: listaInvitados || null,
+        listaInvitados: formatParticipantsList(participantesNormalizados),
       });
 
       participacionGuardada = await participacionDeportivaRepository.save(nuevaParticipacion);
@@ -362,9 +645,9 @@ export async function participarEnEvento(req, res) {
       const nuevaParticipacion = participacionRepository.create({
         eventoId: parseInt(eventoId),
         rutRamaExterna,
-        cantidadNinos,
+        cantidadNinos: cantidadNormalizada,
         categoria,
-        listaInvitados: listaInvitados || null,
+        listaInvitados: formatParticipantsList(participantesNormalizados),
       });
 
       participacionGuardada = await participacionRepository.save(nuevaParticipacion);
@@ -656,166 +939,40 @@ export async function obtenerParticipacionesEvento(req, res) {
   try {
     const { id } = req.params;
     const { categorias } = req.query;
+    const { payload } = await fetchParticipacionesEventoData({ id, categorias });
 
-    const participacionRepository = AppDataSource.getRepository(ParticipacionEvento);
-    const userRepository = AppDataSource.getRepository(User);
-
-    const { AppDataSource: dataSource } = await import("../config/configDb.js");
-    const ParticipacionEventoDeportivo = (await import("../entity/participacionEventoDeportivo.entity.js")).default;
-    const participacionDeportivaRepository = dataSource.getRepository(ParticipacionEventoDeportivo);
-
-    const esUUID = (str) => {
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-      return uuidRegex.test(str);
-    };
-
-    let participaciones = [];
-
-    if (esUUID(id)) {
-      participaciones = await participacionDeportivaRepository.find({
-        where: { eventoDeportivoId: id },
-        order: { categoria: "ASC", createdAt: "DESC" },
-      });
-    } else {
-      const eventoIdInt = parseInt(id);
-      if (!Number.isNaN(eventoIdInt)) {
-        participaciones = await participacionRepository.find({
-          where: { eventoId: eventoIdInt },
-          order: { categoria: "ASC", createdAt: "DESC" },
-        });
-      }
-    }
-
-    if (!participaciones.length) {
-      handleSuccess(res, 200, "Participaciones del evento obtenidas exitosamente", {
-        categoriasDisponibles: [],
-        categoriasAplicadas: [],
-        participaciones: [],
-        estadisticasPorRama: [],
-        resumenCategorias: [],
-        totalGeneral: 0,
-        totalRamas: 0,
-      });
-      return;
-    }
-
-    const rutParticipantes = Array.from(
-      new Set(
-        participaciones
-          .map((participacion) => participacion.rutRamaExterna)
-          .filter(Boolean),
-      ),
-    );
-
-    let usuariosMap = new Map();
-    if (rutParticipantes.length) {
-      const usuarios = await userRepository.findBy({ rut: In(rutParticipantes) });
-      usuariosMap = new Map(usuarios.map((usuario) => [usuario.rut, usuario]));
-    }
-
-    const categoriasDisponiblesSet = new Set(
-      participaciones
-        .map((participacion) => participacion.categoria)
-        .filter(Boolean),
-    );
-
-    let categoriasFiltroSet = null;
-    if (typeof categorias === "string" && categorias.trim().length > 0) {
-      const parsedCategorias = categorias
-        .split(",")
-        .map((categoria) => categoria.trim())
-        .filter(Boolean);
-
-      if (parsedCategorias.length > 0) {
-        categoriasFiltroSet = new Set(parsedCategorias.map((cat) => cat.toLowerCase()));
-      }
-    }
-
-    const participacionesFiltradas = [];
-    const estadisticasPorRamaMap = new Map();
-    const resumenCategoriasMap = new Map();
-    let totalGeneral = 0;
-
-    for (const participacion of participaciones) {
-      const categoriaOriginal = (participacion.categoria || "sin categoria").trim();
-      const categoriaKey = categoriaOriginal.toLowerCase();
-
-      if (categoriasFiltroSet && !categoriasFiltroSet.has(categoriaKey)) {
-        continue;
-      }
-
-      const cantidadNinos = Number(participacion.cantidadNinos) || 0;
-      const usuario = usuariosMap.get(participacion.rutRamaExterna);
-      const nombreRama = usuario?.nombreCompleto || "Rama no identificada";
-
-      const participacionExtendida = {
-        ...participacion,
-        ramaExterna: usuario || null,
-        nombreRama,
-      };
-
-      participacionesFiltradas.push(participacionExtendida);
-
-      if (!estadisticasPorRamaMap.has(nombreRama)) {
-        estadisticasPorRamaMap.set(nombreRama, {
-          nombreRama,
-          rut: participacion.rutRamaExterna,
-          participaciones: [],
-          totalPorCategoria: {},
-          totalRama: 0,
-        });
-      }
-
-      const ramaEntry = estadisticasPorRamaMap.get(nombreRama);
-      ramaEntry.participaciones.push(participacionExtendida);
-      ramaEntry.totalPorCategoria[categoriaOriginal] =
-        (ramaEntry.totalPorCategoria[categoriaOriginal] || 0) + cantidadNinos;
-      ramaEntry.totalRama += cantidadNinos;
-
-      if (!resumenCategoriasMap.has(categoriaOriginal)) {
-        resumenCategoriasMap.set(categoriaOriginal, {
-          categoria: categoriaOriginal,
-          totalNinos: 0,
-          ramasParticipantes: new Set(),
-        });
-      }
-
-      const resumenCategoria = resumenCategoriasMap.get(categoriaOriginal);
-      resumenCategoria.totalNinos += cantidadNinos;
-      resumenCategoria.ramasParticipantes.add(participacion.rutRamaExterna);
-
-      totalGeneral += cantidadNinos;
-    }
-
-    const estadisticasPorRama = Array.from(estadisticasPorRamaMap.values()).filter(
-      (registro) => registro.totalRama > 0,
-    );
-
-    const resumenCategorias = Array.from(resumenCategoriasMap.values())
-      .map((registro) => ({
-        categoria: registro.categoria,
-        totalNinos: registro.totalNinos,
-        ramasParticipantes: registro.ramasParticipantes.size,
-      }))
-      .sort((a, b) => a.categoria.localeCompare(b.categoria));
-
-    const categoriasAplicadas = categoriasFiltroSet
-      ? Array.from(categoriasDisponiblesSet).filter((categoria) =>
-          categoriasFiltroSet.has(categoria.toLowerCase()),
-        )
-      : [];
-
-    handleSuccess(res, 200, "Participaciones del evento obtenidas exitosamente", {
-      categoriasDisponibles: Array.from(categoriasDisponiblesSet).sort(),
-      categoriasAplicadas,
-      participaciones: participacionesFiltradas,
-      estadisticasPorRama,
-      resumenCategorias,
-      totalGeneral,
-      totalRamas: estadisticasPorRama.length,
-    });
+    handleSuccess(res, 200, "Participaciones del evento obtenidas exitosamente", payload);
   } catch (error) {
     console.error("Error al obtener participaciones del evento:", error);
+    handleErrorServer(res, 500, error.message);
+  }
+}
+
+export async function descargarParticipacionesEventoPdf(req, res) {
+  try {
+    const { id } = req.params;
+    const { categorias } = req.query;
+    const { evento, payload } = await fetchParticipacionesEventoData({ id, categorias });
+
+    const buffer = await buildParticipacionesPdf({
+      evento,
+      estadisticasPorRama: payload.estadisticasPorRama,
+      filtros: payload.categoriasAplicadas,
+      totalGeneral: payload.totalGeneral,
+    });
+
+    const baseNombre = (evento?.nombre || `evento_${id}`)
+      .toString()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/gi, "_")
+      .replace(/^_+|_+$/g, "");
+    const fileName = `${baseNombre || "participaciones"}_participantes.pdf`;
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+    res.send(buffer);
+  } catch (error) {
+    console.error("Error al generar PDF de participaciones:", error);
     handleErrorServer(res, 500, error.message);
   }
 }

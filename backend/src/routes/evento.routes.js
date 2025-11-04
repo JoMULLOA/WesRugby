@@ -11,7 +11,8 @@ import {
   obtenerCategoriasRegistradas,
   actualizarEvento,
   eliminarEvento,
-  obtenerParticipacionesEvento
+  obtenerParticipacionesEvento,
+  descargarParticipacionesEventoPdf,
 } from "../controllers/evento.controller.js";
 import { isDirectiva, isRamaExterna, isAuthenticated } from "../middlewares/authorization.middleware.js";
 
@@ -26,6 +27,7 @@ router
   .get("/todos", authenticateJWT, isDirectiva, obtenerEventos)
   .put("/:id", authenticateJWT, isDirectiva, actualizarEvento)
   .delete("/:id", authenticateJWT, isDirectiva, eliminarEvento)
+  .get("/:id/participaciones/pdf", authenticateJWT, isDirectiva, descargarParticipacionesEventoPdf)
   .get("/:id/participaciones", authenticateJWT, isDirectiva, obtenerParticipacionesEvento);
 
 // Rutas para RamaExterna
