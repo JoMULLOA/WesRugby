@@ -29,12 +29,12 @@ class _InventorySimulatorScreenState extends State<InventorySimulatorScreen> {
 
   static const Map<String, String> _categoryLabels = {
     'bebida_latas': 'Bebidas (Latas)',
-    'pasteleria': 'Pastelería',
+    'pasteleria': 'Pastelerï¿½a',
     'selladitos': 'Selladitos',
-    'cafeteria': 'Cafetería',
+    'cafeteria': 'Cafeterï¿½a',
     'pastillas': 'Pastillas',
     'papas_fritas_cajita': 'Papas Fritas (Cajita)',
-    'bebidas_energeticas': 'Bebidas Energéticas',
+    'bebidas_energeticas': 'Bebidas Energï¿½ticas',
     'varios': 'Varios',
   };
   @override
@@ -82,7 +82,7 @@ class _InventorySimulatorScreenState extends State<InventorySimulatorScreen> {
       await file.writeAsBytes(bytes, flush: true);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Hoja de códigos guardada en ' + file.path)),
+        SnackBar(content: Text('Hoja de cï¿½digos guardada en ' + file.path)),
       );
     } catch (error) {
       if (!mounted) return;
@@ -122,7 +122,7 @@ class _InventorySimulatorScreenState extends State<InventorySimulatorScreen> {
                 final value = double.tryParse(controller.text.replaceAll(',', '.'));
                 if (value == null || value <= 0) {
                   ScaffoldMessenger.of(dialogContext).showSnackBar(
-                    const SnackBar(content: Text('Ingresa un precio válido')),
+                    const SnackBar(content: Text('Ingresa un precio vï¿½lido')),
                   );
                   return;
                 }
@@ -204,17 +204,22 @@ class _InventorySimulatorScreenState extends State<InventorySimulatorScreen> {
     }
     final priceInput = _variosPriceController.text.trim();
     final quantityInput = _variosQuantityController.text.trim();
-    final pricePesos = double.tryParse(priceInput.replaceAll(',', '.'));
+    
+    // Limpiar el input: remover puntos (separadores de miles) y reemplazar comas por puntos
+    // Ejemplos: "1.500" -> "1500", "1,500" -> "1500", "1500" -> "1500"
+    final cleanedPrice = priceInput.replaceAll('.', '').replaceAll(',', '');
+    final pricePesos = double.tryParse(cleanedPrice);
     final quantity = int.tryParse(quantityInput);
+    
     if (pricePesos == null || pricePesos <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ingresa un precio válido para Varios.')),
+        const SnackBar(content: Text('Ingresa un precio vÃ¡lido para Varios.')),
       );
       return;
     }
     if (quantity == null || quantity <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ingresa una cantidad válida.')),
+        const SnackBar(content: Text('Ingresa una cantidad vï¿½lida.')),
       );
       return;
     }
@@ -224,8 +229,13 @@ class _InventorySimulatorScreenState extends State<InventorySimulatorScreen> {
     });
 
     try {
+      // El usuario ingresa el monto en pesos chilenos (ej: 1500 = $1.500)
+      // El backend maneja "priceCents" pero en el contexto de CLP sin decimales,
+      // por lo tanto el valor ingresado se envÃ­a directamente (1500 pesos = 1500 "centavos")
+      final priceCents = pricePesos.round();
+      
       final sale = await InventoryService.createVariosSale(
-        priceCents: pricePesos.round(),
+        priceCents: priceCents,
         quantity: quantity,
         deviceId: 'flutter-manual',
       );
@@ -338,6 +348,8 @@ class _InventorySimulatorScreenState extends State<InventorySimulatorScreen> {
                                 keyboardType: TextInputType.number,
                                 decoration: const InputDecoration(
                                   labelText: 'Precio (pesos)',
+                                  hintText: 'Ej: 1500',
+                                  helperText: 'Ingresa solo nÃºmeros (sin puntos ni comas)',
                                 ),
                               ),
                             ),
@@ -368,7 +380,7 @@ class _InventorySimulatorScreenState extends State<InventorySimulatorScreen> {
                           ),
                         ),
                         if (varios != null)
-                          Text('Código actual: ' + varios.barcode),
+                          Text('Cï¿½digo actual: ' + varios.barcode),
                       ],
                     ),
                   ),
@@ -408,7 +420,7 @@ class _InventorySimulatorScreenState extends State<InventorySimulatorScreen> {
                                 leading: const Icon(Icons.inventory_2_outlined),
                                 title: Text(product.name),
                                 subtitle: Text(
-                                  'Código ${product.barcode}\nPrecio: ${_formatPrice(product.defaultPriceCents)}',
+                                  'Cï¿½digo ${product.barcode}\nPrecio: ${_formatPrice(product.defaultPriceCents)}',
                                 ),
                                 isThreeLine: true,
                                 trailing: ElevatedButton(

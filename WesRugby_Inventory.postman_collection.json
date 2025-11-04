@@ -1,0 +1,230 @@
+{
+  "info": {
+    "name": "WesRugby - Inventario",
+    "description": "Colección de endpoints para el sistema de inventario",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Escaneo Masivo (Precio Fijo)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"scans\": [\n    {\n      \"id\": \"550e8400-e29b-41d4-a716-446655440001\",\n      \"barcode\": \"INV-COCA-350ML\",\n      \"scannedAt\": \"2025-11-02T10:30:00.000Z\",\n      \"deviceId\": \"scanner-001\"\n    },\n    {\n      \"id\": \"550e8400-e29b-41d4-a716-446655440002\",\n      \"barcode\": \"INV-SPRITE-350ML\",\n      \"scannedAt\": \"2025-11-02T10:31:00.000Z\",\n      \"deviceId\": \"scanner-001\"\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/inventario/scans/bulk",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "inventario", "scans", "bulk"]
+        },
+        "description": "Endpoint para escanear productos con precio fijo (Coca Cola, Sprite, etc.)"
+      },
+      "response": []
+    },
+    {
+      "name": "2. Venta Varios - Simple",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"priceCents\": 1500,\n  \"quantity\": 1,\n  \"deviceId\": \"scanner-001\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/inventario/sales/varios",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "inventario", "sales", "varios"]
+        },
+        "description": "Venta simple de producto Varios con precio variable de $1.500 CLP"
+      },
+      "response": []
+    },
+    {
+      "name": "3. Venta Varios - Múltiples Unidades",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"priceCents\": 800,\n  \"quantity\": 3,\n  \"deviceId\": \"caja-principal\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/inventario/sales/varios",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "inventario", "sales", "varios"]
+        },
+        "description": "Venta de 3 unidades de Varios a $800 cada una"
+      },
+      "response": []
+    },
+    {
+      "name": "4. Venta Varios - Con Ingest",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"priceCents\": 2000,\n  \"quantity\": 2,\n  \"deviceId\": \"scanner-mobile\",\n  \"recordIngest\": \"550e8400-e29b-41d4-a716-446655440099\",\n  \"scannedAt\": \"2025-11-02T15:45:00.000Z\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/inventario/sales/varios",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "inventario", "sales", "varios"]
+        },
+        "description": "Venta de Varios con registro de ingest para trazabilidad"
+      },
+      "response": []
+    },
+    {
+      "name": "5. ERROR - Varios sin Precio",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"scans\": [\n    {\n      \"id\": \"550e8400-e29b-41d4-a716-446655440099\",\n      \"barcode\": \"INV-VARIOS\",\n      \"scannedAt\": \"2025-11-02T16:00:00.000Z\",\n      \"deviceId\": \"scanner-001\"\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/inventario/scans/bulk",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "inventario", "scans", "bulk"]
+        },
+        "description": "Intento de escanear Varios sin precio - debe retornar error 400"
+      },
+      "response": []
+    },
+    {
+      "name": "6. Obtener Producto Varios",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/api/inventario/products/varios",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "inventario", "products", "varios"]
+        },
+        "description": "Obtener información del producto Varios"
+      },
+      "response": []
+    },
+    {
+      "name": "7. Resumen de Ventas - Todo",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/api/inventario/sales/summary",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "inventario", "sales", "summary"]
+        },
+        "description": "Obtener resumen de todas las ventas"
+      },
+      "response": []
+    },
+    {
+      "name": "8. Resumen de Ventas - Con Filtros",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/api/inventario/sales/summary?from=2025-11-01T00:00:00.000Z&to=2025-11-02T23:59:59.999Z",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "inventario", "sales", "summary"],
+          "query": [
+            {
+              "key": "from",
+              "value": "2025-11-01T00:00:00.000Z"
+            },
+            {
+              "key": "to",
+              "value": "2025-11-02T23:59:59.999Z"
+            }
+          ]
+        },
+        "description": "Obtener resumen de ventas filtrado por fecha"
+      },
+      "response": []
+    },
+    {
+      "name": "9. Listar Productos Activos",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/api/inventario/products",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "inventario", "products"]
+        },
+        "description": "Listar todos los productos activos"
+      },
+      "response": []
+    },
+    {
+      "name": "10. Productos Gestión (incluye inactivos)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/api/inventario/products/management?includeInactive=true",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "inventario", "products", "management"],
+          "query": [
+            {
+              "key": "includeInactive",
+              "value": "true"
+            }
+          ]
+        },
+        "description": "Listar productos para gestión (incluye inactivos)"
+      },
+      "response": []
+    }
+  ]
+}

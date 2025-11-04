@@ -236,6 +236,20 @@ export async function postBulkScans(req, res, next) {
       scannedAt: new Date(scan.scannedAt),
     }));
     const result = await processBulkScans(normalized);
+    
+    // Si hay productos rechazados por precio variable, enviar error específico
+    const variablePriceErrors = result.rejected.filter(
+      r => r.reason === "MISSING_PRICE_FOR_VARIABLE"
+    );
+    
+    if (variablePriceErrors.length > 0 && result.acceptedIds.length === 0) {
+      return res.status(400).json({
+        error: "VARIABLE_PRICE_REQUIRED",
+        message: "Este producto requiere precio variable. Use el endpoint /api/inventario/sales/varios",
+        rejected: result.rejected,
+      });
+    }
+    
     res.json(result);
   } catch (error) {
     if (error.isJoi) {
@@ -248,8 +262,11 @@ export async function postBulkScans(req, res, next) {
 
 export async function postVariosSale(req, res, next) {
   try {
+    console.log('[DEBUG postVariosSale] req.body:', JSON.stringify(req.body));
     const payload = await variosSchema.validateAsync(req.body, { abortEarly: false });
+    console.log('[DEBUG postVariosSale] payload after validation:', JSON.stringify(payload));
     const sale = await createVariosSale(payload);
+    console.log('[DEBUG postVariosSale] sale result:', JSON.stringify(sale));
     res.status(201).json(sale);
   } catch (error) {
     if (error.isJoi) {

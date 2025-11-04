@@ -8,49 +8,49 @@ import { generateBarcodeSheet } from "../utils/inventoryPdf.js";
 
 const PRODUCT_SEED = [
   {
-    name: "Coca Cola Lata 350ml",
+    name: "Bebida (lata)",
     category: "bebida_latas",
     sourceType: "compra",
     pricingMode: "fixed",
     defaultPriceCents: 1200,
   },
   {
-    name: "Kuchen Casero",
+    name: "Pasteleria (pies, queques, kucken)",
     category: "pasteleria",
-    sourceType: "donacion",
+    sourceType: "compra",
     pricingMode: "fixed",
     defaultPriceCents: 1500,
   },
   {
-    name: "Selladito Jamon Queso",
+    name: "selladito",
     category: "selladitos",
-    sourceType: "donacion",
+    sourceType: "compra",
     pricingMode: "fixed",
     defaultPriceCents: 800,
   },
   {
-    name: "Cafe Americano",
+    name: "cafeteria (cafe, te, leche, chocolate)",
     category: "cafeteria",
-    sourceType: "donacion",
+    sourceType: "compra",
     pricingMode: "fixed",
     defaultPriceCents: 500,
   },
   {
-    name: "Mentitas Clasicas",
+    name: "pastilla",
     category: "pastillas",
     sourceType: "compra",
     pricingMode: "fixed",
     defaultPriceCents: 300,
   },
   {
-    name: "Papas Fritas Cajita Original",
+    name: "papas fritas en cajita",
     category: "papas_fritas_cajita",
     sourceType: "compra",
     pricingMode: "fixed",
     defaultPriceCents: 900,
   },
   {
-    name: "Bebida Energetica Xtreme",
+    name: "Bebida energetica",
     category: "bebidas_energeticas",
     sourceType: "compra",
     pricingMode: "fixed",
@@ -397,15 +397,24 @@ export async function createVariosSale(payload) {
   const scannedAt = payload.scannedAt ? new Date(payload.scannedAt) : new Date();
   const quantity = Number.isInteger(payload.quantity) && payload.quantity > 0 ? payload.quantity : 1;
 
+  const priceCentsToSave = Math.round(payload.priceCents);
+  
+  // Debug: Log del valor recibido y el que se va a guardar
+  console.log('[DEBUG createVariosSale] payload.priceCents:', payload.priceCents);
+  console.log('[DEBUG createVariosSale] priceCentsToSave:', priceCentsToSave);
+
   const sale = saleRepo.create({
     product: { id: varios.id },
-    priceCents: Math.round(payload.priceCents),
+    priceCents: priceCentsToSave,
     quantity,
     deviceId: payload.deviceId || "frontend-manual",
     scannedAt,
   });
 
   const saved = await saleRepo.save(sale);
+  
+  // Debug: Log del valor guardado
+  console.log('[DEBUG createVariosSale] saved.priceCents:', saved.priceCents);
 
   let ingestId = null;
   if (payload.recordIngest) {
