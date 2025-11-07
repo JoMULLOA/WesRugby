@@ -9,18 +9,18 @@ import { getEstudiantesByRutListService } from "../services/estudiante.service.j
 
 export const createSesionAsistencia = async (req, res) => {
   try {
-    const { nombre, descripcion, fecha, curso, asistencias } = req.body;
+    const { nombre, descripcion, fecha, categoria, asistencias } = req.body;
     const userAuth = req.user;
 
     console.log('📝 Creando nueva sesión de asistencia');
     console.log('👤 Usuario autenticado:', userAuth.rut);
-    console.log('📊 Datos recibidos:', { nombre, curso, fecha, asistencias: asistencias?.length });
+    console.log('📊 Datos recibidos:', { nombre, categoria, fecha, asistencias: asistencias?.length });
 
     // Validaciones
-    if (!nombre || !fecha || !curso || !asistencias || !Array.isArray(asistencias)) {
+    if (!nombre || !fecha || !categoria || !asistencias || !Array.isArray(asistencias)) {
       return res.status(400).json({
         success: false,
-        message: 'Datos incompletos. Se requiere nombre, fecha, curso y asistencias.'
+        message: 'Datos incompletos. Se requiere nombre, fecha, categoria y asistencias.'
       });
     }
 
@@ -62,7 +62,7 @@ export const createSesionAsistencia = async (req, res) => {
       nombre: nombre.trim(),
       descripcion: descripcion?.trim() || '',
       fecha: new Date(fecha),
-      curso: curso.trim(),
+      curso: categoria.trim(), // Guardar categoria como curso en la BD
     };
 
     const [sesionCreada, error] = await createSesionAsistenciaService(

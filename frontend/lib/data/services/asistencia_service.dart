@@ -279,7 +279,14 @@ class AsistenciaService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final List<dynamic> sesionesJson = data['sesiones'] ?? [];
+        print('📊 Respuesta del servidor: ${data.toString().substring(0, 200)}...');
+        
+        final List<dynamic> sesionesJson = data['data'] ?? data['sesiones'] ?? [];
+        print('✅ Sesiones recibidas: ${sesionesJson.length}');
+        
+        if (sesionesJson.isNotEmpty) {
+          print('📋 Primera sesión: ${sesionesJson[0]}');
+        }
 
         return sesionesJson
             .map((json) => SesionEntrenamiento.fromJson(json))

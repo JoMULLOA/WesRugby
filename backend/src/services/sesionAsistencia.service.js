@@ -55,6 +55,7 @@ export const createSesionAsistenciaService = async (sesionData, registrosData, e
 export const getSesionesByEntrenadorService = async (rutEntrenador, limite = 50) => {
   try {
     const sesionRepository = AppDataSource.getRepository(SesionAsistenciaSchema);
+    const registroRepository = AppDataSource.getRepository(RegistroAsistenciaSchema);
     
     const sesiones = await sesionRepository.find({
       where: { rutEntrenador },
@@ -62,8 +63,23 @@ export const getSesionesByEntrenadorService = async (rutEntrenador, limite = 50)
       take: limite,
     });
 
-    console.log(`✅ Sesiones encontradas para entrenador ${rutEntrenador}:`, sesiones.length);
-    return [sesiones, null];
+    // Obtener registros para cada sesión
+    const sesionesConRegistros = await Promise.all(
+      sesiones.map(async (sesion) => {
+        const registros = await registroRepository.find({
+          where: { sesionId: sesion.id },
+          order: { nombreEstudiante: 'ASC' },
+        });
+        
+        return {
+          ...sesion,
+          registros,
+        };
+      })
+    );
+
+    console.log(`✅ Sesiones encontradas para entrenador ${rutEntrenador}:`, sesionesConRegistros.length);
+    return [sesionesConRegistros, null];
   } catch (error) {
     console.error('❌ Error al obtener sesiones:', error);
     return [null, error];

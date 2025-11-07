@@ -567,6 +567,58 @@ class _HistorialAsistenciaScreenState extends State<HistorialAsistenciaScreen> {
 
                     const SizedBox(height: 20),
 
+                    // Lista de alumnos con observaciones
+                    Text(
+                      'Registros de Asistencia',
+                      style: TextStyle(
+                        fontSize: isDesktop ? 16 : (isTablet ? 15 : 14),
+                        fontWeight: FontWeight.bold,
+                        color: WessexColors.darkGrape,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Lista de registros
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: sesion.registros.isEmpty
+                            ? Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(20),
+                                child: Text(
+                                  'No hay registros de asistencia',
+                                  style: TextStyle(
+                                    fontSize: isDesktop ? 14 : 12,
+                                    color: WessexColors.darkGrape.withOpacity(0.5),
+                                  ),
+                                ),
+                              ),
+                            )
+                            : ListView.separated(
+                              shrinkWrap: true,
+                              itemCount: sesion.registros.length,
+                              separatorBuilder: (context, index) => Divider(
+                                height: 1,
+                                color: Colors.grey.shade200,
+                              ),
+                              itemBuilder: (context, index) {
+                                final registro = sesion.registros[index];
+                                return _buildRegistroItem(
+                                  registro,
+                                  isDesktop,
+                                  isTablet,
+                                );
+                              },
+                            ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
                     // Botón de cerrar
                     SizedBox(
                       width: double.infinity,
@@ -581,6 +633,153 @@ class _HistorialAsistenciaScreenState extends State<HistorialAsistenciaScreen> {
               ),
             ),
           ),
+    );
+  }
+
+  Widget _buildRegistroItem(
+    RegistroAsistencia registro,
+    bool isDesktop,
+    bool isTablet,
+  ) {
+    Color estadoColor;
+    IconData estadoIcon;
+    String estadoTexto;
+
+    switch (registro.estado.name) {
+      case 'presente':
+        estadoColor = WessexColors.leafGreen;
+        estadoIcon = Icons.check_circle;
+        estadoTexto = 'Presente';
+        break;
+      case 'ausente':
+        estadoColor = WessexColors.crimsonAlert;
+        estadoIcon = Icons.cancel;
+        estadoTexto = 'Ausente';
+        break;
+      case 'justificado':
+        estadoColor = WessexColors.deepRoyalBlue;
+        estadoIcon = Icons.info;
+        estadoTexto = 'Justificado';
+        break;
+      default:
+        estadoColor = Colors.grey;
+        estadoIcon = Icons.help_outline;
+        estadoTexto = 'Desconocido';
+    }
+
+    final tieneObservaciones = registro.observaciones != null && 
+                               registro.observaciones!.trim().isNotEmpty;
+
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: isDesktop ? 16 : 12,
+        vertical: isDesktop ? 12 : 10,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              // Icono de estado
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: estadoColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Icon(
+                  estadoIcon,
+                  color: estadoColor,
+                  size: isDesktop ? 20 : 18,
+                ),
+              ),
+              const SizedBox(width: 12),
+              
+              // Nombre del alumno
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      registro.nombreAlumno,
+                      style: TextStyle(
+                        fontSize: isDesktop ? 14 : 13,
+                        fontWeight: FontWeight.w600,
+                        color: WessexColors.darkGrape,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'RUT: ${registro.rutAlumno}',
+                      style: TextStyle(
+                        fontSize: isDesktop ? 12 : 11,
+                        color: WessexColors.darkGrape.withOpacity(0.6),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Badge de estado
+              Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isDesktop ? 12 : 10,
+                  vertical: isDesktop ? 6 : 5,
+                ),
+                decoration: BoxDecoration(
+                  color: estadoColor,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  estadoTexto,
+                  style: TextStyle(
+                    color: WessexColors.white,
+                    fontSize: isDesktop ? 12 : 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          
+          // Observaciones (si existen)
+          if (tieneObservaciones) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade50,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: Colors.amber.shade200,
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.notes,
+                    size: 16,
+                    color: Colors.amber.shade800,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      registro.observaciones!,
+                      style: TextStyle(
+                        fontSize: isDesktop ? 13 : 12,
+                        color: Colors.amber.shade900,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 

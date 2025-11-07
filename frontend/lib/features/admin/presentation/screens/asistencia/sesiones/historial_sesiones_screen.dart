@@ -181,7 +181,7 @@ class _HistorialSesionesScreenState extends State<HistorialSesionesScreen> {
                             child: DropdownButtonFormField<String>(
                               value: _cursoFiltro,
                               decoration: InputDecoration(
-                                labelText: 'Curso',
+                                labelText: 'Categoría',
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
@@ -191,11 +191,11 @@ class _HistorialSesionesScreenState extends State<HistorialSesionesScreen> {
                                 ),
                               ),
                               isExpanded: true,
-                              hint: const Text('Todos los cursos'),
+                              hint: const Text('Todos las categorías'),
                               items: [
                                 const DropdownMenuItem<String>(
                                   value: null,
-                                  child: Text('Todos los cursos'),
+                                  child: Text('Todos las categorías'),
                                 ),
                                 ..._cursosDisponibles
                                     .map(
@@ -254,7 +254,7 @@ class _HistorialSesionesScreenState extends State<HistorialSesionesScreen> {
                         const SizedBox(width: 16),
                         Expanded(
                           child: _buildStatCard(
-                            'Cursos Activos',
+                            'Categorías Activas',
                             '${_cursosDisponibles.length}',
                             Icons.school,
                             WessexColors.leafGreen,
@@ -298,7 +298,7 @@ class _HistorialSesionesScreenState extends State<HistorialSesionesScreen> {
                           const SizedBox(height: 8),
                           Text(
                             _cursoFiltro != null
-                                ? 'No hay sesiones para el curso $_cursoFiltro'
+                                ? 'No hay sesiones para la categoría $_cursoFiltro'
                                 : 'Toma tu primera asistencia para verla aquí',
                             style: TextStyle(
                               color: WessexColors.darkGrape.withOpacity(0.5),

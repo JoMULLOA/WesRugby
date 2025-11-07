@@ -118,14 +118,15 @@ class RegistroAsistencia {
 
   factory RegistroAsistencia.fromJson(Map<String, dynamic> json) {
     return RegistroAsistencia(
-      rutAlumno: json['rutAlumno']?.toString() ?? '',
-      nombreAlumno: json['nombreAlumno']?.toString() ?? '',
+      rutAlumno: json['rutAlumno']?.toString() ?? json['rutEstudiante']?.toString() ?? '',
+      nombreAlumno: json['nombreAlumno']?.toString() ?? json['nombreEstudiante']?.toString() ?? '',
       estado: EstadoAsistencia.values.firstWhere(
         (e) => e.name == json['estado']?.toString(),
         orElse: () => EstadoAsistencia.sinRegistrar,
       ),
       fechaHora:
           DateTime.tryParse(json['fechaHora']?.toString() ?? '') ??
+          DateTime.tryParse(json['createdAt']?.toString() ?? '') ??
           DateTime.now(),
       observaciones: json['observaciones']?.toString(),
       justificacion: json['justificacion']?.toString(),
@@ -189,16 +190,17 @@ class SesionEntrenamiento {
     return SesionEntrenamiento(
       id: json['id']?.toString() ?? '',
       nombre: json['nombre']?.toString() ?? '',
-      categoria: json['categoria']?.toString() ?? '',
+      categoria: json['categoria']?.toString() ?? json['curso']?.toString() ?? '',
       fechaInicio:
           DateTime.tryParse(json['fechaInicio']?.toString() ?? '') ??
+          DateTime.tryParse(json['fecha']?.toString() ?? '') ??
           DateTime.now(),
       fechaFin:
           json['fechaFin'] != null
               ? DateTime.tryParse(json['fechaFin'].toString())
               : null,
-      entrenadorRut: json['entrenadorRut']?.toString() ?? '',
-      entrenadorNombre: json['entrenadorNombre']?.toString() ?? '',
+      entrenadorRut: json['entrenadorRut']?.toString() ?? json['rutEntrenador']?.toString() ?? '',
+      entrenadorNombre: json['entrenadorNombre']?.toString() ?? json['nombreEntrenador']?.toString() ?? '',
       registros:
           (json['registros'] as List<dynamic>?)
               ?.map(
