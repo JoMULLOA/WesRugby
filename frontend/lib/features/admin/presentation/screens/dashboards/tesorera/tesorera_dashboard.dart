@@ -6,6 +6,7 @@ import 'package:wesrugby/features/admin/presentation/screens/pagos/gestion/gesti
 import 'package:wesrugby/features/admin/presentation/screens/pagos/resumen/pagos_resumen_screen.dart';
 import 'package:wesrugby/features/admin/presentation/screens/actas/visualizar/visualizar_actas_reunion_screen.dart';
 import 'package:wesrugby/features/inventory/presentation/screens/management/inventory_management_screen.dart';
+import 'package:wesrugby/features/admin/presentation/screens/pagos/configuracion/configuracion_precios_screen.dart';
 
 class TesoreraDashboard extends StatelessWidget {
   const TesoreraDashboard({super.key});
@@ -135,6 +136,23 @@ class TesoreraDashboard extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (context) => const InventoryManagementScreen(),
+                    ),
+                  ),
+                  isDesktop: isDesktop,
+                  isTablet: isTablet,
+                ),
+
+                const SizedBox(height: 16),
+
+                _buildActionCard(
+                  'Configuración de Precios',
+                  'Definir precios de mensualidad y matrícula',
+                  Icons.settings,
+                  WessexColors.deepRoyalBlue,
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ConfiguracionPreciosScreen(),
                     ),
                   ),
                   isDesktop: isDesktop,

@@ -7,6 +7,7 @@ import 'package:wesrugby/data/services/voucher_service.dart';
 import 'package:wesrugby/data/services/estudiante_service.dart';
 import 'package:wesrugby/data/services/api_service.dart';
 import 'package:wesrugby/data/services/pagos_service.dart';
+import 'package:wesrugby/data/services/configuracion_precio_service.dart';
 
 class VoucherPagoScreen extends StatefulWidget {
   const VoucherPagoScreen({super.key});
@@ -21,12 +22,14 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
   final _descripcionController = TextEditingController();
   String? _selectedMonth;
   String? _selectedMetodoPago;
+  String? _selectedTipoPago; // Nuevo: mensualidad o matrícula
   String? _archivoNombre;
   Uint8List? _webFile;
   bool _isUploading = false;
   bool _isLoadingEstudiantes = true;
   bool _isLoadingUserData = true;
   bool _isLoadingMeses = true;
+  bool _isLoadingPrecios = true;
   bool _aplicarATodos = true;
   Map<String, dynamic>? _userData;
   final VoucherService _voucherService = VoucherService();
@@ -37,6 +40,14 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
   // Lista de meses disponibles (cargados dinámicamente)
   List<Map<String, dynamic>> _mesesDisponibles = [];
   String? _errorMeses;
+  
+  // Precios configurados
+  double? _precioMensualidad;
+  double? _precioMatricula;
+  int _descuentoMensualidad2 = 0;
+  int _descuentoMensualidad3Plus = 0;
+  int _descuentoMatricula2 = 0;
+  int _descuentoMatricula3Plus = 0;
 
   @override
   void initState() {
@@ -46,8 +57,97 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
         _loadUserData();
         _loadMisEstudiantes();
         _cargarMesesNoPagados();
+        _cargarPrecios();
       }
     });
+  }
+
+  Future<void> _cargarPrecios() async {
+    setState(() {
+      _isLoadingPrecios = true;
+    });
+
+    try {
+      final anioActual = DateTime.now().year;
+      final response = await ConfiguracionPrecioService.obtenerPreciosPorAnio(
+        anioActual,
+      );
+
+      if (response.statusCode == 200 && mounted) {
+        final data = response.data['data'] as Map<String, dynamic>?;
+        
+        if (data != null) {
+          setState(() {
+            _precioMensualidad = data['precioMensualidad']?.toDouble();
+            _precioMatricula = data['precioMatricula']?.toDouble();
+            _descuentoMensualidad2 = data['descuentoMensualidad2'] ?? 0;
+            _descuentoMensualidad3Plus = data['descuentoMensualidad3Plus'] ?? 0;
+            _descuentoMatricula2 = data['descuentoMatricula2'] ?? 0;
+            _descuentoMatricula3Plus = data['descuentoMatricula3Plus'] ?? 0;
+            _isLoadingPrecios = false;
+          });
+          print('✅ Precios cargados: Mensualidad=\$$_precioMensualidad, Matrícula=\$$_precioMatricula');
+          print('✅ Descuentos: Men2=$_descuentoMensualidad2%, Men3+=$_descuentoMensualidad3Plus%, Mat2=$_descuentoMatricula2%, Mat3+=$_descuentoMatricula3Plus%');
+        } else {
+          setState(() {
+            _isLoadingPrecios = false;
+          });
+        }
+      }
+    } catch (e) {
+      print('Error al cargar precios: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingPrecios = false;
+        });
+      }
+    }
+  }
+
+  void _onTipoPagoChanged(String? tipoPago) {
+    setState(() {
+      _selectedTipoPago = tipoPago;
+      _actualizarMontoConDescuento();
+    });
+  }
+
+  /// Calcula el monto total con descuento según cantidad de estudiantes
+  double _calcularMontoConDescuento(double precioBase, int cantidadEstudiantes, int descuento2, int descuento3Plus) {
+    if (cantidadEstudiantes <= 1) {
+      return precioBase * cantidadEstudiantes;
+    }
+    
+    final totalSinDescuento = precioBase * cantidadEstudiantes;
+    
+    if (cantidadEstudiantes == 2) {
+      return totalSinDescuento * (100 - descuento2) / 100;
+    }
+    
+    // cantidadEstudiantes >= 3
+    return totalSinDescuento * (100 - descuento3Plus) / 100;
+  }
+
+  /// Actualiza el monto del controller según tipo de pago y estudiantes seleccionados
+  void _actualizarMontoConDescuento() {
+    final cantidadEstudiantes = _estudiantesSeleccionados.length;
+    
+    if (_selectedTipoPago == 'Mensualidad' && _precioMensualidad != null) {
+      final montoTotal = _calcularMontoConDescuento(
+        _precioMensualidad!,
+        cantidadEstudiantes,
+        _descuentoMensualidad2,
+        _descuentoMensualidad3Plus,
+      );
+      _montoController.text = montoTotal.toStringAsFixed(0);
+    } else if (_selectedTipoPago == 'Matrícula' && _precioMatricula != null) {
+      final montoTotal = _calcularMontoConDescuento(
+        _precioMatricula!,
+        cantidadEstudiantes,
+        _descuentoMatricula2,
+        _descuentoMatricula3Plus,
+      );
+      _montoController.text = montoTotal.toStringAsFixed(0);
+    }
   }
 
   Future<void> _cargarMesesNoPagados() async {
@@ -588,6 +688,7 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
                                             setState(() {
                                               _aplicarATodos = value;
                                               _sincronizarSeleccion();
+                                              _actualizarMontoConDescuento();
                                             });
                                           }
                                         : null,
@@ -654,6 +755,9 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
                                       if (_aplicarATodos) {
                                         _sincronizarSeleccion();
                                       }
+                                      
+                                      // Recalcular el monto con descuento
+                                      _actualizarMontoConDescuento();
                                     });
                                   },
                                 );
@@ -700,6 +804,37 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
                           ),
                         ),
                         const SizedBox(height: 20),
+
+                        // Tipo de pago (Mensualidad o Matrícula)
+                        DropdownButtonFormField<String>(
+                          value: _selectedTipoPago,
+                          decoration: InputDecoration(
+                            labelText: 'Tipo de Pago',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            prefixIcon: Icon(
+                              Icons.category,
+                              color: WessexColors.deepRoyalBlue,
+                            ),
+                          ),
+                          hint: const Text('Selecciona el tipo de pago'),
+                          items: const [
+                            DropdownMenuItem(
+                              value: 'Mensualidad',
+                              child: Text('Mensualidad'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'Matrícula',
+                              child: Text('Matrícula'),
+                            ),
+                          ],
+                          onChanged: _onTipoPagoChanged,
+                          validator: (value) =>
+                              value == null ? 'Selecciona el tipo de pago' : null,
+                        ),
+
+                        const SizedBox(height: 16),
 
                         // Mes de pago
                         if (_isLoadingMeses)
@@ -790,6 +925,73 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
                             onChanged: (value) => setState(() => _selectedMonth = value),
                             validator: (value) =>
                                 value == null ? 'Selecciona el mes de pago' : null,
+                          ),
+
+                        const SizedBox(height: 16),
+
+                        // Nota informativa de precios configurados
+                        if (_precioMensualidad != null || _precioMatricula != null)
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: WessexColors.deepRoyalBlue.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: WessexColors.deepRoyalBlue.withOpacity(0.3),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.info_outline,
+                                  color: WessexColors.deepRoyalBlue,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Precios configurados para ${DateTime.now().year}:',
+                                        style: TextStyle(
+                                          color: WessexColors.deepRoyalBlue,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      if (_precioMensualidad != null)
+                                        Text(
+                                          'Mensualidad: \$${_precioMensualidad!.toStringAsFixed(0)} (por estudiante)',
+                                          style: TextStyle(
+                                            color: WessexColors.deepRoyalBlue.withOpacity(0.8),
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      if (_precioMatricula != null)
+                                        Text(
+                                          'Matrícula: \$${_precioMatricula!.toStringAsFixed(0)} (por estudiante)',
+                                          style: TextStyle(
+                                            color: WessexColors.deepRoyalBlue.withOpacity(0.8),
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      const SizedBox(height: 4),
+                                      if (_estudiantesSeleccionados.length >= 2)
+                                        Text(
+                                          'Descuento por ${_estudiantesSeleccionados.length} estudiantes aplicado automáticamente',
+                                          style: TextStyle(
+                                            color: WessexColors.leafGreen,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
 
                         const SizedBox(height: 16),

@@ -25,6 +25,7 @@ import merchandisingRoutes from "./merchandising.routes.js";
 import homepageRoutes from "./homepage.routes.js";
 import uploadRoutes from "./upload.routes.js";
 import inventoryRoutes from "./inventory.routes.js";
+import configuracionPrecioRoutes from "./configuracionPrecio.routes.js";
 
 const router = Router();
 
@@ -51,6 +52,7 @@ router
     .use("/merchandising", merchandisingRoutes)
     .use("/homepage", homepageRoutes)
     .use("/inventario", inventoryRoutes)
+    .use("/configuracion-precios", configuracionPrecioRoutes)
     .use("/upload", uploadRoutes);
 
 export default router;
