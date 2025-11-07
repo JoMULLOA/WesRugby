@@ -22,8 +22,8 @@ class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
 
   // Datos
   List<Map<String, dynamic>> _todosEstudiantes = [];
-  List<String> _cursosDisponibles = [];
-  String? _cursoSeleccionado;
+  List<String> _categoriasDisponibles = [];
+  String? _categoriaSeleccionada;
 
   // Asistencia
   Map<String, String> _asistenciaEstudiantes = {}; // RUT -> estado
@@ -59,24 +59,24 @@ class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
 
       final estudiantes = await _estudianteService.getAllStudentsFromAPI();
 
-      // Extraer cursos únicos
-      final cursosSet = <String>{};
+      // Extraer categorías únicas
+      final categoriasSet = <String>{};
       for (var estudiante in estudiantes) {
-        final curso = estudiante['curso'];
-        if (curso != null && curso.toString().isNotEmpty) {
-          cursosSet.add(curso.toString());
+        final categoria = estudiante['categoria'];
+        if (categoria != null && categoria.toString().isNotEmpty) {
+          categoriasSet.add(categoria.toString());
         }
       }
 
       setState(() {
         _todosEstudiantes = estudiantes;
-        _cursosDisponibles = cursosSet.toList()..sort();
+        _categoriasDisponibles = categoriasSet.toList()..sort();
         _isLoadingEstudiantes = false;
       });
 
       if (kDebugMode) {
         print('📚 Estudiantes cargados: ${estudiantes.length}');
-        print('📋 Cursos disponibles: $_cursosDisponibles');
+        print('📋 Categorías disponibles: $_categoriasDisponibles');
       }
     } catch (e) {
       setState(() {
@@ -89,25 +89,25 @@ class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
     }
   }
 
-  List<Map<String, dynamic>> _getEstudiantesPorCurso() {
-    if (_cursoSeleccionado == null) return [];
+  List<Map<String, dynamic>> _getEstudiantesPorCategoria() {
+    if (_categoriaSeleccionada == null) return [];
 
     return _todosEstudiantes
         .where(
           (estudiante) =>
-              estudiante['curso'] == _cursoSeleccionado &&
+              estudiante['categoria'] == _categoriaSeleccionada &&
               estudiante['estado'] == 'activo',
         )
         .toList();
   }
 
-  void _onCursoSelected(String? curso) {
+  void _onCategoriaSelected(String? categoria) {
     setState(() {
-      _cursoSeleccionado = curso;
+      _categoriaSeleccionada = categoria;
       _asistenciaEstudiantes.clear();
 
-      // Inicializar asistencia como "presente" para todos los estudiantes del curso
-      final estudiantes = _getEstudiantesPorCurso();
+      // Inicializar asistencia como "presente" para todos los estudiantes de la categoría
+      final estudiantes = _getEstudiantesPorCategoria();
       for (var estudiante in estudiantes) {
         _asistenciaEstudiantes[estudiante['rut']] = 'presente';
       }
@@ -121,8 +121,8 @@ class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
   }
 
   Future<void> _guardarAsistencia() async {
-    if (_cursoSeleccionado == null) {
-      _showErrorSnackBar('Selecciona un curso');
+    if (_categoriaSeleccionada == null) {
+      _showErrorSnackBar('Selecciona una categoría');
       return;
     }
 
@@ -141,22 +141,22 @@ class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
     });
 
     try {
-      // Obtener estudiantes del curso seleccionado para incluir nombres
-      final estudiantesCurso = _getEstudiantesPorCurso();
+      // Obtener estudiantes de la categoría seleccionada para incluir nombres
+      final estudiantesCategoria = _getEstudiantesPorCategoria();
 
       // Crear el objeto de sesión de asistencia
       final sesionAsistencia = {
         'nombre': _nombreSesionController.text.trim(),
         'descripcion': _descripcionController.text.trim(),
         'fecha': _fechaSesion.toIso8601String(),
-        'curso': _cursoSeleccionado,
+        'categoria': _categoriaSeleccionada,
         'asistencias':
             _asistenciaEstudiantes.entries
                 .map(
                   (entry) => {
                     'rutEstudiante': entry.key,
                     'nombreEstudiante':
-                        estudiantesCurso.firstWhere(
+                        estudiantesCategoria.firstWhere(
                           (e) => e['rut'] == entry.key,
                           orElse: () => {'nombre': 'Estudiante ${entry.key}'},
                         )['nombre'],
@@ -222,7 +222,7 @@ class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'La asistencia de ${_cursoSeleccionado} ha sido registrada correctamente.',
+                  'La asistencia de $_categoriaSeleccionada ha sido registrada correctamente.',
                   style: TextStyle(
                     color: WessexColors.darkGrape.withOpacity(0.7),
                     fontSize: 14,
@@ -443,7 +443,7 @@ class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
                             color: WessexColors.deepRoyalBlue,
                           ),
                         )
-                      else if (_cursosDisponibles.isEmpty)
+                      else if (_categoriasDisponibles.isEmpty)
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
@@ -463,7 +463,7 @@ class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
-                                  'No se encontraron cursos disponibles.',
+                                  'No se encontraron categorías disponibles.',
                                   style: TextStyle(
                                     color: WessexColors.crimsonAlert,
                                     fontSize: 14,
@@ -476,36 +476,36 @@ class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
                         )
                       else
                         DropdownButtonFormField<String>(
-                          value: _cursoSeleccionado,
+                          value: _categoriaSeleccionada,
                           decoration: InputDecoration(
-                            labelText: 'Curso',
+                            labelText: 'Categoría',
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
                             prefixIcon: Icon(
-                              Icons.class_,
+                              Icons.sports_rugby,
                               color: WessexColors.crimsonAlert,
                             ),
                           ),
                           isExpanded: true,
-                          hint: const Text('Selecciona un curso'),
+                          hint: const Text('Selecciona una categoría'),
                           items:
-                              _cursosDisponibles
+                              _categoriasDisponibles
                                   .map(
-                                    (curso) => DropdownMenuItem<String>(
-                                      value: curso,
-                                      child: Text(curso),
+                                    (categoria) => DropdownMenuItem<String>(
+                                      value: categoria,
+                                      child: Text(categoria),
                                     ),
                                   )
                                   .toList(),
-                          onChanged: _onCursoSelected,
+                          onChanged: _onCategoriaSelected,
                         ),
                     ],
                   ),
                 ),
 
                 // Lista de estudiantes para tomar asistencia
-                if (_cursoSeleccionado != null) ...[
+                if (_categoriaSeleccionada != null) ...[
                   _buildListaAsistencia(),
 
                   const SizedBox(height: 24),
@@ -592,7 +592,7 @@ class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
   }
 
   Widget _buildListaAsistencia() {
-    final estudiantes = _getEstudiantesPorCurso();
+    final estudiantes = _getEstudiantesPorCategoria();
 
     if (estudiantes.isEmpty) {
       return WessexCard(
@@ -605,7 +605,7 @@ class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  'No hay estudiantes activos en este curso.',
+                  'No hay estudiantes activos en esta categoría.',
                   style: TextStyle(
                     color: WessexColors.deepRoyalBlue,
                     fontSize: 14,
@@ -627,7 +627,7 @@ class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Estudiantes - $_cursoSeleccionado',
+                'Estudiantes - $_categoriaSeleccionada',
                 style: TextStyle(
                   color: WessexColors.darkGrape,
                   fontSize: 18,
