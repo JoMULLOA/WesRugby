@@ -152,89 +152,147 @@ class _AuspiciadoresScreenState extends State<AuspiciadoresScreen> {
               ],
             ),
           ),
-          ...(_auspiciadores.map(
-            (auspiciador) => _buildAuspiciadorCard(auspiciador),
-          )),
+          _buildAuspiciadoresGrid(),
         ],
       ),
     );
   }
 
+  Widget _buildAuspiciadoresGrid() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screenWidth = constraints.maxWidth;
+        final isDesktop = screenWidth > 1200;
+        final isTablet = screenWidth > 600;
+        
+        int crossAxisCount = isDesktop ? 3 : (isTablet ? 2 : 1);
+        
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            childAspectRatio: 1.2,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+          ),
+          itemCount: _auspiciadores.length,
+          itemBuilder: (context, index) {
+            return _buildAuspiciadorCard(_auspiciadores[index]);
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildAuspiciadorCard(AuspiciadorModel auspiciador) {
-    return WessexCard(
-      margin: const EdgeInsets.only(bottom: 16),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border: Border.all(
+          color: WessexColors.lightGray.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           // Logo del auspiciador
-          if (auspiciador.imagen.isNotEmpty) ...[
-            Container(
+          Expanded(
+            child: Container(
               width: double.infinity,
-              height: 150,
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: WessexColors.lightGray, width: 1),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  auspiciador.imagen,
-                  fit: BoxFit.contain,
-                  errorBuilder:
-                      (context, error, stackTrace) => Container(
-                        child: const Icon(
-                          Icons.business,
-                          color: WessexColors.ashGray,
-                          size: 48,
-                        ),
-                      ),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(12),
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-          ],
-
-          // Nombre del auspiciador
-          Text(
-            auspiciador.titulo,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: WessexColors.deepNavyBlue,
+              child:
+                  auspiciador.imagen.isNotEmpty
+                      ? ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          auspiciador.imagen,
+                          fit: BoxFit.contain,
+                          errorBuilder:
+                              (context, error, stackTrace) => const Icon(
+                                Icons.business,
+                                color: WessexColors.ashGray,
+                                size: 48,
+                              ),
+                        ),
+                      )
+                      : const Icon(
+                        Icons.business,
+                        color: WessexColors.ashGray,
+                        size: 48,
+                      ),
             ),
           ),
 
-          const SizedBox(height: 12),
-
-          // Enlace si existe
-          if (auspiciador.enlace != null && auspiciador.enlace!.isNotEmpty) ...[
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: WessexColors.lightGray.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.link, size: 16, color: WessexColors.deepRoyalBlue),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      auspiciador.enlace!,
-                      style: TextStyle(
-                        fontSize: 14,
+          // Nombre del auspiciador
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              children: [
+                Text(
+                  auspiciador.titulo,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: WessexColors.deepNavyBlue,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                
+                // Enlace si existe
+                if (auspiciador.enlace != null &&
+                    auspiciador.enlace!.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.link,
+                        size: 14,
                         color: WessexColors.deepRoyalBlue,
-                        fontWeight: FontWeight.w500,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          auspiciador.enlace!,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: WessexColors.deepRoyalBlue,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
-              ),
+              ],
             ),
-          ],
+          ),
         ],
       ),
     );

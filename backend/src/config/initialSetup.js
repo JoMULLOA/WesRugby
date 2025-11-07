@@ -81,6 +81,7 @@ async function createInitialData() {
       console.log("Usuarios del sistema ya existen, cargando referencias...");
     }
 
+    await ensureSampleEntrenadores(userRepository);
     await ensureSampleRamaUsers(userRepository);
 
 
@@ -122,6 +123,75 @@ async function createInitialData() {
 
   } catch (error) {
     console.error("Error al crear datos iniciales:", error);
+  }
+}
+
+async function ensureSampleEntrenadores(userRepository) {
+  try {
+    const sampleEntrenadores = [
+      {
+        rut: "34.567.890-1",
+        nombreCompleto: "Carlos Rodriguez Martinez",
+        email: "entrenador@wessex.cl",
+      },
+      {
+        rut: "15.234.678-5",
+        nombreCompleto: "María González Perez",
+        email: "maria.gonzalez@wessex.cl",
+      },
+      {
+        rut: "16.345.789-2",
+        nombreCompleto: "Juan Pablo Fernandez",
+        email: "juan.fernandez@wessex.cl",
+      },
+      {
+        rut: "17.456.890-9",
+        nombreCompleto: "Patricia Silva Castro",
+        email: "patricia.silva@wessex.cl",
+      },
+      {
+        rut: "18.567.901-6",
+        nombreCompleto: "Diego Muñoz Valdes",
+        email: "diego.munoz@wessex.cl",
+      },
+      {
+        rut: "19.678.012-3",
+        nombreCompleto: "Carolina Ramirez Lopez",
+        email: "carolina.ramirez@wessex.cl",
+      },
+      {
+        rut: "20.789.123-0",
+        nombreCompleto: "Andrés Torres Gutierrez",
+        email: "andres.torres@wessex.cl",
+      },
+      {
+        rut: "21.890.234-7",
+        nombreCompleto: "Francisca Morales Diaz",
+        email: "francisca.morales@wessex.cl",
+      },
+    ];
+
+    for (const sample of sampleEntrenadores) {
+      const existing = await userRepository.findOne({
+        where: { rut: sample.rut },
+      });
+
+      if (!existing) {
+        const entrenador = userRepository.create({
+          rut: sample.rut,
+          nombreCompleto: sample.nombreCompleto,
+          email: sample.email,
+          password: await encryptPassword("Entrenador2024"),
+          rol: "entrenador",
+        });
+
+        await userRepository.save(entrenador);
+        console.log(`   - Entrenador creado: ${sample.nombreCompleto} (${sample.email})`);
+      }
+    }
+    console.log("✅ Entrenadores de ejemplo verificados/creados");
+  } catch (error) {
+    console.error("Error asegurando entrenadores de ejemplo:", error);
   }
 }
 

@@ -236,6 +236,7 @@ function normalizePago(raw) {
 
 function buildPagos(rowMap) {
   const pagos = {
+    anio: 2025, // Identificar que estos pagos son del año 2025
     matricula: normalizePago(pickValue(rowMap, COLUMN_ALIASES.matricula) ?? ""),
     meses: {},
     totalAnio: normalizePago(pickValue(rowMap, COLUMN_ALIASES.totalAnio) ?? ""),

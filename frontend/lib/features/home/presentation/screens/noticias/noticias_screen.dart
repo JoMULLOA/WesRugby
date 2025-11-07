@@ -173,97 +173,189 @@ class _NoticiasScreenState extends State<NoticiasScreen> {
               ],
             ),
           ),
-          ...(_noticias.map((noticia) => _buildNoticiaCard(noticia))),
+          _buildNoticiasGrid(),
         ],
       ),
     );
   }
 
+  Widget _buildNoticiasGrid() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screenWidth = constraints.maxWidth;
+        final isDesktop = screenWidth > 1200;
+        final isTablet = screenWidth > 600;
+        
+        int crossAxisCount = isDesktop ? 3 : (isTablet ? 2 : 1);
+        
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            childAspectRatio: 0.75,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+          ),
+          itemCount: _noticias.length,
+          itemBuilder: (context, index) {
+            return _buildNoticiaCard(_noticias[index]);
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildNoticiaCard(NoticiaModel noticia) {
-    return WessexCard(
-      margin: const EdgeInsets.only(bottom: 16),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border: Border.all(
+          color: WessexColors.lightGray.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (noticia.destacada) ...[
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: WessexColors.goldenYellow,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.star,
-                    color: WessexColors.deepNavyBlue,
-                    size: 16,
-                  ),
-                  const SizedBox(width: 4),
-                  const Text(
-                    'DESTACADA',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: WessexColors.deepNavyBlue,
+          // Imagen de la noticia
+          Expanded(
+            child: Stack(
+              children: [
+                Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: WessexColors.lightGray,
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(12),
                     ),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
-          if (noticia.imagen.isNotEmpty) ...[
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                noticia.imagen,
-                width: double.infinity,
-                height: 200,
-                fit: BoxFit.cover,
-                errorBuilder:
-                    (context, error, stackTrace) => Container(
-                      width: double.infinity,
-                      height: 200,
-                      color: WessexColors.lightGray,
-                      child: const Icon(
-                        Icons.image_not_supported,
-                        color: WessexColors.ashGray,
-                        size: 48,
+                  child:
+                      noticia.imagen.isNotEmpty
+                          ? ClipRRect(
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(12),
+                            ),
+                            child: Image.network(
+                              noticia.imagen,
+                              fit: BoxFit.cover,
+                              errorBuilder:
+                                  (context, error, stackTrace) => Container(
+                                    child: const Icon(
+                                      Icons.article,
+                                      color: WessexColors.ashGray,
+                                      size: 48,
+                                    ),
+                                  ),
+                            ),
+                          )
+                          : const Center(
+                            child: Icon(
+                              Icons.article,
+                              color: WessexColors.ashGray,
+                              size: 48,
+                            ),
+                          ),
+                ),
+                if (noticia.destacada)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: WessexColors.goldenYellow,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [
+                          Icon(
+                            Icons.star,
+                            color: WessexColors.deepNavyBlue,
+                            size: 14,
+                          ),
+                          SizedBox(width: 4),
+                          Text(
+                            'DESTACADA',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: WessexColors.deepNavyBlue,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
-          Text(
-            noticia.titulo,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: WessexColors.deepNavyBlue,
+                  ),
+              ],
             ),
           ),
-          const SizedBox(height: 12),
-          Text(
-            noticia.descripcion,
-            style: const TextStyle(
-              fontSize: 14,
-              color: WessexColors.charcoalGray,
-              height: 1.5,
+          
+          // Información de la noticia
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  noticia.titulo,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: WessexColors.deepNavyBlue,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  noticia.descripcion,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: WessexColors.charcoalGray,
+                    height: 1.4,
+                  ),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.calendar_today,
+                      size: 14,
+                      color: WessexColors.ashGray,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      _formatDate(noticia.fechaCreacion),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: WessexColors.ashGray,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Icon(Icons.calendar_today, size: 16, color: WessexColors.ashGray),
-              const SizedBox(width: 4),
-              Text(
-                _formatDate(noticia.fechaCreacion),
-                style: TextStyle(fontSize: 14, color: WessexColors.ashGray),
-              ),
-            ],
           ),
         ],
       ),

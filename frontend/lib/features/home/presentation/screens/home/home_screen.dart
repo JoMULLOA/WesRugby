@@ -6,6 +6,7 @@ import 'package:wesrugby/core/config/colors.dart';
 import 'package:wesrugby/features/home/presentation/screens/noticias/noticias_screen.dart';
 import 'package:wesrugby/features/home/presentation/screens/merchandising/merchandising_screen.dart';
 import 'package:wesrugby/features/home/presentation/screens/auspiciadores/auspiciadores_screen.dart';
+import 'package:wesrugby/features/home/presentation/screens/entrenadores/entrenadores_screen.dart';
 import 'package:wesrugby/data/services/api_service.dart';
 import 'package:wesrugby/data/models/noticia_model.dart';
 import 'package:wesrugby/data/models/merchandising_model.dart';
@@ -25,14 +26,17 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isNoticiasLoading = true;
   bool _isMerchandisingLoading = true;
   bool _isAuspiciadoresLoading = true;
+  bool _isEntrenadoresLoading = true;
 
   List<NoticiaModel> _noticias = [];
   List<MerchandisingModel> _productos = [];
   List<AuspiciadorModel> _auspiciadores = [];
+  List<Map<String, dynamic>> _entrenadores = [];
 
   int _noticiasPage = 0;
   int _merchandisingPage = 0;
   int _auspiciadoresPage = 0;
+  int _entrenadoresPage = 0;
 
   @override
   void initState() {
@@ -44,6 +48,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadNoticiasPreview();
     _loadMerchandisingPreview();
     _loadAuspiciadoresPreview();
+    _loadEntrenadoresPreview();
   }
 
   Future<void> _loadNoticiasPreview() async {
@@ -118,6 +123,31 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
       debugPrint('Error cargando auspiciadores públicos: $error');
       setState(() => _isAuspiciadoresLoading = false);
+    }
+  }
+
+  Future<void> _loadEntrenadoresPreview() async {
+    setState(() => _isEntrenadoresLoading = true);
+    try {
+      final response = await ApiService.get('/users/entrenadores');
+
+      if (!mounted) return;
+
+      final dataList = _extractDataList(response.data);
+      final entrenadores =
+          response.success
+              ? dataList.cast<Map<String, dynamic>>()
+              : <Map<String, dynamic>>[];
+
+      setState(() {
+        _entrenadores = entrenadores;
+        _entrenadoresPage = 0;
+        _isEntrenadoresLoading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      debugPrint('Error cargando entrenadores: $error');
+      setState(() => _isEntrenadoresLoading = false);
     }
   }
 
@@ -322,6 +352,32 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildEntrenadoresGrid(
+    List<Map<String, dynamic>> items,
+    bool isDesktop,
+    bool isTablet,
+  ) {
+    final crossAxisCount = isDesktop
+        ? 4
+        : isTablet
+            ? 3
+            : 2;
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: crossAxisCount,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        childAspectRatio: 0.85,
+      ),
+      itemCount: items.length,
+      itemBuilder: (context, index) =>
+          _buildEntrenadorPreviewCard(items[index]),
+    );
+  }
+
   Widget _buildNoticiaPreviewCard(NoticiaModel noticia) {
     return Container(
       decoration: _homeCardDecoration(),
@@ -504,6 +560,101 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildEntrenadorPreviewCard(Map<String, dynamic> entrenador) {
+    final String nombre = entrenador['nombreCompleto'] ?? 'Sin nombre';
+    final String? avatar = entrenador['avatar'];
+    
+    return Container(
+      decoration: _homeCardDecoration(),
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Avatar circular
+          Container(
+            width: 70,
+            height: 70,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: WessexColors.deepRoyalBlue.withOpacity(0.1),
+              border: Border.all(
+                color: WessexColors.deepRoyalBlue,
+                width: 2,
+              ),
+            ),
+            child: ClipOval(
+              child:
+                  avatar != null && avatar.isNotEmpty
+                      ? Image.network(
+                        avatar,
+                        fit: BoxFit.cover,
+                        errorBuilder:
+                            (context, error, stackTrace) => _buildDefaultAvatarPreview(nombre),
+                      )
+                      : _buildDefaultAvatarPreview(nombre),
+            ),
+          ),
+          const SizedBox(height: 10),
+          // Nombre del entrenador
+          Text(
+            nombre,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: WessexColors.deepNavyBlue,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 6),
+          // Badge de entrenador
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: WessexColors.leafGreen.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Text(
+              'ENTRENADOR',
+              style: TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.bold,
+                color: WessexColors.leafGreen,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDefaultAvatarPreview(String nombre) {
+    // Obtener las iniciales del nombre
+    final List<String> palabras = nombre.split(' ');
+    String iniciales = '';
+    if (palabras.isNotEmpty) {
+      iniciales = palabras[0][0].toUpperCase();
+      if (palabras.length > 1) {
+        iniciales += palabras[1][0].toUpperCase();
+      }
+    }
+
+    return Container(
+      color: WessexColors.deepRoyalBlue.withOpacity(0.2),
+      child: Center(
+        child: Text(
+          iniciales,
+          style: const TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: WessexColors.deepRoyalBlue,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _cardFallbackIcon({required IconData icon}) {
     return Container(
       color: WessexColors.lightGray.withOpacity(0.3),
@@ -517,12 +668,20 @@ class _HomeScreenState extends State<HomeScreen> {
     return BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: WessexColors.lightGray.withOpacity(0.6)),
+      border: Border.all(
+        color: WessexColors.lightGray.withOpacity(0.3),
+        width: 1,
+      ),
       boxShadow: [
         BoxShadow(
-          color: WessexColors.darkGrape.withOpacity(0.06),
-          blurRadius: 10,
+          color: Colors.black.withOpacity(0.1),
+          blurRadius: 8,
           offset: const Offset(0, 4),
+        ),
+        BoxShadow(
+          color: Colors.black.withOpacity(0.05),
+          blurRadius: 4,
+          offset: const Offset(0, 2),
         ),
       ],
     );
@@ -693,10 +852,17 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(width: 8),
               _buildTabButton(
-                'Club Wessex',
-                Icons.info_outline,
+                'Entrenadores',
+                Icons.sports,
                 _selectedTabIndex == 3,
                 () => setState(() => _selectedTabIndex = 3),
+              ),
+              const SizedBox(width: 8),
+              _buildTabButton(
+                'Club Wessex',
+                Icons.info_outline,
+                _selectedTabIndex == 4,
+                () => setState(() => _selectedTabIndex = 4),
               ),
             ],
           ),
@@ -765,6 +931,8 @@ class _HomeScreenState extends State<HomeScreen> {
       case 2:
         return _buildAuspiciadoresContent(context, isDesktop, isTablet);
       case 3:
+        return _buildEntrenadoresContent(context, isDesktop, isTablet);
+      case 4:
         return _buildClubInfoContent(context, isDesktop, isTablet);
       default:
         return _buildNoticiasContent(context, isDesktop, isTablet);
@@ -940,6 +1108,65 @@ class _HomeScreenState extends State<HomeScreen> {
               currentPage: _auspiciadoresPage,
               onPageSelected: (page) =>
                   setState(() => _auspiciadoresPage = page),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEntrenadoresContent(
+    BuildContext context,
+    bool isDesktop,
+    bool isTablet,
+  ) {
+    final currentItems = _itemsForPage(_entrenadores, _entrenadoresPage);
+
+    return WessexCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Nuestros Entrenadores',
+                style: TextStyle(
+                  color: WessexColors.darkGrape,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              TextButton(
+                onPressed:
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const EntrenadoresScreen(),
+                      ),
+                    ),
+                child: const Text(
+                  'Ver todos',
+                  style: TextStyle(
+                    color: WessexColors.deepRoyalBlue,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (_isEntrenadoresLoading)
+            _buildSectionLoadingIndicator()
+          else if (_entrenadores.isEmpty)
+            _buildEmptySection('No hay entrenadores disponibles', Icons.sports)
+          else ...[
+            _buildEntrenadoresGrid(currentItems, isDesktop, isTablet),
+            _buildPagination(
+              itemCount: _entrenadores.length,
+              currentPage: _entrenadoresPage,
+              onPageSelected: (page) =>
+                  setState(() => _entrenadoresPage = page),
             ),
           ],
         ],

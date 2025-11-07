@@ -2,45 +2,41 @@ import 'package:flutter/material.dart';
 import 'package:wesrugby/shared/widgets/layout/wessex_widgets.dart';
 import 'package:wesrugby/core/config/colors.dart';
 import 'package:wesrugby/data/services/api_service.dart';
-import 'package:wesrugby/data/models/merchandising_model.dart';
 
-class MerchandisingScreen extends StatefulWidget {
-  const MerchandisingScreen({super.key});
+class EntrenadoresScreen extends StatefulWidget {
+  const EntrenadoresScreen({super.key});
 
   @override
-  State<MerchandisingScreen> createState() => _MerchandisingScreenState();
+  State<EntrenadoresScreen> createState() => _EntrenadoresScreenState();
 }
 
-class _MerchandisingScreenState extends State<MerchandisingScreen> {
-  List<MerchandisingModel> _productos = [];
+class _EntrenadoresScreenState extends State<EntrenadoresScreen> {
+  List<Map<String, dynamic>> _entrenadores = [];
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadProductos();
+    _loadEntrenadores();
   }
 
-  Future<void> _loadProductos() async {
+  Future<void> _loadEntrenadores() async {
     setState(() => _isLoading = true);
     try {
-      final response = await ApiService.get('/merchandising/publico');
+      // Obtenemos usuarios con rol "entrenador"
+      final response = await ApiService.get('/users/entrenadores');
       if (response.success && response.data != null) {
-        // El backend devuelve {success: true, message: "...", data: [...]}
-        final List<dynamic> productosData =
+        final List<dynamic> entrenadoresData =
             response.data is Map
                 ? (response.data['data'] as List? ?? [])
                 : (response.data is List ? response.data as List : []);
 
         setState(() {
-          _productos =
-              productosData
-                  .map((json) => MerchandisingModel.fromJson(json))
-                  .toList();
+          _entrenadores = entrenadoresData.cast<Map<String, dynamic>>();
         });
       }
     } catch (e) {
-      print('Error al cargar productos: $e');
+      print('Error al cargar entrenadores: $e');
     } finally {
       setState(() => _isLoading = false);
     }
@@ -51,7 +47,7 @@ class _MerchandisingScreenState extends State<MerchandisingScreen> {
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: WessexAppBar(
-        title: 'Tienda del Club',
+        title: 'Nuestros Entrenadores',
         elevation: 2,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: WessexColors.white),
@@ -65,9 +61,9 @@ class _MerchandisingScreenState extends State<MerchandisingScreen> {
                   ? const Center(
                     child: CircularProgressIndicator(color: WessexColors.white),
                   )
-                  : _productos.isEmpty
+                  : _entrenadores.isEmpty
                   ? _buildEmptyState()
-                  : _buildProductosList(),
+                  : _buildEntrenadoresList(),
         ),
       ),
     );
@@ -82,10 +78,10 @@ class _MerchandisingScreenState extends State<MerchandisingScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.shopping_bag, size: 64, color: WessexColors.ashGray),
+              Icon(Icons.sports, size: 64, color: WessexColors.ashGray),
               const SizedBox(height: 16),
               const Text(
-                'No hay productos disponibles',
+                'No hay entrenadores registrados',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w500,
@@ -94,7 +90,7 @@ class _MerchandisingScreenState extends State<MerchandisingScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Pronto tendremos merchandising del club',
+                'Pronto conocerás a nuestro equipo técnico',
                 style: TextStyle(fontSize: 14, color: WessexColors.ashGray),
               ),
             ],
@@ -104,7 +100,7 @@ class _MerchandisingScreenState extends State<MerchandisingScreen> {
     );
   }
 
-  Widget _buildProductosList() {
+  Widget _buildEntrenadoresList() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -121,7 +117,7 @@ class _MerchandisingScreenState extends State<MerchandisingScreen> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(
-                    Icons.shopping_bag,
+                    Icons.sports,
                     color: WessexColors.deepRoyalBlue,
                     size: 24,
                   ),
@@ -132,7 +128,7 @@ class _MerchandisingScreenState extends State<MerchandisingScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Tienda del Wessex Rugby',
+                        'Equipo Técnico Wessex Rugby',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -140,7 +136,7 @@ class _MerchandisingScreenState extends State<MerchandisingScreen> {
                         ),
                       ),
                       Text(
-                        'Lleva la camiseta del club y apoya al equipo',
+                        'Conoce a los profesionales que entrenan a nuestros jugadores',
                         style: TextStyle(
                           fontSize: 14,
                           color: WessexColors.charcoalGray,
@@ -152,40 +148,44 @@ class _MerchandisingScreenState extends State<MerchandisingScreen> {
               ],
             ),
           ),
-          _buildProductosGrid(),
+          _buildEntrenadoresGrid(),
         ],
       ),
     );
   }
 
-  Widget _buildProductosGrid() {
+  Widget _buildEntrenadoresGrid() {
     return LayoutBuilder(
       builder: (context, constraints) {
         final screenWidth = constraints.maxWidth;
         final isDesktop = screenWidth > 1200;
         final isTablet = screenWidth > 600;
         
-        int crossAxisCount = isDesktop ? 3 : (isTablet ? 2 : 1);
+        int crossAxisCount = isDesktop ? 4 : (isTablet ? 3 : 2);
         
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
-            childAspectRatio: 0.75,
+            childAspectRatio: 0.85,
             crossAxisSpacing: 16,
             mainAxisSpacing: 16,
           ),
-          itemCount: _productos.length,
+          itemCount: _entrenadores.length,
           itemBuilder: (context, index) {
-            return _buildProductoCard(_productos[index]);
+            return _buildEntrenadorCard(_entrenadores[index]);
           },
         );
       },
     );
   }
 
-  Widget _buildProductoCard(MerchandisingModel producto) {
+  Widget _buildEntrenadorCard(Map<String, dynamic> entrenador) {
+    final String nombre = entrenador['nombreCompleto'] ?? 'Sin nombre';
+    final String? avatar = entrenador['avatar'];
+    final String email = entrenador['email'] ?? '';
+    
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -208,89 +208,123 @@ class _MerchandisingScreenState extends State<MerchandisingScreen> {
         ),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Imagen del producto
-          Expanded(
-            flex: 3,
-            child: Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: WessexColors.lightGray,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(12),
-                ),
+          const SizedBox(height: 16),
+          // Avatar circular
+          Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: WessexColors.deepRoyalBlue.withOpacity(0.1),
+              border: Border.all(
+                color: WessexColors.deepRoyalBlue,
+                width: 3,
               ),
+            ),
+            child: ClipOval(
               child:
-                  producto.imagen.isNotEmpty
-                      ? ClipRRect(
-                        borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(12),
-                        ),
-                        child: Image.network(
-                          producto.imagen,
-                          fit: BoxFit.cover,
-                          errorBuilder:
-                              (context, error, stackTrace) => Container(
-                                child: const Icon(
-                                  Icons.shopping_bag,
-                                  color: WessexColors.ashGray,
-                                  size: 48,
-                                ),
-                              ),
-                        ),
+                  avatar != null && avatar.isNotEmpty
+                      ? Image.network(
+                        avatar,
+                        fit: BoxFit.cover,
+                        errorBuilder:
+                            (context, error, stackTrace) => _buildDefaultAvatar(nombre),
                       )
-                      : const Icon(
-                        Icons.shopping_bag,
-                        color: WessexColors.ashGray,
-                        size: 48,
-                      ),
+                      : _buildDefaultAvatar(nombre),
             ),
           ),
-
-          // Información del producto
-          Expanded(
-            flex: 2,
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          const SizedBox(height: 12),
+          // Nombre del entrenador
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Text(
+              nombre,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: WessexColors.deepNavyBlue,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(height: 4),
+          // Rol
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: WessexColors.leafGreen.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Text(
+              'ENTRENADOR',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: WessexColors.leafGreen,
+              ),
+            ),
+          ),
+          if (email.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(
-                    producto.titulo,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: WessexColors.deepNavyBlue,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                  Icon(
+                    Icons.email,
+                    size: 12,
+                    color: WessexColors.ashGray,
                   ),
-                  const SizedBox(height: 4),
-                  if (producto.descripcion != null)
-                    Text(
-                      producto.descripcion!,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: WessexColors.charcoalGray,
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      email,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: WessexColors.ashGray,
                       ),
-                      maxLines: 2,
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                    ),
-                  const SizedBox(height: 10),
-                  Text(
-                    '\$${producto.precio.toStringAsFixed(0)}',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: WessexColors.deepRoyalBlue,
                     ),
                   ),
                 ],
               ),
             ),
-          ),
+          ],
+          const SizedBox(height: 12),
         ],
+      ),
+    );
+  }
+
+  Widget _buildDefaultAvatar(String nombre) {
+    // Obtener las iniciales del nombre
+    final List<String> palabras = nombre.split(' ');
+    String iniciales = '';
+    if (palabras.isNotEmpty) {
+      iniciales = palabras[0][0].toUpperCase();
+      if (palabras.length > 1) {
+        iniciales += palabras[1][0].toUpperCase();
+      }
+    }
+
+    return Container(
+      color: WessexColors.deepRoyalBlue.withOpacity(0.2),
+      child: Center(
+        child: Text(
+          iniciales,
+          style: const TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+            color: WessexColors.deepRoyalBlue,
+          ),
+        ),
       ),
     );
   }

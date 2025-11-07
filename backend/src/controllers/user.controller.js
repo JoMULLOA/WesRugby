@@ -759,3 +759,25 @@ export const deleteUserByDirectiva = async (req, res) => {
     handleErrorServer(res, 500, "Error interno del servidor");
   }
 }
+
+/**
+ * @name getEntrenadores
+ * @description Obtiene todos los usuarios con rol "entrenador" (endpoint público)
+ * @param {Object} req - Objeto de petición
+ * @param {Object} res - Objeto de respuesta
+ */
+export async function getEntrenadores(req, res) {
+  try {
+    const entrenadores = await userRepository.find({
+      where: { rol: "entrenador" },
+      select: ["rut", "nombreCompleto", "email", "avatar"],
+      order: { nombreCompleto: "ASC" }
+    });
+
+    handleSuccess(res, 200, "Entrenadores encontrados", entrenadores);
+  } catch (error) {
+    console.error("Error al obtener entrenadores:", error);
+    handleErrorServer(res, 500, "Error interno del servidor");
+  }
+}
+

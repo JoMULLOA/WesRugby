@@ -6,6 +6,7 @@ import 'package:wesrugby/core/config/colors.dart';
 import 'package:wesrugby/data/services/voucher_service.dart';
 import 'package:wesrugby/data/services/estudiante_service.dart';
 import 'package:wesrugby/data/services/api_service.dart';
+import 'package:wesrugby/data/services/pagos_service.dart';
 
 class VoucherPagoScreen extends StatefulWidget {
   const VoucherPagoScreen({super.key});
@@ -25,12 +26,17 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
   bool _isUploading = false;
   bool _isLoadingEstudiantes = true;
   bool _isLoadingUserData = true;
+  bool _isLoadingMeses = true;
   bool _aplicarATodos = true;
   Map<String, dynamic>? _userData;
   final VoucherService _voucherService = VoucherService();
   final EstudianteService _estudianteService = EstudianteService();
   List<Map<String, dynamic>> _misEstudiantes = [];
   final Set<String> _estudiantesSeleccionados = <String>{};
+  
+  // Lista de meses disponibles (cargados dinámicamente)
+  List<Map<String, dynamic>> _mesesDisponibles = [];
+  String? _errorMeses;
 
   @override
   void initState() {
@@ -39,8 +45,91 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
       if (mounted) {
         _loadUserData();
         _loadMisEstudiantes();
+        _cargarMesesNoPagados();
       }
     });
+  }
+
+  Future<void> _cargarMesesNoPagados() async {
+    print('🔄 [VOUCHER] Cargando meses no pagados...');
+    setState(() {
+      _isLoadingMeses = true;
+      _errorMeses = null;
+    });
+
+    try {
+      final response = await PagosService.obtenerMesesNoPagados2025();
+      print('📡 [VOUCHER] Respuesta completa: $response');
+      print('📡 [VOUCHER] StatusCode: ${response.statusCode}');
+      print('� [VOUCHER] Data type: ${response.data?.runtimeType}');
+      print('�📊 [VOUCHER] Data: ${response.data}');
+
+      if (response.statusCode == 200 && mounted) {
+        // Verificar si data es un Map
+        if (response.data is Map) {
+          print('✅ [VOUCHER] Data es un Map');
+          final dataMap = response.data as Map<String, dynamic>;
+          print('🔑 [VOUCHER] Keys en data: ${dataMap.keys.toList()}');
+          
+          // El backend envía: { success: true, message: "...", data: { mesesComunes: [...] } }
+          // Entonces necesitamos acceder a data.data.mesesComunes
+          final backendData = dataMap['data'] as Map<String, dynamic>?;
+          print('📦 [VOUCHER] backendData: $backendData');
+          
+          if (backendData != null) {
+            final mesesComunes = backendData['mesesComunes'];
+            print('📅 [VOUCHER] mesesComunes type: ${mesesComunes?.runtimeType}');
+            print('📅 [VOUCHER] mesesComunes value: $mesesComunes');
+            
+            if (mesesComunes is List && mesesComunes.isNotEmpty) {
+              print('✅ [VOUCHER] mesesComunes es una Lista con ${mesesComunes.length} elementos');
+              setState(() {
+                _mesesDisponibles = List<Map<String, dynamic>>.from(
+                  mesesComunes.map((m) => m as Map<String, dynamic>)
+                );
+                print('✅ [VOUCHER] ${_mesesDisponibles.length} meses cargados: $_mesesDisponibles');
+                _isLoadingMeses = false;
+              });
+            } else {
+              print('⚠️ [VOUCHER] mesesComunes está vacío o no es una lista');
+              print('⚠️ [VOUCHER] estudiantes: ${backendData['estudiantes']}');
+              setState(() {
+                _mesesDisponibles = [];
+                _errorMeses = 'Todos los meses de 2025 están pagados';
+                _isLoadingMeses = false;
+              });
+            }
+          } else {
+            print('❌ [VOUCHER] backendData es null');
+            setState(() {
+              _errorMeses = 'No se recibieron datos del servidor';
+              _isLoadingMeses = false;
+            });
+          }
+        } else {
+          print('❌ [VOUCHER] Data NO es un Map: ${response.data?.runtimeType}');
+          setState(() {
+            _errorMeses = 'Formato de respuesta inválido';
+            _isLoadingMeses = false;
+          });
+        }
+      } else {
+        print('❌ [VOUCHER] Error en respuesta: ${response.message}');
+        setState(() {
+          _errorMeses = response.message ?? 'Error al cargar meses';
+          _isLoadingMeses = false;
+        });
+      }
+    } catch (e, stackTrace) {
+      print('❌ [VOUCHER] Excepción: $e');
+      print('❌ [VOUCHER] StackTrace: $stackTrace');
+      if (mounted) {
+        setState(() {
+          _errorMeses = 'Error de conexión: $e';
+          _isLoadingMeses = false;
+        });
+      }
+    }
   }
 
   Future<void> _loadUserData() async {
@@ -146,21 +235,6 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
     _descripcionController.dispose();
     super.dispose();
   }
-
-  final List<String> _meses = [
-    'Enero',
-    'Febrero',
-    'Marzo',
-    'Abril',
-    'Mayo',
-    'Junio',
-    'Julio',
-    'Agosto',
-    'Septiembre',
-    'Octubre',
-    'Noviembre',
-    'Diciembre',
-  ];
 
   final List<String> _metodosPago = [
     'Transferencia Bancaria',
@@ -628,35 +702,95 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
                         const SizedBox(height: 20),
 
                         // Mes de pago
-                        DropdownButtonFormField<String>(
-                          value: _selectedMonth,
-                          decoration: InputDecoration(
-                            labelText: 'Mes de Pago',
-                            border: OutlineInputBorder(
+                        if (_isLoadingMeses)
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey.shade300),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            prefixIcon: Icon(
-                              Icons.calendar_month,
-                              color: WessexColors.deepRoyalBlue,
+                            child: Row(
+                              children: [
+                                SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: WessexColors.deepRoyalBlue,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                const Text('Cargando meses disponibles...'),
+                              ],
                             ),
+                          )
+                        else if (_errorMeses != null)
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.red.shade300),
+                              borderRadius: BorderRadius.circular(8),
+                              color: Colors.red.shade50,
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.error_outline, color: Colors.red.shade700),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    _errorMeses!,
+                                    style: TextStyle(color: Colors.red.shade700),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        else if (_mesesDisponibles.isEmpty)
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.orange.shade300),
+                              borderRadius: BorderRadius.circular(8),
+                              color: Colors.orange.shade50,
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.info_outline, color: Colors.orange.shade700),
+                                const SizedBox(width: 12),
+                                const Expanded(
+                                  child: Text(
+                                    'No hay meses pendientes de pago para los estudiantes seleccionados',
+                                    style: TextStyle(color: Colors.black87),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          DropdownButtonFormField<String>(
+                            value: _selectedMonth,
+                            decoration: InputDecoration(
+                              labelText: 'Mes de Pago',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              prefixIcon: Icon(
+                                Icons.calendar_month,
+                                color: WessexColors.deepRoyalBlue,
+                              ),
+                            ),
+                            items: _mesesDisponibles
+                                .map(
+                                  (mes) => DropdownMenuItem(
+                                    value: mes['label'] as String,
+                                    child: Text(mes['label'] as String),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (value) => setState(() => _selectedMonth = value),
+                            validator: (value) =>
+                                value == null ? 'Selecciona el mes de pago' : null,
                           ),
-                          items:
-                              _meses
-                                  .map(
-                                    (mes) => DropdownMenuItem(
-                                      value: mes,
-                                      child: Text(mes),
-                                    ),
-                                  )
-                                  .toList(),
-                          onChanged:
-                              (value) => setState(() => _selectedMonth = value),
-                          validator:
-                              (value) =>
-                                  value == null
-                                      ? 'Selecciona el mes de pago'
-                                      : null,
-                        ),
 
                         const SizedBox(height: 16),
 

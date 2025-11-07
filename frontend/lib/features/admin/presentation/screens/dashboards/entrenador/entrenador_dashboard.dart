@@ -144,72 +144,9 @@ class EntrenadorDashboard extends StatelessWidget {
                         isTablet: isTablet,
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _buildActionCard(
-                        'Evaluaciones',
-                        'Rendimiento de jugadores',
-                        Icons.assessment,
-                        WessexColors.deepRoyalBlue,
-                        () => _showComingSoon(context, 'Evaluaciones'),
-                        isDesktop: isDesktop,
-                        isTablet: isTablet,
-                      ),
-                    ),
                   ],
                 ),
                 const SizedBox(height: 16),
-
-                // Botón de ancho completo
-                _buildActionCard(
-                  'Revisar Inscripciones Pendientes',
-                  'Gestionar solicitudes de nuevos jugadores',
-                  Icons.approval,
-                  WessexColors.crimsonAlert,
-                  () => _showComingSoon(context, 'Revisar Inscripciones'),
-                  isDesktop: isDesktop,
-                  isTablet: isTablet,
-                  fullWidth: true,
-                ),
-                const SizedBox(height: 32),
-
-                // Sección: Módulos Adicionales
-                const WessexSectionTitle(
-                  title: 'Módulos Deportivos',
-                  subtitle: 'Herramientas adicionales',
-                  titleColor: WessexColors.white,
-                ),
-                const SizedBox(height: 20),
-
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildModuleCard(
-                        'Eventos',
-                        'Planificar entrenamientos y partidos',
-                        Icons.event_note,
-                        WessexColors.midnightNavy,
-                        () => _showComingSoon(context, 'Gestión de Eventos'),
-                        isDesktop: isDesktop,
-                        isTablet: isTablet,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildModuleCard(
-                        'Tienda',
-                        'Venta de productos del club',
-                        Icons.shopping_cart,
-                        WessexColors.crimsonAlert,
-                        () => _showComingSoon(context, 'Tienda'),
-                        isDesktop: isDesktop,
-                        isTablet: isTablet,
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 24),
               ],
             ),
           ),

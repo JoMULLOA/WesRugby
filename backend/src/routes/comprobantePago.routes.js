@@ -11,6 +11,7 @@ import {
   subirVoucherMensualidadApoderado,
   obtenerHistorialApoderado,
   reenviarComprobanteApoderado,
+  obtenerMesesNoPagados2025,
 } from "../controllers/comprobantePago.controller.js";
 
 import { authenticateJwt } from "../middlewares/authentication.middleware.js";
@@ -39,6 +40,13 @@ router.get(
   authenticateJwt,
   isApoderado,
   obtenerInscripcionesApoderado,
+);
+
+router.get(
+  "/apoderado/meses-no-pagados-2025",
+  authenticateJwt,
+  isApoderado,
+  obtenerMesesNoPagados2025,
 );
 
 router.get(

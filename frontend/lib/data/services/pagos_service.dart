@@ -271,6 +271,11 @@ class PagosService {
     return ApiService.get('/comprobantes-pago/apoderado/inscripciones');
   }
 
+  /// Obtener meses no pagados de 2025 para los estudiantes del apoderado
+  static Future<ApiResponse> obtenerMesesNoPagados2025() async {
+    return ApiService.get('/comprobantes-pago/apoderado/meses-no-pagados-2025');
+  }
+
   /// Reenviar comprobante electrónico
   static Future<ApiResponse> reenviarComprobanteElectronico(
     String comprobanteId,

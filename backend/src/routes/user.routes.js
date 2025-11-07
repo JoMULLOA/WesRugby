@@ -2,14 +2,17 @@
 import express from "express";
 import { isAdmin, isDirectiva, isAuthenticated } from "../middlewares/authorization.middleware.js";
 import { authenticateJwt } from "../middlewares/authentication.middleware.js";
-import { deleteUser, getUser, getUsers, updateUser, searchUser, buscarRut, getMisVehiculos, calcularCalificacion, obtenerPromedioGlobal, actualizarTokenFCM, getHistorialTransacciones, calificarUsuario, changeUserRole, createUserByDirectiva, updateUserByDirectiva, deleteUserByDirectiva, updateAvatar } from "../controllers/user.controller.js";
+import { deleteUser, getUser, getUsers, updateUser, searchUser, buscarRut, getMisVehiculos, calcularCalificacion, obtenerPromedioGlobal, actualizarTokenFCM, getHistorialTransacciones, calificarUsuario, changeUserRole, createUserByDirectiva, updateUserByDirectiva, deleteUserByDirectiva, updateAvatar, getEntrenadores } from "../controllers/user.controller.js";
 import { AppDataSource } from "../config/configDb.js";
 import User from "../entity/user.entity.js";
 import { uploadAvatar as uploadAvatarMiddleware } from "../middlewares/upload.middleware.js";
 
 const router = express.Router();
 
-// Middleware para autenticar todas las rutas
+// Ruta pública (sin autenticación)
+router.get("/entrenadores", getEntrenadores);
+
+// Middleware para autenticar todas las demás rutas
 router.use(authenticateJwt);
 
 // Rutas que requieren solo autenticación

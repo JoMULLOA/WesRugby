@@ -1082,3 +1082,99 @@ export async function reenviarComprobanteApoderado(req, res) {
     handleErrorServer(res, 500, "Error interno del servidor", error.message);
   }
 }
+
+/**
+ * Obtiene los meses no pagados de 2025 para los estudiantes de un apoderado
+ * Si tiene múltiples estudiantes, devuelve solo los meses que NINGUNO ha pagado
+ * NOTA: Solo incluye marzo-diciembre (enero y febrero son vacaciones)
+ */
+export async function obtenerMesesNoPagados2025(req, res) {
+  try {
+    const apoderadoRut = req.user.rut;
+    const dependientes = await getDependientes(apoderadoRut);
+
+    if (!dependientes || dependientes.length === 0) {
+      return handleSuccess(res, 200, "No hay estudiantes asociados", {
+        estudiantes: [],
+        mesesComunes: [],
+      });
+    }
+
+    // Solo marzo-diciembre (enero y febrero son vacaciones)
+    const MESES_2025 = [
+      { value: "2025-03", label: "Marzo 2025", mes: "marzo" },
+      { value: "2025-04", label: "Abril 2025", mes: "abril" },
+      { value: "2025-05", label: "Mayo 2025", mes: "mayo" },
+      { value: "2025-06", label: "Junio 2025", mes: "junio" },
+      { value: "2025-07", label: "Julio 2025", mes: "julio" },
+      { value: "2025-08", label: "Agosto 2025", mes: "agosto" },
+      { value: "2025-09", label: "Septiembre 2025", mes: "septiembre" },
+      { value: "2025-10", label: "Octubre 2025", mes: "octubre" },
+      { value: "2025-11", label: "Noviembre 2025", mes: "noviembre" },
+      { value: "2025-12", label: "Diciembre 2025", mes: "diciembre" },
+    ];
+
+    console.log(`🔍 Obteniendo meses no pagados para apoderado: ${apoderadoRut}`);
+    console.log(`📊 Total de estudiantes: ${dependientes.length}`);
+
+    // Obtener meses no pagados por cada estudiante
+    const estudiantesConMeses = dependientes.map((estudiante) => {
+      const mesesNoPagados = [];
+      const pagos = estudiante.pagos || {};
+      const mesesPagos = pagos.meses || {};
+
+      console.log(`\n👤 Estudiante: ${estudiante.nombre} (${estudiante.rut})`);
+      console.log(`   Pagos:`, mesesPagos);
+
+      MESES_2025.forEach((mesInfo) => {
+        const estadoPago = mesesPagos[mesInfo.mes];
+        // Solo está no pagado si el valor es exactamente "no pagado" (case insensitive)
+        // Cualquier otro valor (número, texto, etc.) significa que está pagado
+        const estaNoPagado = !estadoPago || 
+                            estadoPago.toString().trim().toLowerCase() === "no pagado";
+        
+        console.log(`   ${mesInfo.mes}: "${estadoPago}" → ${estaNoPagado ? 'NO PAGADO ❌' : 'PAGADO ✅'}`);
+        
+        if (estaNoPagado) {
+          mesesNoPagados.push(mesInfo.value);
+        }
+      });
+
+      console.log(`   Meses no pagados: ${mesesNoPagados.join(', ') || 'Ninguno'}`);
+
+      return {
+        rut: estudiante.rut,
+        nombre: estudiante.nombre,
+        mesesNoPagados,
+      };
+    });
+
+    // Si hay múltiples estudiantes, encontrar intersección (meses que NINGUNO ha pagado)
+    let mesesComunes;
+    if (dependientes.length === 1) {
+      mesesComunes = estudiantesConMeses[0].mesesNoPagados;
+    } else {
+      // Intersección: solo meses que están en TODOS los estudiantes
+      mesesComunes = estudiantesConMeses[0].mesesNoPagados.filter((mes) =>
+        estudiantesConMeses.every((est) => est.mesesNoPagados.includes(mes))
+      );
+      console.log(`\n🔄 Intersección (meses que TODOS no han pagado): ${mesesComunes.join(', ') || 'Ninguno'}`);
+    }
+
+    // Convertir de vuelta a objetos con label
+    const mesesComunesDetalle = MESES_2025.filter((mesInfo) =>
+      mesesComunes.includes(mesInfo.value)
+    );
+
+    console.log(`\n✅ Meses finales a mostrar en dropdown:`, mesesComunesDetalle);
+
+    handleSuccess(res, 200, "Meses no pagados obtenidos exitosamente", {
+      estudiantes: estudiantesConMeses,
+      mesesComunes: mesesComunesDetalle,
+      totalEstudiantes: dependientes.length,
+    });
+  } catch (error) {
+    console.error("Error obteniendo meses no pagados:", error);
+    handleErrorServer(res, 500, "Error interno del servidor", error.message);
+  }
+}

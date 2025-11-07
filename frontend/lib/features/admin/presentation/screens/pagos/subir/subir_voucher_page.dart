@@ -25,6 +25,7 @@ class _SubirVoucherPageState extends State<SubirVoucherPage> {
   bool _isLoading = false;
   bool _isLoadingInscripciones =
       false; // Cambiar a false para evitar loading inicial
+  bool _isLoadingMeses = false;
 
   // Datos del formulario
   String _metodoPago = 'transferencia';
@@ -37,12 +38,17 @@ class _SubirVoucherPageState extends State<SubirVoucherPage> {
   // Lista de inscripciones
   List<Inscripcion> _inscripciones = [];
   String? _errorInscripciones;
+  
+  // Lista de meses no pagados
+  List<Map<String, dynamic>> _mesesDisponibles = [];
+  String? _errorMeses;
 
   @override
   void initState() {
     super.initState();
     _inicializarMesCorrespondiente();
     _inicializarDatos();
+    _cargarMesesNoPagados();
   }
 
   void _inicializarDatos() {
@@ -125,6 +131,60 @@ class _SubirVoucherPageState extends State<SubirVoucherPage> {
     final ahora = DateTime.now();
     _mesCorrespondiente =
         '${ahora.year}-${ahora.month.toString().padLeft(2, '0')}';
+  }
+
+  Future<void> _cargarMesesNoPagados() async {
+    print('🔄 Iniciando carga de meses no pagados...');
+    setState(() {
+      _isLoadingMeses = true;
+      _errorMeses = null;
+    });
+
+    try {
+      final response = await PagosService.obtenerMesesNoPagados2025();
+      print('📡 Respuesta del servidor:');
+      print('   Status: ${response.statusCode}');
+      print('   Data: ${response.data}');
+
+      if (response.statusCode == 200 && response.data != null && mounted) {
+        final mesesComunes = response.data['mesesComunes'] as List?;
+        print('📅 Meses comunes recibidos: $mesesComunes');
+        
+        if (mesesComunes != null && mesesComunes.isNotEmpty) {
+          setState(() {
+            _mesesDisponibles = List<Map<String, dynamic>>.from(mesesComunes);
+            print('✅ Meses disponibles establecidos: $_mesesDisponibles');
+            // Establecer el primer mes disponible como seleccionado
+            if (_mesesDisponibles.isNotEmpty) {
+              _mesCorrespondiente = _mesesDisponibles.first['value'];
+              print('✅ Mes seleccionado por defecto: $_mesCorrespondiente');
+            }
+            _isLoadingMeses = false;
+          });
+        } else {
+          print('⚠️ No hay meses disponibles');
+          setState(() {
+            _mesesDisponibles = [];
+            _errorMeses = 'No hay meses pendientes de pago para el año 2025';
+            _isLoadingMeses = false;
+          });
+        }
+      } else {
+        print('❌ Error en respuesta: ${response.message}');
+        setState(() {
+          _errorMeses = response.message ?? 'Error al cargar meses disponibles';
+          _isLoadingMeses = false;
+        });
+      }
+    } catch (e) {
+      print('❌ Excepción al cargar meses: $e');
+      if (mounted) {
+        setState(() {
+          _errorMeses = 'Error de conexión: $e';
+          _isLoadingMeses = false;
+        });
+      }
+    }
   }
 
   void _alinearSeleccionConInscripciones() {
@@ -681,28 +741,114 @@ class _SubirVoucherPageState extends State<SubirVoucherPage> {
   }
 
   Widget _buildCampoMesCorrespondiente() {
-    return TextFormField(
-      initialValue: _mesCorrespondiente,
+    print('🎨 Renderizando campo mes correspondiente...');
+    print('   Loading: $_isLoadingMeses');
+    print('   Error: $_errorMeses');
+    print('   Meses disponibles: ${_mesesDisponibles.length}');
+    
+    if (_isLoadingMeses) {
+      print('   → Mostrando loading');
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey[300]!),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Row(
+          children: [
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            SizedBox(width: 12),
+            Text('Cargando meses disponibles...'),
+          ],
+        ),
+      );
+    }
+
+    if (_errorMeses != null) {
+      print('   → Mostrando error');
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.red[50],
+          border: Border.all(color: Colors.red[300]!),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.error_outline, color: Colors.red[700]),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                _errorMeses!,
+                style: TextStyle(color: Colors.red[700]),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_mesesDisponibles.isEmpty) {
+      print('   → Mostrando "todos pagados"');
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.green[50],
+          border: Border.all(color: Colors.green[300]!),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.check_circle_outline, color: Colors.green[700]),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                '¡Todos los meses de 2025 están pagados!',
+                style: TextStyle(
+                  color: Colors.green[700],
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    print('   → Mostrando dropdown con ${_mesesDisponibles.length} opciones');
+    print('   Valor actual: $_mesCorrespondiente');
+
+    return DropdownButtonFormField<String>(
+      value: _mesesDisponibles.any((m) => m['value'] == _mesCorrespondiente)
+          ? _mesCorrespondiente
+          : (_mesesDisponibles.isNotEmpty ? _mesesDisponibles.first['value'] : null),
       decoration: InputDecoration(
-        labelText: 'Mes Correspondiente *',
+        labelText: 'Mes Correspondiente (2025) *',
         prefixIcon: const Icon(Icons.calendar_month),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        hintText: 'YYYY-MM (Ej: 2024-03)',
+        hintText: 'Seleccione el mes a pagar',
       ),
+      items: _mesesDisponibles.map((mes) {
+        return DropdownMenuItem<String>(
+          value: mes['value'],
+          child: Text(mes['label']),
+        );
+      }).toList(),
       onChanged: (value) {
-        _mesCorrespondiente = value;
+        if (value != null) {
+          setState(() {
+            _mesCorrespondiente = value;
+          });
+        }
       },
       validator: (value) {
         if (value == null || value.isEmpty) {
-          return 'El mes correspondiente es obligatorio';
+          return 'Debe seleccionar un mes';
         }
-
-        // Validar formato YYYY-MM
-        final regex = RegExp(r'^\d{4}-\d{2}$');
-        if (!regex.hasMatch(value)) {
-          return 'Formato inválido. Use YYYY-MM';
-        }
-
         return null;
       },
     );

@@ -95,6 +95,10 @@ class _GestionActasReunionScreenState extends State<GestionActasReunionScreen> {
           (context) => AlertDialog(
             title: Text(
               isEditing ? 'Editar Acta de Reunión' : 'Nueva Acta de Reunión',
+              style: const TextStyle(
+                color: WessexColors.deepNavyBlue,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             content: SingleChildScrollView(
               child: SizedBox(
@@ -103,12 +107,18 @@ class _GestionActasReunionScreenState extends State<GestionActasReunionScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Sección: Información Básica
+                    _buildSectionTitle('Información Básica'),
+                    const SizedBox(height: 12),
+                    
                     // Título
                     TextField(
                       controller: tituloController,
                       decoration: const InputDecoration(
-                        labelText: 'Título de la reunión',
+                        labelText: 'Título de la reunión *',
+                        hintText: 'Ej: Reunión Mensual de Directiva',
                         border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.title),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -116,14 +126,7 @@ class _GestionActasReunionScreenState extends State<GestionActasReunionScreen> {
                     // Fecha
                     StatefulBuilder(
                       builder:
-                          (context, setDialogState) => ListTile(
-                            title: const Text('Fecha de la reunión'),
-                            subtitle: Text(
-                              DateFormat(
-                                'dd/MM/yyyy',
-                              ).format(fechaSeleccionada),
-                            ),
-                            trailing: const Icon(Icons.calendar_today),
+                          (context, setDialogState) => InkWell(
                             onTap: () async {
                               final fecha = await showDatePicker(
                                 context: context,
@@ -137,8 +140,20 @@ class _GestionActasReunionScreenState extends State<GestionActasReunionScreen> {
                                 });
                               }
                             },
+                            child: InputDecorator(
+                              decoration: const InputDecoration(
+                                labelText: 'Fecha de la reunión *',
+                                border: OutlineInputBorder(),
+                                prefixIcon: Icon(Icons.calendar_today),
+                              ),
+                              child: Text(
+                                DateFormat('dd/MM/yyyy').format(fechaSeleccionada),
+                                style: const TextStyle(fontSize: 16),
+                              ),
+                            ),
                           ),
                     ),
+                    const SizedBox(height: 16),
 
                     // Horas
                     Row(
@@ -146,12 +161,7 @@ class _GestionActasReunionScreenState extends State<GestionActasReunionScreen> {
                         Expanded(
                           child: StatefulBuilder(
                             builder:
-                                (context, setDialogState) => ListTile(
-                                  title: const Text('Hora inicio'),
-                                  subtitle: Text(
-                                    horaInicio?.format(context) ??
-                                        'No definida',
-                                  ),
+                                (context, setDialogState) => InkWell(
                                   onTap: () async {
                                     final hora = await showTimePicker(
                                       context: context,
@@ -164,17 +174,30 @@ class _GestionActasReunionScreenState extends State<GestionActasReunionScreen> {
                                       });
                                     }
                                   },
+                                  child: InputDecorator(
+                                    decoration: const InputDecoration(
+                                      labelText: 'Hora inicio',
+                                      border: OutlineInputBorder(),
+                                      prefixIcon: Icon(Icons.access_time),
+                                    ),
+                                    child: Text(
+                                      horaInicio?.format(context) ?? 'Seleccionar',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: horaInicio == null
+                                            ? Colors.grey
+                                            : Colors.black,
+                                      ),
+                                    ),
+                                  ),
                                 ),
                           ),
                         ),
+                        const SizedBox(width: 12),
                         Expanded(
                           child: StatefulBuilder(
                             builder:
-                                (context, setDialogState) => ListTile(
-                                  title: const Text('Hora fin'),
-                                  subtitle: Text(
-                                    horaFin?.format(context) ?? 'No definida',
-                                  ),
+                                (context, setDialogState) => InkWell(
                                   onTap: () async {
                                     final hora = await showTimePicker(
                                       context: context,
@@ -186,29 +209,54 @@ class _GestionActasReunionScreenState extends State<GestionActasReunionScreen> {
                                       });
                                     }
                                   },
+                                  child: InputDecorator(
+                                    decoration: const InputDecoration(
+                                      labelText: 'Hora fin',
+                                      border: OutlineInputBorder(),
+                                      prefixIcon: Icon(Icons.access_time_filled),
+                                    ),
+                                    child: Text(
+                                      horaFin?.format(context) ?? 'Seleccionar',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: horaFin == null
+                                            ? Colors.grey
+                                            : Colors.black,
+                                      ),
+                                    ),
+                                  ),
                                 ),
                           ),
                         ),
                       ],
                     ),
+                    const SizedBox(height: 16),
 
                     // Lugar
                     TextField(
                       controller: lugarController,
                       decoration: const InputDecoration(
                         labelText: 'Lugar de la reunión',
+                        hintText: 'Ej: Sala de Reuniones, Club Wessex',
                         border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.location_on),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 24),
+
+                    // Sección: Contenido de la Reunión
+                    _buildSectionTitle('Contenido de la Reunión'),
+                    const SizedBox(height: 12),
 
                     // Descripción
                     TextField(
                       controller: descripcionController,
                       maxLines: 4,
                       decoration: const InputDecoration(
-                        labelText: 'Descripción de la reunión',
+                        labelText: 'Descripción de la reunión *',
+                        hintText: 'Describe brevemente el propósito y contexto de la reunión...',
                         border: OutlineInputBorder(),
+                        alignLabelWithHint: true,
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -216,21 +264,37 @@ class _GestionActasReunionScreenState extends State<GestionActasReunionScreen> {
                     // Asistentes
                     TextField(
                       controller: asistentesController,
-                      maxLines: 3,
+                      maxLines: 4,
                       decoration: const InputDecoration(
-                        labelText: 'Asistentes (uno por línea)',
+                        labelText: 'Asistentes',
+                        hintText: '• Juan Pérez - Presidente\n• María González - Tesorera\n• Carlos López - Secretario\n(Un asistente por línea)',
                         border: OutlineInputBorder(),
+                        alignLabelWithHint: true,
+                        prefixIcon: Padding(
+                          padding: EdgeInsets.only(bottom: 60),
+                          child: Icon(Icons.people),
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 24),
+
+                    // Sección: Resoluciones
+                    _buildSectionTitle('Resoluciones y Compromisos'),
+                    const SizedBox(height: 12),
 
                     // Acuerdos
                     TextField(
                       controller: acuerdosController,
-                      maxLines: 3,
+                      maxLines: 4,
                       decoration: const InputDecoration(
                         labelText: 'Acuerdos tomados',
+                        hintText: '• Se aprobó el presupuesto para el torneo\n• Se acordó realizar evento benéfico\n• Se aprobó nueva camiseta\n(Un acuerdo por línea)',
                         border: OutlineInputBorder(),
+                        alignLabelWithHint: true,
+                        prefixIcon: Padding(
+                          padding: EdgeInsets.only(bottom: 60),
+                          child: Icon(Icons.check_circle_outline),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -238,10 +302,42 @@ class _GestionActasReunionScreenState extends State<GestionActasReunionScreen> {
                     // Próximos compromisos
                     TextField(
                       controller: compromisosController,
-                      maxLines: 3,
+                      maxLines: 4,
                       decoration: const InputDecoration(
                         labelText: 'Próximos compromisos y fechas',
+                        hintText: '• Organizar torneo - Fecha: 15/12/2024\n• Reunión con sponsors - Fecha: 20/11/2024\n• Entrega de uniformes - Fecha: 05/12/2024\n(Un compromiso por línea con fecha)',
                         border: OutlineInputBorder(),
+                        alignLabelWithHint: true,
+                        prefixIcon: Padding(
+                          padding: EdgeInsets.only(bottom: 60),
+                          child: Icon(Icons.event_note),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // Nota informativa
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.blue[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.blue[200]!),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info_outline, color: Colors.blue[700]),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Los campos marcados con * son obligatorios',
+                              style: TextStyle(
+                                color: Colors.blue[700],
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -514,8 +610,13 @@ class _GestionActasReunionScreenState extends State<GestionActasReunionScreen> {
               style: TextStyle(color: Colors.grey[700]),
             ),
             const SizedBox(height: 16),
-            Row(
+            
+            // Botones de acción en horizontal
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
+                // Botón de Editar
                 ElevatedButton.icon(
                   onPressed: () => _mostrarDialogoCrearEditar(acta: acta),
                   icon: const Icon(Icons.edit, size: 16),
@@ -523,88 +624,80 @@ class _GestionActasReunionScreenState extends State<GestionActasReunionScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: WessexColors.deepRoyalBlue,
                     foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                PopupMenuButton<String>(
-                  onSelected: (value) {
-                    switch (value) {
-                      case 'publicar':
-                        _cambiarEstado(acta, 'publicada');
-                        break;
-                      case 'archivar':
-                        _cambiarEstado(acta, 'archivada');
-                        break;
-                      case 'borrador':
-                        _cambiarEstado(acta, 'borrador');
-                        break;
-                      case 'eliminar':
-                        _eliminarActa(acta);
-                        break;
-                    }
-                  },
-                  itemBuilder:
-                      (context) => [
-                        if (estado != 'publicada')
-                          const PopupMenuItem(
-                            value: 'publicar',
-                            child: Row(
-                              children: [
-                                Icon(Icons.public, color: Colors.green),
-                                SizedBox(width: 8),
-                                Text('Publicar'),
-                              ],
-                            ),
-                          ),
-                        if (estado != 'archivada')
-                          const PopupMenuItem(
-                            value: 'archivar',
-                            child: Row(
-                              children: [
-                                Icon(Icons.archive, color: Colors.grey),
-                                SizedBox(width: 8),
-                                Text('Archivar'),
-                              ],
-                            ),
-                          ),
-                        if (estado != 'borrador')
-                          const PopupMenuItem(
-                            value: 'borrador',
-                            child: Row(
-                              children: [
-                                Icon(Icons.edit, color: Colors.orange),
-                                SizedBox(width: 8),
-                                Text('Pasar a borrador'),
-                              ],
-                            ),
-                          ),
-                        const PopupMenuItem(
-                          value: 'eliminar',
-                          child: Row(
-                            children: [
-                              Icon(Icons.delete, color: Colors.red),
-                              SizedBox(width: 8),
-                              Text('Eliminar'),
-                            ],
-                          ),
-                        ),
-                      ],
-                  child: Container(
+                
+                // Botón Publicar
+                if (estado != 'publicada')
+                  OutlinedButton.icon(
+                    onPressed: () => _cambiarEstado(acta, 'publicada'),
+                    icon: const Icon(Icons.public, size: 16, color: Colors.green),
+                    label: const Text(
+                      'Publicar',
+                      style: TextStyle(color: Colors.green),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Colors.green),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                    ),
+                  ),
+                
+                // Botón Archivar
+                if (estado != 'archivada')
+                  OutlinedButton.icon(
+                    onPressed: () => _cambiarEstado(acta, 'archivada'),
+                    icon: const Icon(Icons.archive, size: 16, color: Colors.grey),
+                    label: const Text(
+                      'Archivar',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: Colors.grey[400]!),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                    ),
+                  ),
+                
+                // Botón Pasar a Borrador
+                if (estado != 'borrador')
+                  OutlinedButton.icon(
+                    onPressed: () => _cambiarEstado(acta, 'borrador'),
+                    icon: const Icon(Icons.edit_note, size: 16, color: Colors.orange),
+                    label: const Text(
+                      'Borrador',
+                      style: TextStyle(color: Colors.orange),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Colors.orange),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                    ),
+                  ),
+                
+                // Botón Eliminar
+                OutlinedButton.icon(
+                  onPressed: () => _eliminarActa(acta),
+                  icon: const Icon(Icons.delete, size: 16, color: Colors.red),
+                  label: const Text(
+                    'Eliminar',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.red),
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey[300]!),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text('Acciones'),
-                        SizedBox(width: 4),
-                        Icon(Icons.arrow_drop_down),
-                      ],
+                      horizontal: 16,
+                      vertical: 10,
                     ),
                   ),
                 ),
@@ -753,6 +846,30 @@ class _GestionActasReunionScreenState extends State<GestionActasReunionScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Row(
+      children: [
+        Container(
+          width: 4,
+          height: 20,
+          decoration: BoxDecoration(
+            color: WessexColors.deepRoyalBlue,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: WessexColors.deepNavyBlue,
+          ),
+        ),
+      ],
     );
   }
 }
