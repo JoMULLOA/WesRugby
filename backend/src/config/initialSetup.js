@@ -22,7 +22,7 @@ async function createInitialData() {
       const userDirectiva = userRepository.create({
         rut: "12.345.678-9",
         nombreCompleto: "Director Wessex Rugby",
-        email: "directiva@ubiobio.cl",
+        email: "directiva@wessex.cl",
         password: await encryptPassword("Directiva2024"),
         rol: "directiva",
       });
@@ -31,7 +31,7 @@ async function createInitialData() {
       const userTesorera = userRepository.create({
         rut: "23.456.789-0",
         nombreCompleto: "Tesorera Wessex Rugby",
-        email: "tesorera@ubiobio.cl",
+        email: "tesorera@wessex.cl",
         password: await encryptPassword("Tesorera2024"),
         rol: "tesorera",
       });
@@ -40,7 +40,7 @@ async function createInitialData() {
       const userEntrenador = userRepository.create({
         rut: "34.567.890-1",
         nombreCompleto: "Entrenador Wessex Rugby",
-        email: "entrenador@ubiobio.cl",
+        email: "entrenador@wessex.cl",
         password: await encryptPassword("Entrenador2024"),
         rol: "entrenador",
       });
@@ -49,7 +49,7 @@ async function createInitialData() {
       const userApoderado = userRepository.create({
         rut: "45.678.901-2",
         nombreCompleto: "Apoderado Demo Wessex",
-        email: "apoderado@ubiobio.cl",
+        email: "apoderado@wessex.cl",
         password: await encryptPassword("Apoderado2024"),
         rol: "apoderado",
       });
@@ -58,7 +58,7 @@ async function createInitialData() {
       const userRamaExterna = userRepository.create({
         rut: "56.789.012-3",
         nombreCompleto: "Rama Externa Rugby Sub-12",
-        email: "coordinador@ubiobio.cl",
+        email: "coordinador@wessex.cl",
         password: await encryptPassword("Coordinador2024"),
         rol: "RamaExterna",
       });
@@ -66,11 +66,11 @@ async function createInitialData() {
       await userRepository.save([userDirectiva, userTesorera, userEntrenador, userApoderado, userRamaExterna]);
       
       console.log("âœ… Usuarios del sistema Wessex Rugby creados exitosamente:");
-      console.log("   - Directiva: directiva@ubiobio.cl / Directiva2024");
-      console.log("   - Tesorera: tesorera@ubiobio.cl / Tesorera2024");
-      console.log("   - Entrenador: entrenador@ubiobio.cl / Entrenador2024");
-      console.log("   - Apoderado: apoderado@ubiobio.cl / Apoderado2024");
-      console.log("   - RamaExterna: coordinador@ubiobio.cl / Coordinador2024");
+      console.log("   - Directiva: directiva@wessex.cl / Directiva2024");
+      console.log("   - Tesorera: tesorera@wessex.cl / Tesorera2024");
+      console.log("   - Entrenador: entrenador@wessex.cl / Entrenador2024");
+      console.log("   - Apoderado: apoderado@wessex.cl / Apoderado2024");
+      console.log("   - RamaExterna: coordinador@wessex.cl / Coordinador2024");
 
       // Mantener referencia para creaciÃ³n de otros datos
       const user1 = userDirectiva;
@@ -131,17 +131,17 @@ async function ensureSampleRamaUsers(userRepository) {
       {
         rut: "56.789.012-3",
         nombreCompleto: "Rama Externa Rugby Sub-12",
-        email: "coordinador@ubiobio.cl",
+        email: "coordinador@wessex.cl",
       },
       {
         rut: "57.321.654-1",
         nombreCompleto: "Rama Externa Rugby Sub-11",
-        email: "rama.sub11@ubiobio.cl",
+        email: "rama.sub11@wessex.cl",
       },
       {
         rut: "58.654.321-9",
         nombreCompleto: "Rama Externa Femenina Sub-13",
-        email: "rama.sub13@ubiobio.cl",
+        email: "rama.sub13@wessex.cl",
       },
     ];
 

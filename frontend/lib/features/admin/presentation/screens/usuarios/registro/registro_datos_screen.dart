@@ -53,10 +53,6 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
                 _buildHeaderSection(isDesktop, isTablet),
                 const SizedBox(height: 24),
 
-                // Instrucciones del formato Excel
-                _buildInstructionsSection(isDesktop, isTablet),
-                const SizedBox(height: 24),
-
                 // Área de carga de archivo
                 _buildUploadSection(isDesktop, isTablet),
                 const SizedBox(height: 24),
@@ -72,6 +68,9 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
                   _buildErrorsSection(isDesktop, isTablet),
                   const SizedBox(height: 24),
                 ],
+                // Instrucciones del formato Excel
+                _buildInstructionsSection(isDesktop, isTablet),
+                const SizedBox(height: 24),
               ],
             ),
           ),
@@ -166,6 +165,19 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
                   color: WessexColors.darkGrape,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Spacer(),
+              OutlinedButton.icon(
+                onPressed: _downloadTemplate,
+                icon: Icon(Icons.download, color: WessexColors.deepRoyalBlue),
+                label: Text(
+                  'Descargar Plantilla',
+                  style: TextStyle(color: WessexColors.deepRoyalBlue),
+                ),
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: WessexColors.deepRoyalBlue),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 ),
               ),
             ],
@@ -414,27 +426,6 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
             ),
           ),
 
-          const SizedBox(height: 16),
-
-          // Botón para descargar plantilla
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _downloadTemplate,
-                  icon: Icon(Icons.download, color: WessexColors.deepRoyalBlue),
-                  label: Text(
-                    'Descargar Plantilla Excel',
-                    style: TextStyle(color: WessexColors.deepRoyalBlue),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: WessexColors.deepRoyalBlue),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
-            ],
-          ),
         ],
       ),
     );
@@ -1551,8 +1542,10 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
   }
 
   void _downloadTemplate() {
-    // Simular descarga de plantilla Excel
-    _showSuccessSnackBar('Plantilla Excel descargada exitosamente');
+    final url = 'excelBase.xlsx';
+    html.AnchorElement(href: url)
+      ..setAttribute('download', 'plantilla.xlsx')
+      ..click();
   }
 
   void _showSuccessDialog(
