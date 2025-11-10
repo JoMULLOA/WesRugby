@@ -37,31 +37,86 @@ class _GestionInformacionPublicaScreenState
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth > 1200;
+    
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('Gestión de Información Pública'),
-        backgroundColor: WessexColors.midnightNavy,
-        foregroundColor: WessexColors.white,
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: WessexColors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.public, color: WessexColors.white, size: 24),
+            ),
+            const SizedBox(width: 12),
+            const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Información Pública',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: WessexColors.white,
+                  ),
+                ),
+                Text(
+                  'Gestión de contenido visible al público',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: WessexColors.white,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        backgroundColor: WessexColors.crestPrimaryGreen,
+        elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: WessexColors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: WessexColors.white,
-          indicatorWeight: 3,
-          labelColor: WessexColors.white,
-          unselectedLabelColor: WessexColors.white.withOpacity(0.7),
-          labelStyle: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
+        bottom: PreferredSize(
+          preferredSize: Size.fromHeight(isDesktop ? 60 : 50),
+          child: Container(
+            color: WessexColors.leafGreen,
+            child: TabBar(
+              controller: _tabController,
+              indicatorColor: WessexColors.goldenYellow,
+              indicatorWeight: 4,
+              labelColor: WessexColors.white,
+              unselectedLabelColor: WessexColors.white.withOpacity(0.6),
+              labelStyle: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: isDesktop ? 16 : 14,
+              ),
+              tabs: [
+                Tab(
+                  icon: const Icon(Icons.article),
+                  text: 'Noticias',
+                  height: isDesktop ? 60 : 50,
+                ),
+                Tab(
+                  icon: const Icon(Icons.business),
+                  text: 'Auspiciadores',
+                  height: isDesktop ? 60 : 50,
+                ),
+                Tab(
+                  icon: const Icon(Icons.shopping_bag),
+                  text: 'Merchandising',
+                  height: isDesktop ? 60 : 50,
+                ),
+              ],
+            ),
           ),
-          tabs: const [
-            Tab(icon: Icon(Icons.article), text: 'Noticias'),
-            Tab(icon: Icon(Icons.business), text: 'Auspiciadores'),
-            Tab(icon: Icon(Icons.shopping_bag), text: 'Merchandising'),
-          ],
         ),
       ),
       body: WessexBackground(
@@ -141,56 +196,164 @@ class _NoticiasTabState extends State<_NoticiasTab> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth > 1200;
+    final isTablet = screenWidth > 600;
+    final crossAxisCount = isDesktop ? 3 : (isTablet ? 2 : 1);
+    
     return SafeArea(
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Gestión de Noticias',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: WessexColors.white,
-                  ),
+          // Header mejorado con estadísticas
+          Container(
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  WessexColors.deepRoyalBlue,
+                  WessexColors.midnightNavy,
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
                 ),
-                WessexButton(
-                  onPressed: () => _showCreateDialog(),
-                  text: 'Nueva Noticia',
-                  icon: Icons.add,
-                  backgroundColor: WessexColors.crimsonAlert,
+              ],
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: WessexColors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(
+                                  Icons.article,
+                                  color: WessexColors.white,
+                                  size: 24,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              const Text(
+                                'Gestión de Noticias',
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  color: WessexColors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '${_noticias.length} noticias publicadas',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: WessexColors.white.withOpacity(0.9),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    WessexButton(
+                      onPressed: () => _showCreateDialog(),
+                      text: isDesktop ? 'Nueva Noticia' : 'Crear',
+                      icon: Icons.add_circle,
+                      backgroundColor: WessexColors.crimsonAlert,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isDesktop ? 24 : 16,
+                        vertical: 14,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
+          
+          // Contenido
           Expanded(
             child:
                 _isLoading
-                    ? const Center(
-                      child: CircularProgressIndicator(
-                        color: WessexColors.white,
+                    ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(
+                            color: WessexColors.white,
+                            strokeWidth: 3,
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Cargando noticias...',
+                            style: TextStyle(
+                              color: WessexColors.white,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
                       ),
                     )
                     : _noticias.isEmpty
-                    ? const Center(
-                      child: Text(
-                        'No hay noticias registradas\nAgrega la primera noticia para comenzar',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: WessexColors.white,
-                          fontSize: 18,
-                        ),
+                    ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.article_outlined,
+                            size: 80,
+                            color: WessexColors.white.withOpacity(0.5),
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'No hay noticias registradas',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: WessexColors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Agrega la primera noticia para comenzar',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: WessexColors.white.withOpacity(0.7),
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
                       ),
                     )
-                    : ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                    : GridView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: crossAxisCount,
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 16,
+                        childAspectRatio: 0.85,
+                      ),
                       itemCount: _noticias.length,
                       itemBuilder:
                           (context, index) =>
-                              _buildNoticiaCard(_noticias[index]),
+                              _buildNoticiaCard(_noticias[index], isDesktop, isTablet),
                     ),
           ),
         ],
@@ -198,109 +361,235 @@ class _NoticiasTabState extends State<_NoticiasTab> {
     );
   }
 
-  Widget _buildNoticiaCard(NoticiaModel noticia) {
+  Widget _buildNoticiaCard(NoticiaModel noticia, bool isDesktop, bool isTablet) {
     return WessexCard(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
+      margin: EdgeInsets.zero,
+      padding: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Imagen destacada
+          Stack(
+            children: [
+              Container(
+                height: 180,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(12),
+                    topRight: Radius.circular(12),
+                  ),
+                  image: DecorationImage(
+                    image: NetworkImage(
+                      noticia.imagen.isNotEmpty && !noticia.imagen.contains('placeholder')
+                          ? noticia.imagen
+                          : 'https://via.placeholder.com/400x200/090976/FFFFFF?text=Sin+Imagen',
+                    ),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+              // Overlay oscuro para mejor legibilidad
+              Container(
+                height: 180,
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(12),
+                    topRight: Radius.circular(12),
+                  ),
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withOpacity(0.7),
+                    ],
+                  ),
+                ),
+              ),
+              // Badges superiores
+              Positioned(
+                top: 12,
+                left: 12,
+                child: Row(
                   children: [
                     _buildEstadoChip(noticia.estado),
                     if (noticia.destacada) ...[
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
+                          horizontal: 10,
+                          vertical: 6,
                         ),
                         decoration: BoxDecoration(
                           color: WessexColors.goldenYellow,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
-                        child: const Text(
-                          'DESTACADA',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: WessexColors.deepNavyBlue,
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            Icon(
+                              Icons.star,
+                              size: 14,
+                              color: WessexColors.deepNavyBlue,
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              'DESTACADA',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: WessexColors.deepNavyBlue,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ],
                 ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: Icon(
-                        noticia.destacada ? Icons.star : Icons.star_border,
-                      ),
-                      onPressed: () => _toggleDestacada(noticia),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.edit),
-                      onPressed: () => _showEditDialog(noticia),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete),
-                      onPressed: () => _confirmDelete(noticia),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            // Imagen de la noticia
-            if (noticia.imagen.isNotEmpty &&
-                !noticia.imagen.contains('placeholder'))
-              Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                height: 200,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
-                  image: DecorationImage(
-                    image: NetworkImage(noticia.imagen),
-                    fit: BoxFit.cover,
-                  ),
-                ),
               ),
-            Text(
-              noticia.titulo,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ],
+          ),
+          
+          // Contenido de la tarjeta
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Título
+                  Text(
+                    noticia.titulo,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: WessexColors.darkGrape,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+                  
+                  // Descripción
+                  Expanded(
+                    child: Text(
+                      noticia.descripcion,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: WessexColors.darkGrape.withOpacity(0.7),
+                        height: 1.4,
+                      ),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 12),
+                  
+                  // Acciones
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      _buildActionButton(
+                        icon: noticia.destacada ? Icons.star : Icons.star_border,
+                        color: noticia.destacada ? WessexColors.goldenYellow : Colors.grey,
+                        onTap: () => _toggleDestacada(noticia),
+                        tooltip: 'Destacar',
+                      ),
+                      const SizedBox(width: 8),
+                      _buildActionButton(
+                        icon: Icons.edit,
+                        color: WessexColors.deepRoyalBlue,
+                        onTap: () => _showEditDialog(noticia),
+                        tooltip: 'Editar',
+                      ),
+                      const SizedBox(width: 8),
+                      _buildActionButton(
+                        icon: Icons.delete,
+                        color: WessexColors.crimsonAlert,
+                        onTap: () => _confirmDelete(noticia),
+                        tooltip: 'Eliminar',
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 8),
-            Text(noticia.descripcion),
-          ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+    required String tooltip,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            color: color,
+            size: 20,
+          ),
         ),
       ),
     );
   }
 
   Widget _buildEstadoChip(String estado) {
+    final bool isPublicada = estado == 'publicada';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color:
-            estado == 'publicada'
-                ? WessexColors.leafGreen
-                : WessexColors.ashGray,
+        color: isPublicada ? WessexColors.leafGreen : WessexColors.ashGray,
         borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: Text(
-        estado.toUpperCase(),
-        style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-          color: WessexColors.white,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isPublicada ? Icons.check_circle : Icons.schedule,
+            size: 14,
+            color: WessexColors.white,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            estado.toUpperCase(),
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: WessexColors.white,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -883,114 +1172,316 @@ class _AuspiciadoresTabState extends State<_AuspiciadoresTab> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth > 1200;
+    final isTablet = screenWidth > 600;
+    final crossAxisCount = isDesktop ? 3 : (isTablet ? 2 : 1);
+    
     return SafeArea(
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Gestión de Auspiciadores',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: WessexColors.deepNavyBlue,
-                  ),
-                ),
-                ElevatedButton.icon(
-                  onPressed: _showCreateDialog,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Nuevo Auspiciador'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: WessexColors.deepRoyalBlue,
-                    foregroundColor: Colors.white,
-                  ),
+          // Header mejorado
+          Container(
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  WessexColors.deepRoyalBlue,
+                  WessexColors.midnightNavy,
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
-          ),
-          Expanded(
-            child:
-                _isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : _auspiciadores.isEmpty
-                    ? const Center(
-                      child: Text('No hay auspiciadores registrados'),
-                    )
-                    : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _auspiciadores.length,
-                      itemBuilder: (context, index) {
-                        final auspiciador = _auspiciadores[index];
-                        return Card(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
                             children: [
-                              // Imagen del auspiciador
-                              if (auspiciador.imagen.isNotEmpty &&
-                                  !auspiciador.imagen.contains('placeholder'))
-                                Container(
-                                  height: 150,
-                                  width: double.infinity,
-                                  decoration: BoxDecoration(
-                                    borderRadius: const BorderRadius.vertical(
-                                      top: Radius.circular(4),
-                                    ),
-                                    image: DecorationImage(
-                                      image: NetworkImage(auspiciador.imagen),
-                                      fit: BoxFit.cover,
-                                    ),
-                                  ),
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: WessexColors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
-                              // Información del auspiciador
-                              ListTile(
-                                leading:
-                                    auspiciador.imagen.isEmpty ||
-                                            auspiciador.imagen.contains(
-                                              'placeholder',
-                                            )
-                                        ? const Icon(Icons.business, size: 40)
-                                        : null,
-                                title: Text(
-                                  auspiciador.titulo,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                child: const Icon(
+                                  Icons.business,
+                                  color: WessexColors.white,
+                                  size: 24,
                                 ),
-                                subtitle: Text(
-                                  auspiciador.enlace ?? 'Sin enlace',
-                                ),
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.edit),
-                                      onPressed:
-                                          () => _showEditDialog(auspiciador),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.delete,
-                                        color: Colors.red,
-                                      ),
-                                      onPressed:
-                                          () => _deleteAuspiciador(
-                                            auspiciador.id,
-                                          ),
-                                    ),
-                                  ],
+                              ),
+                              const SizedBox(width: 12),
+                              const Text(
+                                'Gestión de Auspiciadores',
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  color: WessexColors.white,
                                 ),
                               ),
                             ],
                           ),
-                        );
-                      },
+                          const SizedBox(height: 8),
+                          Text(
+                            '${_auspiciadores.length} auspiciadores activos',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: WessexColors.white.withOpacity(0.9),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    WessexButton(
+                      onPressed: _showCreateDialog,
+                      text: isDesktop ? 'Nuevo Auspiciador' : 'Crear',
+                      icon: Icons.add_circle,
+                      backgroundColor: WessexColors.crimsonAlert,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isDesktop ? 24 : 16,
+                        vertical: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          
+          // Contenido
+          Expanded(
+            child:
+                _isLoading
+                    ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(
+                            color: WessexColors.white,
+                            strokeWidth: 3,
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Cargando auspiciadores...',
+                            style: TextStyle(
+                              color: WessexColors.white,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                    : _auspiciadores.isEmpty
+                    ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.business_outlined,
+                            size: 80,
+                            color: WessexColors.white.withOpacity(0.5),
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'No hay auspiciadores registrados',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: WessexColors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Agrega el primer auspiciador para comenzar',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: WessexColors.white.withOpacity(0.7),
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                    : GridView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: crossAxisCount,
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 16,
+                        childAspectRatio: 0.9,
+                      ),
+                      itemCount: _auspiciadores.length,
+                      itemBuilder: (context, index) => _buildAuspiciadorCard(
+                        _auspiciadores[index],
+                        isDesktop,
+                        isTablet,
+                      ),
                     ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildAuspiciadorCard(
+    AuspiciadorModel auspiciador,
+    bool isDesktop,
+    bool isTablet,
+  ) {
+    return WessexCard(
+      margin: EdgeInsets.zero,
+      padding: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Imagen del auspiciador
+          Container(
+            height: 160,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(12),
+                topRight: Radius.circular(12),
+              ),
+              color: Colors.white,
+              image: DecorationImage(
+                image: NetworkImage(
+                  auspiciador.imagen.isNotEmpty && !auspiciador.imagen.contains('placeholder')
+                      ? auspiciador.imagen
+                      : 'https://via.placeholder.com/400x200/FFFFFF/090976?text=Logo',
+                ),
+                fit: BoxFit.contain,
+              ),
+            ),
+          ),
+          
+          // Contenido de la tarjeta
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Título
+                  Text(
+                    auspiciador.titulo,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: WessexColors.darkGrape,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+                  
+                  // Enlace
+                  if (auspiciador.enlace != null && auspiciador.enlace!.isNotEmpty)
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.link,
+                            size: 14,
+                            color: WessexColors.deepRoyalBlue,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              auspiciador.enlace!,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: WessexColors.deepRoyalBlue,
+                                decoration: TextDecoration.underline,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    Expanded(
+                      child: Text(
+                        'Sin enlace web',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: WessexColors.darkGrape.withOpacity(0.5),
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
+                  
+                  const SizedBox(height: 12),
+                  
+                  // Acciones
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      _buildAuspiciadorActionButton(
+                        icon: Icons.edit,
+                        color: WessexColors.deepRoyalBlue,
+                        onTap: () => _showEditDialog(auspiciador),
+                        tooltip: 'Editar',
+                      ),
+                      const SizedBox(width: 8),
+                      _buildAuspiciadorActionButton(
+                        icon: Icons.delete,
+                        color: WessexColors.crimsonAlert,
+                        onTap: () => _deleteAuspiciador(auspiciador.id),
+                        tooltip: 'Eliminar',
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAuspiciadorActionButton({
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+    required String tooltip,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            color: color,
+            size: 20,
+          ),
+        ),
       ),
     );
   }
@@ -1574,126 +2065,337 @@ class _MerchandisingTabState extends State<_MerchandisingTab> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth > 1200;
+    final isTablet = screenWidth > 600;
+    final crossAxisCount = isDesktop ? 3 : (isTablet ? 2 : 1);
+    
     return SafeArea(
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Gestión de Merchandising',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: WessexColors.deepNavyBlue,
-                  ),
-                ),
-                ElevatedButton.icon(
-                  onPressed: _showCreateDialog,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Nuevo Producto'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: WessexColors.deepRoyalBlue,
-                    foregroundColor: Colors.white,
-                  ),
+          // Header mejorado
+          Container(
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  WessexColors.deepRoyalBlue,
+                  WessexColors.midnightNavy,
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
-          ),
-          Expanded(
-            child:
-                _isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : _productos.isEmpty
-                    ? const Center(child: Text('No hay productos registrados'))
-                    : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _productos.length,
-                      itemBuilder: (context, index) {
-                        final producto = _productos[index];
-                        return Card(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
                             children: [
-                              // Imagen del producto
-                              if (producto.imagen.isNotEmpty &&
-                                  !producto.imagen.contains('placeholder'))
-                                Container(
-                                  height: 200,
-                                  width: double.infinity,
-                                  decoration: BoxDecoration(
-                                    borderRadius: const BorderRadius.vertical(
-                                      top: Radius.circular(4),
-                                    ),
-                                    image: DecorationImage(
-                                      image: NetworkImage(producto.imagen),
-                                      fit: BoxFit.cover,
-                                    ),
-                                  ),
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: WessexColors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
-                              // Información del producto
-                              ListTile(
-                                leading:
-                                    producto.imagen.isEmpty ||
-                                            producto.imagen.contains(
-                                              'placeholder',
-                                            )
-                                        ? const Icon(
-                                          Icons.shopping_bag,
-                                          size: 40,
-                                        )
-                                        : null,
-                                title: Text(
-                                  producto.titulo,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                child: const Icon(
+                                  Icons.shopping_bag,
+                                  color: WessexColors.white,
+                                  size: 24,
                                 ),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    if (producto.descripcion?.isNotEmpty ==
-                                        true)
-                                      Text(producto.descripcion!),
-                                    Text(
-                                      '\$${producto.precio.toStringAsFixed(2)}',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.green,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.edit),
-                                      onPressed:
-                                          () => _showEditDialog(producto),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.delete,
-                                        color: Colors.red,
-                                      ),
-                                      onPressed:
-                                          () => _deleteProducto(producto.id),
-                                    ),
-                                  ],
+                              ),
+                              const SizedBox(width: 12),
+                              const Text(
+                                'Gestión de Merchandising',
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  color: WessexColors.white,
                                 ),
                               ),
                             ],
                           ),
-                        );
-                      },
+                          const SizedBox(height: 8),
+                          Text(
+                            '${_productos.length} productos en tienda',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: WessexColors.white.withOpacity(0.9),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    WessexButton(
+                      onPressed: _showCreateDialog,
+                      text: isDesktop ? 'Nuevo Producto' : 'Crear',
+                      icon: Icons.add_circle,
+                      backgroundColor: WessexColors.crimsonAlert,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isDesktop ? 24 : 16,
+                        vertical: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          
+          // Contenido
+          Expanded(
+            child:
+                _isLoading
+                    ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(
+                            color: WessexColors.white,
+                            strokeWidth: 3,
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Cargando productos...',
+                            style: TextStyle(
+                              color: WessexColors.white,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                    : _productos.isEmpty
+                    ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.shopping_bag_outlined,
+                            size: 80,
+                            color: WessexColors.white.withOpacity(0.5),
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'No hay productos registrados',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: WessexColors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Agrega el primer producto para comenzar',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: WessexColors.white.withOpacity(0.7),
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                    : GridView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: crossAxisCount,
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 16,
+                        childAspectRatio: 0.75,
+                      ),
+                      itemCount: _productos.length,
+                      itemBuilder: (context, index) => _buildProductoCard(
+                        _productos[index],
+                        isDesktop,
+                        isTablet,
+                      ),
                     ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildProductoCard(
+    MerchandisingModel producto,
+    bool isDesktop,
+    bool isTablet,
+  ) {
+    return WessexCard(
+      margin: EdgeInsets.zero,
+      padding: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Imagen del producto
+          Stack(
+            children: [
+              Container(
+                height: 200,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(12),
+                    topRight: Radius.circular(12),
+                  ),
+                  image: DecorationImage(
+                    image: NetworkImage(
+                      producto.imagen.isNotEmpty && !producto.imagen.contains('placeholder')
+                          ? producto.imagen
+                          : 'https://via.placeholder.com/400x400/090976/FFFFFF?text=Producto',
+                    ),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+              // Badge de precio
+              Positioned(
+                top: 12,
+                right: 12,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: WessexColors.leafGreen,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    '\$${producto.precio.toStringAsFixed(0)}',
+                    style: const TextStyle(
+                      color: WessexColors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          
+          // Contenido de la tarjeta
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Título
+                  Text(
+                    producto.titulo,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: WessexColors.darkGrape,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+                  
+                  // Descripción
+                  if (producto.descripcion != null && producto.descripcion!.isNotEmpty)
+                    Expanded(
+                      child: Text(
+                        producto.descripcion!,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: WessexColors.darkGrape.withOpacity(0.7),
+                          height: 1.4,
+                        ),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    )
+                  else
+                    Expanded(
+                      child: Text(
+                        'Sin descripción',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: WessexColors.darkGrape.withOpacity(0.4),
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
+                  
+                  const SizedBox(height: 12),
+                  
+                  // Acciones
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      _buildProductoActionButton(
+                        icon: Icons.edit,
+                        color: WessexColors.deepRoyalBlue,
+                        onTap: () => _showEditDialog(producto),
+                        tooltip: 'Editar',
+                      ),
+                      const SizedBox(width: 8),
+                      _buildProductoActionButton(
+                        icon: Icons.delete,
+                        color: WessexColors.crimsonAlert,
+                        onTap: () => _deleteProducto(producto.id),
+                        tooltip: 'Eliminar',
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProductoActionButton({
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+    required String tooltip,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            color: color,
+            size: 20,
+          ),
+        ),
       ),
     );
   }
