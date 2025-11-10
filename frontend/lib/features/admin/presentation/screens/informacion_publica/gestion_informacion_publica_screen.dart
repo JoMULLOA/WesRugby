@@ -26,7 +26,7 @@ class _GestionInformacionPublicaScreenState
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
   }
 
   @override
@@ -114,6 +114,11 @@ class _GestionInformacionPublicaScreenState
                   text: 'Merchandising',
                   height: isDesktop ? 60 : 50,
                 ),
+                Tab(
+                  icon: const Icon(Icons.info),
+                  text: 'Info del Club',
+                  height: isDesktop ? 60 : 50,
+                ),
               ],
             ),
           ),
@@ -122,10 +127,11 @@ class _GestionInformacionPublicaScreenState
       body: WessexBackground(
         child: TabBarView(
           controller: _tabController,
-          children: const [
+          children: [
             _NoticiasTab(),
             _AuspiciadoresTab(),
             _MerchandisingTab(),
+            _InformacionClubTab(),
           ],
         ),
       ),
@@ -2934,6 +2940,489 @@ class _MerchandisingDialogState extends State<_MerchandisingDialog> {
     _tituloController.dispose();
     _descripcionController.dispose();
     _precioController.dispose();
+    super.dispose();
+  }
+}
+
+// Tab de Información del Club
+class _InformacionClubTab extends StatefulWidget {
+  const _InformacionClubTab();
+
+  @override
+  State<_InformacionClubTab> createState() => _InformacionClubTabState();
+}
+
+class _InformacionClubTabState extends State<_InformacionClubTab> {
+  final _formKey = GlobalKey<FormState>();
+  bool _isLoading = false;
+  bool _isSaving = false;
+  
+  // Controladores de texto
+  final _nombreController = TextEditingController();
+  final _misionController = TextEditingController();
+  final _visionController = TextEditingController();
+  final _historiaController = TextEditingController();
+  final _direccionController = TextEditingController();
+  final _telefonoController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _facebookController = TextEditingController();
+  final _instagramController = TextEditingController();
+  final _twitterController = TextEditingController();
+  final _websiteController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarInformacion();
+  }
+
+  Future<void> _cargarInformacion() async {
+    setState(() => _isLoading = true);
+    try {
+      final response = await ApiService.get('/club/informacion');
+      print('📥 DEBUG _cargarInformacion - Response: ${response.success}, data: ${response.data}');
+      
+      if (response.success && response.data != null) {
+        // El backend devuelve: { status: "success", message: "...", data: {...} }
+        final data = response.data is Map && response.data.containsKey('data') 
+            ? response.data['data'] 
+            : response.data;
+        
+        print('📝 DEBUG _cargarInformacion - Extracted data: $data');
+        
+        if (data != null && data is Map) {
+          setState(() {
+            _nombreController.text = data['nombre'] ?? 'Wessex Rugby Club';
+            _misionController.text = data['mision'] ?? '';
+            _visionController.text = data['vision'] ?? '';
+            _historiaController.text = data['historia'] ?? '';
+            _direccionController.text = data['direccion'] ?? '';
+            _telefonoController.text = data['telefono'] ?? '';
+            _emailController.text = data['email'] ?? '';
+            _facebookController.text = data['facebook'] ?? '';
+            _instagramController.text = data['instagram'] ?? '';
+            _twitterController.text = data['twitter'] ?? '';
+            _websiteController.text = data['website'] ?? '';
+          });
+          print('✅ DEBUG _cargarInformacion - Datos cargados exitosamente');
+        }
+      } else {
+        print('⚠️ DEBUG _cargarInformacion - Response no exitoso o sin data');
+        // Solo cargar valores por defecto si los controladores están vacíos
+        if (_nombreController.text.isEmpty) {
+          setState(() {
+            _nombreController.text = 'Wessex Rugby Club';
+          });
+        }
+      }
+    } catch (e) {
+      print('❌ ERROR _cargarInformacion - Exception: $e');
+      // Solo establecer valores por defecto si los campos están vacíos
+      if (_nombreController.text.isEmpty) {
+        setState(() {
+          _nombreController.text = 'Wessex Rugby Club';
+        });
+      }
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _guardarInformacion() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isSaving = true);
+    try {
+      final data = {
+        'nombre': _nombreController.text.trim(),
+        'mision': _misionController.text.trim(),
+        'vision': _visionController.text.trim(),
+        'historia': _historiaController.text.trim(),
+        'direccion': _direccionController.text.trim(),
+        'telefono': _telefonoController.text.trim(),
+        'email': _emailController.text.trim(),
+        'facebook': _facebookController.text.trim(),
+        'instagram': _instagramController.text.trim(),
+        'twitter': _twitterController.text.trim(),
+        'website': _websiteController.text.trim(),
+      };
+
+      final response = await ApiService.post('/club/informacion', data);
+      if (response.success) {
+        // Recargar los datos actualizados del servidor
+        await _cargarInformacion();
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Información guardada exitosamente'),
+              backgroundColor: WessexColors.leafGreen,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: ${response.message ?? "No se pudo guardar"}'),
+              backgroundColor: WessexColors.crimsonAlert,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al guardar: $e'),
+            backgroundColor: WessexColors.crimsonAlert,
+          ),
+        );
+      }
+    } finally {
+      setState(() => _isSaving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth > 1200;
+    
+    return SafeArea(
+      child: Column(
+        children: [
+          // Header
+          Container(
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  WessexColors.deepRoyalBlue,
+                  WessexColors.midnightNavy,
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: WessexColors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.info,
+                          color: WessexColors.white,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Información del Club',
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: WessexColors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Gestiona los datos públicos del club',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: WessexColors.white.withOpacity(0.9),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                WessexButton(
+                  onPressed: _isSaving ? null : _guardarInformacion,
+                  text: isDesktop ? 'Guardar Cambios' : 'Guardar',
+                  icon: Icons.save,
+                  backgroundColor: WessexColors.leafGreen,
+                  isLoading: _isSaving,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isDesktop ? 24 : 16,
+                    vertical: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Contenido
+          Expanded(
+            child: _isLoading
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircularProgressIndicator(
+                          color: WessexColors.white,
+                          strokeWidth: 3,
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Cargando información...',
+                          style: TextStyle(
+                            color: WessexColors.white,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Información General
+                          _buildSectionCard(
+                            title: 'Información General',
+                            icon: Icons.business,
+                            color: WessexColors.deepRoyalBlue,
+                            children: [
+                              _buildTextField(
+                                controller: _nombreController,
+                                label: 'Nombre del Club',
+                                icon: Icons.sports_rugby,
+                                validator: (value) =>
+                                    value?.isEmpty == true
+                                        ? 'El nombre es obligatorio'
+                                        : null,
+                              ),
+                              const SizedBox(height: 16),
+                              _buildTextField(
+                                controller: _misionController,
+                                label: 'Misión',
+                                icon: Icons.flag,
+                                maxLines: 4,
+                                hint: 'Describe la misión del club...',
+                              ),
+                              const SizedBox(height: 16),
+                              _buildTextField(
+                                controller: _visionController,
+                                label: 'Visión',
+                                icon: Icons.visibility,
+                                maxLines: 4,
+                                hint: 'Describe la visión del club...',
+                              ),
+                              const SizedBox(height: 16),
+                              _buildTextField(
+                                controller: _historiaController,
+                                label: 'Historia',
+                                icon: Icons.history_edu,
+                                maxLines: 6,
+                                hint: 'Cuenta la historia del club...',
+                              ),
+                            ],
+                          ),
+                          
+                          const SizedBox(height: 16),
+
+                          // Información de Contacto
+                          _buildSectionCard(
+                            title: 'Datos de Contacto',
+                            icon: Icons.contact_mail,
+                            color: WessexColors.leafGreen,
+                            children: [
+                              _buildTextField(
+                                controller: _direccionController,
+                                label: 'Dirección',
+                                icon: Icons.location_on,
+                                hint: 'Dirección física del club',
+                              ),
+                              const SizedBox(height: 16),
+                              _buildTextField(
+                                controller: _telefonoController,
+                                label: 'Teléfono',
+                                icon: Icons.phone,
+                                hint: '+56 9 1234 5678',
+                                keyboardType: TextInputType.phone,
+                              ),
+                              const SizedBox(height: 16),
+                              _buildTextField(
+                                controller: _emailController,
+                                label: 'Email',
+                                icon: Icons.email,
+                                hint: 'contacto@wessexrugby.cl',
+                                keyboardType: TextInputType.emailAddress,
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          // Redes Sociales
+                          _buildSectionCard(
+                            title: 'Redes Sociales y Web',
+                            icon: Icons.share,
+                            color: WessexColors.goldenYellow,
+                            children: [
+                              _buildTextField(
+                                controller: _websiteController,
+                                label: 'Sitio Web',
+                                icon: Icons.language,
+                                hint: 'https://www.wessexrugby.cl',
+                                keyboardType: TextInputType.url,
+                              ),
+                              const SizedBox(height: 16),
+                              _buildTextField(
+                                controller: _facebookController,
+                                label: 'Facebook',
+                                icon: Icons.facebook,
+                                hint: 'https://facebook.com/wessexrugby',
+                                keyboardType: TextInputType.url,
+                              ),
+                              const SizedBox(height: 16),
+                              _buildTextField(
+                                controller: _instagramController,
+                                label: 'Instagram',
+                                icon: Icons.camera_alt,
+                                hint: '@wessexrugby',
+                              ),
+                              const SizedBox(height: 16),
+                              _buildTextField(
+                                controller: _twitterController,
+                                label: 'Twitter / X',
+                                icon: Icons.chat,
+                                hint: '@wessexrugby',
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 24),
+                        ],
+                      ),
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionCard({
+    required String title,
+    required IconData icon,
+    required Color color,
+    required List<Widget> children,
+  }) {
+    return WessexCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  icon,
+                  color: color,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: WessexColors.darkGrape,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          ...children,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    String? hint,
+    int maxLines = 1,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        prefixIcon: Icon(icon, color: WessexColors.deepRoyalBlue),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade400),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: WessexColors.deepRoyalBlue,
+            width: 2,
+          ),
+        ),
+        filled: true,
+        fillColor: Colors.white,
+      ),
+      maxLines: maxLines,
+      keyboardType: keyboardType,
+      validator: validator,
+    );
+  }
+
+  @override
+  void dispose() {
+    _nombreController.dispose();
+    _misionController.dispose();
+    _visionController.dispose();
+    _historiaController.dispose();
+    _direccionController.dispose();
+    _telefonoController.dispose();
+    _emailController.dispose();
+    _facebookController.dispose();
+    _instagramController.dispose();
+    _twitterController.dispose();
+    _websiteController.dispose();
     super.dispose();
   }
 }

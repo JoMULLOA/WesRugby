@@ -1304,7 +1304,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'La directiva puede actualizar esta información desde su panel administrativo. Mantener los datos vigentes ayudará a que la comunidad se mantenga conectada.',
+                    'La directiva puede actualizar esta información desde su panel administrativo.',
                     style: TextStyle(
                       color: WessexColors.deepRoyalBlue.withOpacity(0.9),
                       fontSize: bodyFontSize,
@@ -1312,21 +1312,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: OutlinedButton.icon(
-              onPressed: () => _navigateToLogin(context),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: WessexColors.deepRoyalBlue,
-                side: BorderSide(
-                  color: WessexColors.deepRoyalBlue.withOpacity(0.6),
-                ),
-              ),
-              icon: const Icon(Icons.login),
-              label: const Text('Iniciar sesión como directiva'),
             ),
           ),
         ],
