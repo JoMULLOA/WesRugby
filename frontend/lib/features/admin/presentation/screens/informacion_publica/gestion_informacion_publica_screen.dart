@@ -26,7 +26,7 @@ class _GestionInformacionPublicaScreenState
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
   }
 
   @override
@@ -82,8 +82,8 @@ class _GestionInformacionPublicaScreenState
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                WessexColors.deepRoyalBlue.withOpacity(0.9),
-                WessexColors.darkGrape.withOpacity(0.9),
+                WessexColors.deepRoyalBlue,
+                WessexColors.darkGrape,
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -102,8 +102,8 @@ class _GestionInformacionPublicaScreenState
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  WessexColors.deepRoyalBlue.withOpacity(0.9),
-                  WessexColors.darkGrape.withOpacity(0.9),
+                  WessexColors.deepRoyalBlue,
+                  WessexColors.darkGrape,
                 ],
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
@@ -140,6 +140,11 @@ class _GestionInformacionPublicaScreenState
                   text: 'Entrenadores',
                   height: isDesktop ? 60 : 50,
                 ),
+                Tab(
+                  icon: const Icon(Icons.info),
+                  text: 'Club Wessex',
+                  height: isDesktop ? 60 : 50,
+                ),
               ],
             ),
           ),
@@ -148,11 +153,12 @@ class _GestionInformacionPublicaScreenState
       body: WessexBackground(
         child: TabBarView(
           controller: _tabController,
-          children: const [
+          children: [
             _NoticiasTab(),
             _AuspiciadoresTab(),
             _MerchandisingTab(),
             _EntrenadoresTab(),
+            _ClubWessexTab(),
           ],
         ),
       ),
@@ -2972,75 +2978,79 @@ class _EntrenadoresTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+      child: Column(
+        children: [
+          // Header con gradiente
+          Container(
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  WessexColors.deepRoyalBlue,
+                  WessexColors.midnightNavy,
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: WessexColors.deepRoyalBlue.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.sports,
-                        color: WessexColors.deepRoyalBlue,
-                        size: 32,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Gestión de Entrenadores',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: WessexColors.deepNavyBlue,
-                            ),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            'Administra la información pública de los entrenadores del club',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: WessexColors.charcoalGray,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
                 ),
-              ),
+              ],
             ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: Card(
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: WessexColors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.sports,
+                    color: WessexColors.white,
+                    size: 24,
+                  ),
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: _buildEntrenadoresContent(context),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Gestión de Entrenadores',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: WessexColors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Administra la información pública de los entrenadores del club',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: WessexColors.white.withOpacity(0.9),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
+          ),
+          // Contenido
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: _buildEntrenadoresContent(context),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -3586,5 +3596,445 @@ class _FormularioEntrenadorDialogState
         setState(() => _guardando = false);
       }
     }
+  }
+}
+
+// Tab de Club Wessex - Información Pública del Home
+class _ClubWessexTab extends StatefulWidget {
+  const _ClubWessexTab();
+
+  @override
+  State<_ClubWessexTab> createState() => _ClubWessexTabState();
+}
+
+class _ClubWessexTabState extends State<_ClubWessexTab> {
+  final _formKey = GlobalKey<FormState>();
+  bool _isLoading = false;
+  bool _isSaving = false;
+
+  // Controladores
+  final _historiaController = TextEditingController();
+  final _correoController = TextEditingController();
+  final _telefonoController = TextEditingController();
+  final _direccionController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarInformacion();
+  }
+
+  Future<void> _cargarInformacion() async {
+    setState(() => _isLoading = true);
+    try {
+      final response = await ApiService.get('/homepage/club-info');
+      print('📥 DEBUG _cargarInformacion - Response: ${response.success}, data: ${response.data}');
+
+      if (response.success && response.data != null) {
+        final data = response.data is Map && response.data.containsKey('data')
+            ? response.data['data']
+            : response.data;
+
+        print('📝 DEBUG _cargarInformacion - Extracted data: $data');
+
+        if (data != null && data is Map) {
+          setState(() {
+            _historiaController.text = data['historia'] ?? '';
+            _correoController.text = data['correo'] ?? '';
+            _telefonoController.text = data['telefono'] ?? '';
+            _direccionController.text = data['direccion'] ?? '';
+          });
+          print('✅ DEBUG _cargarInformacion - Datos cargados exitosamente');
+        }
+      }
+    } catch (e) {
+      print('❌ ERROR _cargarInformacion - Exception: $e');
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _guardarInformacion() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isSaving = true);
+    try {
+      final data = {
+        'historia': _historiaController.text.trim(),
+        'correo': _correoController.text.trim(),
+        'telefono': _telefonoController.text.trim(),
+        'direccion': _direccionController.text.trim(),
+      };
+
+      final response = await ApiService.post('/homepage/club-info', data);
+      if (response.success) {
+        // Recargar los datos actualizados del servidor
+        await _cargarInformacion();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Información del Club Wessex guardada exitosamente'),
+              backgroundColor: WessexColors.leafGreen,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: ${response.message ?? "No se pudo guardar"}'),
+              backgroundColor: WessexColors.crimsonAlert,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al guardar: $e'),
+            backgroundColor: WessexColors.crimsonAlert,
+          ),
+        );
+      }
+    } finally {
+      setState(() => _isSaving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth > 1200;
+
+    return SafeArea(
+      child: Column(
+        children: [
+          // Header
+          Container(
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  WessexColors.deepRoyalBlue,
+                  WessexColors.midnightNavy,
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: WessexColors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.info,
+                          color: WessexColors.white,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Club Wessex - Información Pública',
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: WessexColors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Edita la información visible en la página de inicio',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: WessexColors.white.withOpacity(0.9),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                WessexButton(
+                  onPressed: _isSaving ? null : _guardarInformacion,
+                  text: isDesktop ? 'Guardar Cambios' : 'Guardar',
+                  icon: Icons.save,
+                  backgroundColor: WessexColors.leafGreen,
+                  isLoading: _isSaving,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isDesktop ? 24 : 16,
+                    vertical: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Contenido
+          Expanded(
+            child: _isLoading
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircularProgressIndicator(
+                          color: WessexColors.deepRoyalBlue,
+                          strokeWidth: 3,
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Cargando información...',
+                          style: TextStyle(
+                            color: WessexColors.charcoalGray,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Historia de la Rama
+                          WessexCard(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: WessexColors.deepRoyalBlue.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Icon(
+                                        Icons.history_edu,
+                                        color: WessexColors.deepRoyalBlue,
+                                        size: 24,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      'Historia de la Rama',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: WessexColors.darkGrape,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 20),
+                                TextFormField(
+                                  controller: _historiaController,
+                                  decoration: InputDecoration(
+                                    labelText: 'Historia del Club',
+                                    hintText: 'Cuenta la historia y evolución del club...',
+                                    prefixIcon: Icon(Icons.history, color: WessexColors.deepRoyalBlue),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide(color: Colors.grey.shade400),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: const BorderSide(
+                                        color: WessexColors.deepRoyalBlue,
+                                        width: 2,
+                                      ),
+                                    ),
+                                    filled: true,
+                                    fillColor: Colors.white,
+                                  ),
+                                  maxLines: 8,
+                                  validator: (value) =>
+                                      value?.isEmpty == true
+                                          ? 'La historia es obligatoria'
+                                          : null,
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          // Contactos Oficiales
+                          WessexCard(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: WessexColors.leafGreen.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Icon(
+                                        Icons.contact_mail,
+                                        color: WessexColors.leafGreen,
+                                        size: 24,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      'Contactos Oficiales',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: WessexColors.darkGrape,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 20),
+                                TextFormField(
+                                  controller: _correoController,
+                                  decoration: InputDecoration(
+                                    labelText: 'Correo Electrónico',
+                                    hintText: 'rugby@wessexschool.cl',
+                                    prefixIcon: Icon(Icons.email, color: WessexColors.deepRoyalBlue),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide(color: Colors.grey.shade400),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: const BorderSide(
+                                        color: WessexColors.deepRoyalBlue,
+                                        width: 2,
+                                      ),
+                                    ),
+                                    filled: true,
+                                    fillColor: Colors.white,
+                                  ),
+                                  keyboardType: TextInputType.emailAddress,
+                                  validator: (value) {
+                                    if (value?.isEmpty == true) {
+                                      return 'El correo es obligatorio';
+                                    }
+                                    if (!value!.contains('@')) {
+                                      return 'Ingresa un correo válido';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 16),
+                                TextFormField(
+                                  controller: _telefonoController,
+                                  decoration: InputDecoration(
+                                    labelText: 'Teléfono de Contacto',
+                                    hintText: '+56 9 8765 4321',
+                                    prefixIcon: Icon(Icons.phone, color: WessexColors.deepRoyalBlue),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide(color: Colors.grey.shade400),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: const BorderSide(
+                                        color: WessexColors.deepRoyalBlue,
+                                        width: 2,
+                                      ),
+                                    ),
+                                    filled: true,
+                                    fillColor: Colors.white,
+                                  ),
+                                  keyboardType: TextInputType.phone,
+                                  validator: (value) =>
+                                      value?.isEmpty == true
+                                          ? 'El teléfono es obligatorio'
+                                          : null,
+                                ),
+                                const SizedBox(height: 16),
+                                TextFormField(
+                                  controller: _direccionController,
+                                  decoration: InputDecoration(
+                                    labelText: 'Dirección',
+                                    hintText: 'The Wessex School, Camino El Venado 950, San Pedro.',
+                                    prefixIcon: Icon(Icons.location_on, color: WessexColors.deepRoyalBlue),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide(color: Colors.grey.shade400),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: const BorderSide(
+                                        color: WessexColors.deepRoyalBlue,
+                                        width: 2,
+                                      ),
+                                    ),
+                                    filled: true,
+                                    fillColor: Colors.white,
+                                  ),
+                                  maxLines: 2,
+                                  validator: (value) =>
+                                      value?.isEmpty == true
+                                          ? 'La dirección es obligatoria'
+                                          : null,
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: 24),
+                        ],
+                      ),
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _historiaController.dispose();
+    _correoController.dispose();
+    _telefonoController.dispose();
+    _direccionController.dispose();
+    super.dispose();
   }
 }

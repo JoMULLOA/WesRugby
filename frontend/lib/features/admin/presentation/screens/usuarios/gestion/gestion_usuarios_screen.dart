@@ -22,6 +22,8 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
   List<Map<String, dynamic>> _filteredUsuarios = [];
   bool _isLoading = false;
   String? _error;
+  int _currentPage = 0;
+  static const int _usuariosPerPage = 9;
 
   final List<String> _roles = [
     'Todos',
@@ -165,6 +167,7 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
 
     setState(() {
       _filteredUsuarios = usuarios;
+      _currentPage = 0; // Reset pagination when filters change
     });
   }
 
@@ -287,67 +290,56 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
           titleColor: WessexColors.white,
         ),
         const SizedBox(height: 20),
-
-        LayoutBuilder(
-          builder: (context, constraints) {
-            int crossAxisCount =
-                constraints.maxWidth > 1200
-                    ? 5
-                    : constraints.maxWidth > 800
-                    ? 3
-                    : constraints.maxWidth > 600
-                    ? 2
-                    : 1;
-
-            return Wrap(
-              spacing: 16,
-              runSpacing: 16,
-              children: [
-                _buildStatCard(
-                  'Total Usuarios',
-                  '$totalUsuarios',
-                  Icons.people,
-                  WessexColors.deepRoyalBlue,
-                  constraints.maxWidth / crossAxisCount - 16,
-                ),
-                _buildStatCard(
-                  'Directiva',
-                  '$directivas',
-                  Icons.admin_panel_settings,
-                  WessexColors.crimsonAlert,
-                  constraints.maxWidth / crossAxisCount - 16,
-                ),
-                _buildStatCard(
-                  'Tesorera',
-                  '$tesoreras',
-                  Icons.account_balance_wallet,
-                  WessexColors.midnightNavy,
-                  constraints.maxWidth / crossAxisCount - 16,
-                ),
-                _buildStatCard(
-                  'Entrenadores',
-                  '$entrenadores',
-                  Icons.sports_rugby,
-                  WessexColors.leafGreen,
-                  constraints.maxWidth / crossAxisCount - 16,
-                ),
-                _buildStatCard(
-                  'Apoderados',
-                  '$apoderados',
-                  Icons.family_restroom,
-                  WessexColors.maximumGrayMint,
-                  constraints.maxWidth / crossAxisCount - 16,
-                ),
-                _buildStatCard(
-                  'Coord. Rama',
-                  '$coordinadores',
-                  Icons.sports_soccer,
-                  WessexColors.crimsonAlert,
-                  constraints.maxWidth / crossAxisCount - 16,
-                ),
-              ],
-            );
-          },
+        
+        // Tarjetas responsivas en una sola fila horizontal con scroll
+        SizedBox(
+          height: 100,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            children: [
+              _buildStatCard(
+                'Total Usuarios',
+                '$totalUsuarios',
+                Icons.people,
+                WessexColors.deepRoyalBlue,
+              ),
+              const SizedBox(width: 16),
+              _buildStatCard(
+                'Directiva',
+                '$directivas',
+                Icons.admin_panel_settings,
+                WessexColors.crimsonAlert,
+              ),
+              const SizedBox(width: 16),
+              _buildStatCard(
+                'Tesorera',
+                '$tesoreras',
+                Icons.account_balance_wallet,
+                WessexColors.midnightNavy,
+              ),
+              const SizedBox(width: 16),
+              _buildStatCard(
+                'Entrenadores',
+                '$entrenadores',
+                Icons.sports_rugby,
+                WessexColors.leafGreen,
+              ),
+              const SizedBox(width: 16),
+              _buildStatCard(
+                'Apoderados',
+                '$apoderados',
+                Icons.family_restroom,
+                WessexColors.maximumGrayMint,
+              ),
+              const SizedBox(width: 16),
+              _buildStatCard(
+                'Coord. Rama',
+                '$coordinadores',
+                Icons.sports_soccer,
+                WessexColors.crimsonAlert,
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -358,61 +350,58 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
     String value,
     IconData icon,
     Color color,
-    double width,
   ) {
-    return SizedBox(
-      width: width,
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.2)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+    return Container(
+      width: 220,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
             ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: color, size: 24),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    value,
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: WessexColors.darkGrape,
-                    ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: WessexColors.darkGrape,
                   ),
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: WessexColors.darkGrape.withOpacity(0.7),
-                    ),
+                ),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: WessexColors.darkGrape.withOpacity(0.7),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -588,6 +577,13 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
       );
     }
 
+    // Calcular paginación
+    final int totalPages = (_filteredUsuarios.length / _usuariosPerPage).ceil();
+    final int startIndex = _currentPage * _usuariosPerPage;
+    final int endIndex = (startIndex + _usuariosPerPage).clamp(0, _filteredUsuarios.length);
+    final List<Map<String, dynamic>> paginatedUsuarios = 
+        _filteredUsuarios.sublist(startIndex, endIndex);
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -643,7 +639,7 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
                   spacing: 20,
                   runSpacing: 20,
                   children:
-                      _filteredUsuarios
+                      paginatedUsuarios
                           .map(
                             (usuario) => SizedBox(
                               width: cardWidth,
@@ -655,7 +651,84 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
               },
             ),
           ),
+          
+          // Controles de paginación
+          if (totalPages > 1)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  IconButton(
+                    onPressed: _currentPage > 0
+                        ? () => setState(() => _currentPage--)
+                        : null,
+                    icon: const Icon(Icons.chevron_left),
+                    tooltip: 'Página anterior',
+                  ),
+                  const SizedBox(width: 16),
+                  ...List.generate(totalPages, (index) {
+                    // Mostrar solo las páginas cercanas a la actual
+                    if (totalPages > 7) {
+                      if (index == 0 || 
+                          index == totalPages - 1 ||
+                          (index >= _currentPage - 1 && index <= _currentPage + 1)) {
+                        return _buildPageButton(index);
+                      } else if (index == _currentPage - 2 || index == _currentPage + 2) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 4),
+                          child: Text('...', style: TextStyle(color: WessexColors.darkGrape)),
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    } else {
+                      return _buildPageButton(index);
+                    }
+                  }),
+                  const SizedBox(width: 16),
+                  IconButton(
+                    onPressed: _currentPage < totalPages - 1
+                        ? () => setState(() => _currentPage++)
+                        : null,
+                    icon: const Icon(Icons.chevron_right),
+                    tooltip: 'Página siguiente',
+                  ),
+                ],
+              ),
+            ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPageButton(int pageIndex) {
+    final bool isActive = pageIndex == _currentPage;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: InkWell(
+        onTap: () => setState(() => _currentPage = pageIndex),
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: isActive ? WessexColors.deepRoyalBlue : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isActive 
+                  ? WessexColors.deepRoyalBlue 
+                  : WessexColors.deepRoyalBlue.withOpacity(0.3),
+            ),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            '${pageIndex + 1}',
+            style: TextStyle(
+              color: isActive ? Colors.white : WessexColors.darkGrape,
+              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+        ),
       ),
     );
   }

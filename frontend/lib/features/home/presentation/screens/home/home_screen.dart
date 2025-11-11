@@ -27,11 +27,18 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isMerchandisingLoading = true;
   bool _isAuspiciadoresLoading = true;
   bool _isEntrenadoresLoading = true;
+  bool _isClubInfoLoading = true;
 
   List<NoticiaModel> _noticias = [];
   List<MerchandisingModel> _productos = [];
   List<AuspiciadorModel> _auspiciadores = [];
   List<Map<String, dynamic>> _entrenadores = [];
+  
+  // Información del Club Wessex
+  String _clubHistoria = '';
+  String _clubCorreo = '';
+  String _clubTelefono = '';
+  String _clubDireccion = '';
 
   int _noticiasPage = 0;
   int _merchandisingPage = 0;
@@ -49,6 +56,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadMerchandisingPreview();
     _loadAuspiciadoresPreview();
     _loadEntrenadoresPreview();
+    _loadClubInfo();
   }
 
   Future<void> _loadNoticiasPreview() async {
@@ -148,6 +156,39 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
       debugPrint('Error cargando entrenadores: $error');
       setState(() => _isEntrenadoresLoading = false);
+    }
+  }
+
+  Future<void> _loadClubInfo() async {
+    setState(() => _isClubInfoLoading = true);
+    try {
+      final response = await ApiService.get('/homepage/club-info');
+
+      if (!mounted) return;
+
+      if (response.success && response.data != null) {
+        final data = response.data is Map && response.data.containsKey('data')
+            ? response.data['data']
+            : response.data;
+
+        if (data != null && data is Map) {
+          setState(() {
+            _clubHistoria = data['historia'] ?? '';
+            _clubCorreo = data['correo'] ?? '';
+            _clubTelefono = data['telefono'] ?? '';
+            _clubDireccion = data['direccion'] ?? '';
+            _isClubInfoLoading = false;
+          });
+        } else {
+          setState(() => _isClubInfoLoading = false);
+        }
+      } else {
+        setState(() => _isClubInfoLoading = false);
+      }
+    } catch (error) {
+      if (!mounted) return;
+      debugPrint('Error cargando información del club: $error');
+      setState(() => _isClubInfoLoading = false);
     }
   }
 
@@ -1424,21 +1465,27 @@ class _HomeScreenState extends State<HomeScreen> {
     bool isDesktop,
     bool isTablet,
   ) {
+    if (_isClubInfoLoading) {
+      return _buildSectionLoadingIndicator();
+    }
+
     final contactDetails = [
       {
         'icon': Icons.mail_outline,
         'title': 'Correo electrónico',
-        'detail': 'rugby@wessexschool.cl',
+        'detail': _clubCorreo.isNotEmpty ? _clubCorreo : 'rugby@wessexschool.cl',
       },
       {
         'icon': Icons.phone_outlined,
         'title': 'Teléfono de contacto',
-        'detail': '+56 9 8765 4321',
+        'detail': _clubTelefono.isNotEmpty ? _clubTelefono : '+56 9 8765 4321',
       },
       {
         'icon': Icons.location_on_outlined,
         'title': 'Dirección',
-        'detail': 'The Wessex School, Camino El Venado 950, San Pedro.',
+        'detail': _clubDireccion.isNotEmpty
+            ? _clubDireccion
+            : 'The Wessex School, Camino El Venado 950, San Pedro.',
       },
     ];
 
@@ -1458,16 +1505,9 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            'La rama de rugby del Wessex School nació del entusiasmo de las generaciones de 1989 y se ha mantenido como un espacio formativo que transmite los valores del colegio. A través de los años, apoderados, entrenadores y estudiantes han consolidado una comunidad que compite en torneos regionales y nacionales.',
-            style: TextStyle(
-              color: WessexColors.charcoalGray,
-              fontSize: bodyFontSize,
-              height: 1.5,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Hoy la directiva impulsa proyectos deportivos, académicos y sociales para seguir creciendo. Si tienes recuerdos, fotografías o hitos que desees sumar, comunícate con el equipo y forma parte de nuestra memoria colectiva.',
+            _clubHistoria.isNotEmpty
+                ? _clubHistoria
+                : 'La rama de rugby del Wessex School nació del entusiasmo de las generaciones de 1989 y se ha mantenido como un espacio formativo que transmite los valores del colegio.',
             style: TextStyle(
               color: WessexColors.charcoalGray,
               fontSize: bodyFontSize,
@@ -1532,48 +1572,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ],
-          const SizedBox(height: 24),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: WessexColors.deepRoyalBlue.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(
-                  Icons.edit_note,
-                  color: WessexColors.deepRoyalBlue,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'La directiva puede actualizar esta información desde su panel administrativo. Mantener los datos vigentes ayudará a que la comunidad se mantenga conectada.',
-                    style: TextStyle(
-                      color: WessexColors.deepRoyalBlue.withOpacity(0.9),
-                      fontSize: bodyFontSize,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: OutlinedButton.icon(
-              onPressed: () => _navigateToLogin(context),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: WessexColors.deepRoyalBlue,
-                side: BorderSide(
-                  color: WessexColors.deepRoyalBlue.withOpacity(0.6),
-                ),
-              ),
-              icon: const Icon(Icons.login),
-              label: const Text('Iniciar sesión como directiva'),
-            ),
-          ),
         ],
       ),
     );

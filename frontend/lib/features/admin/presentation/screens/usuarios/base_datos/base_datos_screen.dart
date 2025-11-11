@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:wesrugby/core/config/colors.dart';
 import 'package:wesrugby/data/services/estudiante_service.dart';
+import 'package:wesrugby/shared/widgets/layout/wessex_widgets.dart';
 
 class BaseDatosScreen extends StatefulWidget {
   const BaseDatosScreen({super.key});
@@ -16,6 +17,10 @@ class _BaseDatosScreenState extends State<BaseDatosScreen> {
   String _selectedCurso = 'Todos';
   List<Map<String, dynamic>> _filteredEstudiantes = [];
   bool _isLoading = false;
+  
+  // Paginación
+  int _currentPage = 0;
+  static const int _estudiantesPerPage = 9;
 
   final List<String> _cursos = [
     'Todos',
@@ -33,7 +38,7 @@ class _BaseDatosScreenState extends State<BaseDatosScreen> {
   void initState() {
     super.initState();
     _estudianteService.addListener(_updateEstudiantes);
-    _loadEstudiantes();
+    _loadEstudiantesFromAPI();
   }
 
   @override
@@ -46,6 +51,22 @@ class _BaseDatosScreenState extends State<BaseDatosScreen> {
   void _updateEstudiantes() {
     if (mounted) {
       _loadEstudiantes();
+    }
+  }
+
+  Future<void> _loadEstudiantesFromAPI() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await _estudianteService.refreshStudentsFromAPI();
+      _loadEstudiantes();
+    } catch (e) {
+      print('❌ Error al cargar estudiantes desde API: $e');
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -78,6 +99,7 @@ class _BaseDatosScreenState extends State<BaseDatosScreen> {
     setState(() {
       _filteredEstudiantes = estudiantes;
       _isLoading = false;
+      _currentPage = 0; // Reset pagination when filters change
     });
   }
 
@@ -86,9 +108,11 @@ class _BaseDatosScreenState extends State<BaseDatosScreen> {
     final estadisticas = _estudianteService.getStudentStatistics();
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: const Text('Base de Datos - Estudiantes'),
-        backgroundColor: WessexColors.midnightNavy,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         foregroundColor: Colors.white,
         actions: [
           IconButton(
@@ -98,25 +122,47 @@ class _BaseDatosScreenState extends State<BaseDatosScreen> {
           ),
         ],
       ),
-      backgroundColor: WessexColors.mistyRoseGray,
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header con estadísticas
-            _buildStatsCards(estadisticas),
+      body: WessexBackground(
+        child: SafeArea(
+          child: _isLoading
+              ? const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(
+                        color: WessexColors.deepRoyalBlue,
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        'Cargando estudiantes...',
+                        style: TextStyle(
+                          color: WessexColors.white,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header con estadísticas
+                      _buildStatsCards(estadisticas),
 
-            const SizedBox(height: 32),
+                      const SizedBox(height: 32),
 
-            // Controles de búsqueda y filtros
-            _buildSearchAndFilters(),
+                      // Controles de búsqueda y filtros
+                      _buildSearchAndFilters(),
 
-            const SizedBox(height: 24),
+                      const SizedBox(height: 24),
 
-            // Lista de estudiantes
-            _buildEstudiantesList(),
-          ],
+                      // Lista de estudiantes
+                      _buildEstudiantesList(),
+                    ],
+                  ),
+                ),
         ),
       ),
     );
@@ -126,61 +172,48 @@ class _BaseDatosScreenState extends State<BaseDatosScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Estadísticas de Estudiantes',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            color: WessexColors.darkGrape,
-            fontWeight: FontWeight.bold,
-          ),
+        const WessexSectionTitle(
+          title: 'Base de Datos de Estudiantes',
+          subtitle: 'Administre el registro completo de estudiantes del club',
+          titleColor: WessexColors.white,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
 
-        LayoutBuilder(
-          builder: (context, constraints) {
-            int crossAxisCount =
-                constraints.maxWidth > 1200
-                    ? 4
-                    : constraints.maxWidth > 800
-                    ? 3
-                    : constraints.maxWidth > 600
-                    ? 2
-                    : 1;
-
-            return GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: crossAxisCount,
-              mainAxisSpacing: 16,
-              crossAxisSpacing: 16,
-              childAspectRatio: 3.5,
-              children: [
-                _buildStatCard(
-                  'Total Estudiantes',
-                  '${stats['total']}',
-                  Icons.school,
-                  WessexColors.deepRoyalBlue,
-                ),
-                _buildStatCard(
-                  'Activos',
-                  '${stats['activos']}',
-                  Icons.check_circle,
-                  WessexColors.leafGreen,
-                ),
-                _buildStatCard(
-                  'Inactivos',
-                  '${stats['inactivos']}',
-                  Icons.cancel,
-                  WessexColors.crimsonAlert,
-                ),
-                _buildStatCard(
-                  'Cursos',
-                  '${(stats['porCurso'] as Map).length}',
-                  Icons.class_,
-                  WessexColors.maximumGrayMint,
-                ),
-              ],
-            );
-          },
+        // Tarjetas responsivas en una sola fila horizontal con scroll
+        SizedBox(
+          height: 100,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            children: [
+              _buildStatCard(
+                'Total Estudiantes',
+                '${stats['total']}',
+                Icons.school,
+                WessexColors.deepRoyalBlue,
+              ),
+              const SizedBox(width: 16),
+              _buildStatCard(
+                'Activos',
+                '${stats['activos']}',
+                Icons.check_circle,
+                WessexColors.leafGreen,
+              ),
+              const SizedBox(width: 16),
+              _buildStatCard(
+                'Inactivos',
+                '${stats['inactivos']}',
+                Icons.cancel,
+                WessexColors.crimsonAlert,
+              ),
+              const SizedBox(width: 16),
+              _buildStatCard(
+                'Cursos',
+                '${(stats['porCurso'] as Map).length}',
+                Icons.class_,
+                WessexColors.maximumGrayMint,
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -193,6 +226,7 @@ class _BaseDatosScreenState extends State<BaseDatosScreen> {
     Color color,
   ) {
     return Container(
+      width: 220,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -393,6 +427,12 @@ class _BaseDatosScreenState extends State<BaseDatosScreen> {
       );
     }
 
+    // Calcular paginación
+    final int totalPages = (_filteredEstudiantes.length / _estudiantesPerPage).ceil();
+    final int startIndex = _currentPage * _estudiantesPerPage;
+    final int endIndex = (startIndex + _estudiantesPerPage).clamp(0, _filteredEstudiantes.length);
+    final List<Map<String, dynamic>> paginatedEstudiantes = _filteredEstudiantes.sublist(startIndex, endIndex);
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -403,7 +443,7 @@ class _BaseDatosScreenState extends State<BaseDatosScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
             child: Row(
               children: [
                 Text(
@@ -427,10 +467,17 @@ class _BaseDatosScreenState extends State<BaseDatosScreen> {
               ],
             ),
           ),
+          Divider(
+            height: 1,
+            thickness: 1,
+            color: WessexColors.mistyRoseGray.withOpacity(0.4),
+          ),
 
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTable(
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
               headingRowColor: MaterialStateProperty.all(
                 WessexColors.deepRoyalBlue.withOpacity(0.1),
               ),
@@ -480,7 +527,7 @@ class _BaseDatosScreenState extends State<BaseDatosScreen> {
                 ),
               ],
               rows:
-                  _filteredEstudiantes.map((estudiante) {
+                  paginatedEstudiantes.map((estudiante) {
                     return DataRow(
                       cells: [
                         DataCell(
@@ -532,9 +579,113 @@ class _BaseDatosScreenState extends State<BaseDatosScreen> {
                       ],
                     );
                   }).toList(),
+              ),
             ),
           ),
+
+          // Controles de paginación
+          if (totalPages > 1)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  IconButton(
+                    onPressed: _currentPage > 0
+                        ? () => setState(() => _currentPage--)
+                        : null,
+                    icon: const Icon(Icons.chevron_left),
+                    tooltip: 'Página anterior',
+                  ),
+                  const SizedBox(width: 8),
+                  
+                  // Mostrar botones de página
+                  ...List.generate(
+                    totalPages > 7 ? 7 : totalPages,
+                    (index) {
+                      if (totalPages <= 7) {
+                        return _buildPageButton(index, totalPages);
+                      } else {
+                        // Lógica para mostrar páginas con puntos suspensivos
+                        if (index == 0) return _buildPageButton(0, totalPages);
+                        if (index == 1 && _currentPage > 3) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: Text('...', style: TextStyle(fontSize: 18)),
+                          );
+                        }
+                        if (index == 5 && _currentPage < totalPages - 4) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: Text('...', style: TextStyle(fontSize: 18)),
+                          );
+                        }
+                        if (index == 6) return _buildPageButton(totalPages - 1, totalPages);
+                        
+                        // Mostrar páginas alrededor de la actual
+                        int pageToShow;
+                        if (_currentPage <= 3) {
+                          pageToShow = index;
+                        } else if (_currentPage >= totalPages - 4) {
+                          pageToShow = totalPages - 7 + index;
+                        } else {
+                          pageToShow = _currentPage - 3 + index;
+                        }
+                        
+                        if (pageToShow >= 0 && pageToShow < totalPages) {
+                          return _buildPageButton(pageToShow, totalPages);
+                        }
+                        return const SizedBox.shrink();
+                      }
+                    },
+                  ),
+                  
+                  const SizedBox(width: 8),
+                  IconButton(
+                    onPressed: _currentPage < totalPages - 1
+                        ? () => setState(() => _currentPage++)
+                        : null,
+                    icon: const Icon(Icons.chevron_right),
+                    tooltip: 'Página siguiente',
+                  ),
+                ],
+              ),
+            ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPageButton(int pageIndex, int totalPages) {
+    final isCurrentPage = pageIndex == _currentPage;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: InkWell(
+        onTap: () => setState(() => _currentPage = pageIndex),
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: isCurrentPage
+                ? WessexColors.deepRoyalBlue
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isCurrentPage
+                  ? WessexColors.deepRoyalBlue
+                  : WessexColors.deepRoyalBlue.withOpacity(0.3),
+            ),
+          ),
+          child: Text(
+            '${pageIndex + 1}',
+            style: TextStyle(
+              color: isCurrentPage
+                  ? Colors.white
+                  : WessexColors.darkGrape,
+              fontWeight: isCurrentPage ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+        ),
       ),
     );
   }

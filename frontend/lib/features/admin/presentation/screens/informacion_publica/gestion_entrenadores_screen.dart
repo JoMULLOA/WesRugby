@@ -64,8 +64,60 @@ class _GestionEntrenadoresScreenState extends State<GestionEntrenadoresScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: WessexAppBar(
-        title: 'Gestión de Entrenadores',
+      appBar: AppBar(
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: WessexColors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.sports, color: WessexColors.white, size: 24),
+            ),
+            const SizedBox(width: 12),
+            const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Gestión de Entrenadores',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: WessexColors.white,
+                  ),
+                ),
+                Text(
+                  'Administra perfiles públicos de entrenadores',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: WessexColors.white,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                WessexColors.deepRoyalBlue.withOpacity(0.9),
+                WessexColors.darkGrape.withOpacity(0.9),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: WessexColors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -110,15 +162,11 @@ class _GestionEntrenadoresScreenState extends State<GestionEntrenadoresScreen> {
     final Map<String, dynamic>? perfil = entrenador['perfilPublico'];
     final bool visible = perfil?['visible'] ?? false;
 
-    return Card(
+    return WessexCard(
       margin: const EdgeInsets.only(bottom: 16),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
             Row(
               children: [
                 // Avatar
@@ -261,7 +309,6 @@ class _GestionEntrenadoresScreenState extends State<GestionEntrenadoresScreen> {
               ],
             ),
           ],
-        ),
       ),
     );
   }
