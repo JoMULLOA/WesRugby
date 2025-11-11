@@ -36,17 +36,48 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
   bool _soloPendientes = false;
   bool _isLoading = true;
 
+  // Paginación
+  int _currentPage = 0;
+  final int _estudiantesPerPage = 6;
+
+  // Estados de expansión para cada estudiante
+  final Map<String, bool> _pagosExpandidos = {};
+  final Map<String, bool> _equipamientoExpandido = {};
+
   @override
   void initState() {
     super.initState();
     _estudianteService.addListener(_recargarDesdeServicio);
-    _recargarDesdeServicio();
+    _cargarDatosIniciales();
   }
 
   @override
   void dispose() {
     _estudianteService.removeListener(_recargarDesdeServicio);
     super.dispose();
+  }
+
+  Future<void> _cargarDatosIniciales() async {
+    setState(() {
+      _isLoading = true;
+    });
+    
+    try {
+      await _estudianteService.refreshStudentsFromAPI();
+      _recargarDesdeServicio();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al cargar estudiantes: $e'),
+            backgroundColor: WessexColors.crimsonAlert,
+          ),
+        );
+      }
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   void _recargarDesdeServicio() {
@@ -177,6 +208,7 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
     setState(() {
       _cursoSeleccionado = value ?? 'Todos';
       _estudiantesFiltrados = _aplicarFiltros(_todosEstudiantes);
+      _currentPage = 0;
     });
   }
 
@@ -184,6 +216,7 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
     setState(() {
       _categoriaSeleccionada = value ?? 'Todas';
       _estudiantesFiltrados = _aplicarFiltros(_todosEstudiantes);
+      _currentPage = 0;
     });
   }
 
@@ -191,42 +224,114 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
     setState(() {
       _soloPendientes = value;
       _estudiantesFiltrados = _aplicarFiltros(_todosEstudiantes);
+      _currentPage = 0;
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Resumen de Pagos'),
-        backgroundColor: WessexColors.midnightNavy,
-        foregroundColor: Colors.white,
+      extendBodyBehindAppBar: true,
+      appBar: WessexAppBar(
+        title: 'Resumen de Pagos',
+        elevation: 2,
       ),
-      backgroundColor: WessexColors.mistyRoseGray,
-      body:
-          _isLoading
+      body: WessexBackground(
+        child: SafeArea(
+          child: _isLoading
               ? const Center(child: CircularProgressIndicator())
               : SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildResumenGeneral(),
-                    const SizedBox(height: 24),
-                    _buildFiltros(),
-                    const SizedBox(height: 24),
-                    if (_estudiantesFiltrados.isEmpty)
-                      _buildEmptyState()
-                    else
-                      Column(
-                        children:
-                            _estudiantesFiltrados
-                                .map(_buildTarjetaEstudiante)
-                                .toList(),
-                      ),
-                  ],
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildResumenGeneral(),
+                      const SizedBox(height: 24),
+                      _buildFiltros(),
+                      const SizedBox(height: 24),
+                      if (_estudiantesFiltrados.isEmpty)
+                        _buildEmptyState()
+                      else
+                        _buildEstudiantesPaginados(),
+                    ],
+                  ),
                 ),
-              ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEstudiantesPaginados() {
+    final totalPages = (_estudiantesFiltrados.length / _estudiantesPerPage).ceil();
+    final startIndex = _currentPage * _estudiantesPerPage;
+    final endIndex = (startIndex + _estudiantesPerPage).clamp(0, _estudiantesFiltrados.length);
+    final estudiantesPaginados = _estudiantesFiltrados.sublist(startIndex, endIndex);
+
+    return Column(
+      children: [
+        ...estudiantesPaginados.map(_buildTarjetaEstudiante).toList(),
+        if (totalPages > 1) ...[
+          const SizedBox(height: 24),
+          _buildPaginacionControls(totalPages),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildPaginacionControls(int totalPages) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        IconButton(
+          onPressed: _currentPage > 0
+              ? () => setState(() => _currentPage--)
+              : null,
+          icon: const Icon(Icons.chevron_left),
+          color: WessexColors.deepRoyalBlue,
+        ),
+        const SizedBox(width: 16),
+        ...List.generate(totalPages, (index) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: _buildPageButton(index, totalPages),
+          );
+        }),
+        const SizedBox(width: 16),
+        IconButton(
+          onPressed: _currentPage < totalPages - 1
+              ? () => setState(() => _currentPage++)
+              : null,
+          icon: const Icon(Icons.chevron_right),
+          color: WessexColors.deepRoyalBlue,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPageButton(int pageIndex, int totalPages) {
+    final isActive = pageIndex == _currentPage;
+    return InkWell(
+      onTap: () => setState(() => _currentPage = pageIndex),
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: isActive ? WessexColors.deepRoyalBlue : Colors.transparent,
+          border: Border.all(
+            color: WessexColors.deepRoyalBlue,
+            width: 1.5,
+          ),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          '${pageIndex + 1}',
+          style: TextStyle(
+            color: isActive ? Colors.white : WessexColors.deepRoyalBlue,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
     );
   }
 
@@ -234,7 +339,7 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final crossAxisCount =
-            constraints.maxWidth > 900
+            constraints.maxWidth > 1000
                 ? 3
                 : constraints.maxWidth > 600
                 ? 2
@@ -272,7 +377,7 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
           crossAxisCount: crossAxisCount,
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,
-          childAspectRatio: 3.8,
+          childAspectRatio: crossAxisCount == 1 ? 3.5 : crossAxisCount == 2 ? 3.2 : 3.5,
           children: tarjetas,
         );
       },
@@ -287,18 +392,18 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
     required String detalle,
   }) {
     return WessexCard(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icono, color: color, size: 24),
+            child: Icon(icono, color: color, size: 22),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -307,26 +412,32 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
                 Text(
                   valor,
                   style: TextStyle(
-                    fontSize: 24,
+                    fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: WessexColors.darkGrape,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 Text(
                   titulo,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: WessexColors.darkGrape.withOpacity(0.8),
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text(
                   detalle,
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 10,
                     color: WessexColors.darkGrape.withOpacity(0.6),
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -434,6 +545,11 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
         (estudiante['equipamiento'] as Map<String, dynamic>?) ?? const {};
     final matricula = _formatearValor(pagos['matricula']);
     final totalAnio = _formatearValor(pagos['totalAnio']);
+    
+    // Usar RUT como clave única para el estado de expansión
+    final rutKey = estudiante['rut']?.toString() ?? estudiante['nombre']?.toString() ?? '';
+    final pagosExpanded = _pagosExpandidos[rutKey] ?? false;
+    final equipamientoExpanded = _equipamientoExpandido[rutKey] ?? false;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -496,27 +612,128 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
               ],
             ),
             const SizedBox(height: 20),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
+            
+            // Botones en horizontal
+            Row(
               children: [
-                _buildPagoEstatusChip('Matrícula', matricula),
-                _buildPagoEstatusChip('Total año', totalAnio),
+                // Botón de Pagos
+                Expanded(
+                  child: InkWell(
+                    onTap: () {
+                      setState(() {
+                        _pagosExpandidos[rutKey] = !pagosExpanded;
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: WessexColors.deepRoyalBlue.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: WessexColors.deepRoyalBlue.withOpacity(0.2),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.payments,
+                            color: WessexColors.deepRoyalBlue,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Pagos',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: WessexColors.deepRoyalBlue,
+                              ),
+                            ),
+                          ),
+                          Icon(
+                            pagosExpanded ? Icons.expand_less : Icons.expand_more,
+                            color: WessexColors.deepRoyalBlue,
+                            size: 20,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                
+                // Espaciado entre botones
+                if (equipamiento.isNotEmpty) const SizedBox(width: 12),
+                
+                // Botón de Equipamiento
+                if (equipamiento.isNotEmpty)
+                  Expanded(
+                    child: InkWell(
+                      onTap: () {
+                        setState(() {
+                          _equipamientoExpandido[rutKey] = !equipamientoExpanded;
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: WessexColors.leafGreen.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: WessexColors.leafGreen.withOpacity(0.2),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.sports_rugby,
+                              color: WessexColors.leafGreen,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Equipamiento',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: WessexColors.leafGreen,
+                                ),
+                              ),
+                            ),
+                            Icon(
+                              equipamientoExpanded ? Icons.expand_less : Icons.expand_more,
+                              color: WessexColors.leafGreen,
+                              size: 20,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             ),
-            const SizedBox(height: 20),
-            _buildMesesGrid(pagosMeses),
-            if (equipamiento.isNotEmpty) ...[
-              const SizedBox(height: 20),
-              Text(
-                'Equipamiento',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: WessexColors.darkGrape,
-                ),
+            
+            // Contenido de Pagos (desplegable)
+            if (pagosExpanded) ...[
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  _buildPagoEstatusChip('Matrícula', matricula),
+                  _buildPagoEstatusChip('Total año', totalAnio),
+                ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 16),
+              _buildMesesGrid(pagosMeses),
+            ],
+            
+            // Contenido de Equipamiento (desplegable)
+            if (equipamientoExpanded) ...[
+              const SizedBox(height: 16),
               _buildEquipamientoResumen(equipamiento),
             ],
           ],
@@ -560,17 +777,18 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
           Text(
             titulo,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 13,
               fontWeight: FontWeight.bold,
-              color: color,
+              color: WessexColors.darkGrape,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             valor,
             style: TextStyle(
-              fontSize: 12,
-              color: WessexColors.darkGrape.withOpacity(0.8),
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: WessexColors.darkGrape,
             ),
           ),
         ],
@@ -582,47 +800,95 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
     return WessexCard(
       padding: const EdgeInsets.all(16),
       backgroundColor: Colors.white,
-      child: Wrap(
-        spacing: 12,
-        runSpacing: 12,
-        children:
-            _meses.map((mes) {
+      child: Column(
+        children: [
+          // Primera fila (5 meses)
+          Row(
+            children: _meses.take(5).map((mes) {
               final valor = _obtenerValorMes(meses, mes);
               final color = _colorEstado(valor);
-              return SizedBox(
-                width: 140,
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: color.withOpacity(0.3)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        _mesTitulo(mes),
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: color,
+              return Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 8, bottom: 8),
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: color.withOpacity(0.3)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _mesTitulo(mes),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: WessexColors.darkGrape,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        valor,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: WessexColors.darkGrape.withOpacity(0.85),
+                        const SizedBox(height: 4),
+                        Text(
+                          valor,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: WessexColors.darkGrape,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               );
             }).toList(),
+          ),
+          // Segunda fila (5 meses)
+          Row(
+            children: _meses.skip(5).map((mes) {
+              final valor = _obtenerValorMes(meses, mes);
+              final color = _colorEstado(valor);
+              return Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: color.withOpacity(0.3)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _mesTitulo(mes),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: WessexColors.darkGrape,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          valor,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: WessexColors.darkGrape,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
       ),
     );
   }

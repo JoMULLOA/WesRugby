@@ -109,11 +109,9 @@ class _BaseDatosScreenState extends State<BaseDatosScreen> {
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        title: const Text('Base de Datos - Estudiantes'),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        foregroundColor: Colors.white,
+      appBar: WessexAppBar(
+        title: 'Base de Datos - Estudiantes',
+        elevation: 2,
         actions: [
           IconButton(
             onPressed: _exportToExcel,

@@ -2149,51 +2149,10 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
   Widget build(BuildContext context) {
     // Gestión de eventos con menú de categorías y formulario mejorado - v2.0
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: WessexAppBar(
         title: 'Gestión de Eventos',
-        actions: [
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert, color: WessexColors.white),
-            onSelected: (value) {
-              print('DEBUG: Menu seleccionado: $value'); // Debug
-              if (value == 'categorias') {
-                print('DEBUG: Mostrando gestión de categorías'); // Debug
-                _mostrarGestionCategorias();
-              } else if (value == 'tipos_evento') {
-                print('DEBUG: Navegando a gestión de tipos de evento'); // Debug
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => AdminTiposEventoScreen(),
-                  ),
-                );
-              }
-            },
-            itemBuilder:
-                (context) => [
-                  PopupMenuItem(
-                    value: 'categorias',
-                    child: Row(
-                      children: [
-                        Icon(Icons.category, color: WessexColors.darkGrape),
-                        SizedBox(width: 8),
-                        Text('Gestionar Categorías'),
-                      ],
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: 'tipos_evento',
-                    child: Row(
-                      children: [
-                        Icon(Icons.event_note, color: WessexColors.darkGrape),
-                        SizedBox(width: 8),
-                        Text('Gestionar Tipos de Evento'),
-                      ],
-                    ),
-                  ),
-                ],
-          ),
-        ],
+        elevation: 2,
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.white,
@@ -2208,53 +2167,48 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
         child: Icon(Icons.add, color: Colors.white),
         tooltip: 'Crear nuevo evento',
       ),
-      body:
-          _isLoading
+      body: WessexBackground(
+        child: SafeArea(
+          child: _isLoading
               ? Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    WessexColors.darkGrape,
+                  child: CircularProgressIndicator(
+                    color: WessexColors.deepRoyalBlue,
                   ),
-                ),
-              )
+                )
               : Column(
-                children: [
-                  // Filtros de búsqueda
-                  Container(
-                    padding: EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: WessexColors.lightGray.withOpacity(0.3),
-                      border: Border(
-                        bottom: BorderSide(
-                          color: WessexColors.darkGrape.withOpacity(0.2),
-                          width: 1,
+                  children: [
+                    // Filtros de búsqueda
+                    Container(
+                      margin: EdgeInsets.all(24),
+                      padding: EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: WessexColors.deepRoyalBlue.withOpacity(0.1),
                         ),
                       ),
-                    ),
-                    child: Column(
-                      children: [
-                        // Filtro por nombre
-                        TextField(
-                          controller: _filtroNombreController,
-                          decoration: InputDecoration(
-                            hintText: 'Buscar por nombre de evento...',
-                            prefixIcon: Icon(
-                              Icons.search,
-                              color: WessexColors.darkGrape,
+                      child: Column(
+                        children: [
+                          // Filtro por nombre
+                          TextField(
+                            controller: _filtroNombreController,
+                            decoration: InputDecoration(
+                              hintText: 'Buscar por nombre de evento...',
+                              prefixIcon: Icon(
+                                Icons.search,
+                                color: WessexColors.darkGrape,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 16,
+                              ),
                             ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide.none,
-                            ),
-                            filled: true,
-                            fillColor: Colors.white,
-                            contentPadding: EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
+                            onChanged: (value) => setState(() {}),
                           ),
-                          onChanged: (value) => setState(() {}),
-                        ),
                         SizedBox(height: 12),
                         // Filtros por fecha
                         Row(
@@ -2350,6 +2304,56 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
                             ),
                           ],
                         ),
+                        SizedBox(height: 16),
+                        // Botones de gestión
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: _mostrarGestionCategorias,
+                                icon: Icon(Icons.category),
+                                label: Text('Gestionar Categorías'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: WessexColors.deepRoyalBlue,
+                                  foregroundColor: Colors.white,
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 24,
+                                    vertical: 16,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => AdminTiposEventoScreen(),
+                                    ),
+                                  );
+                                },
+                                icon: Icon(Icons.event_note),
+                                label: Text('Tipos de Evento'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: WessexColors.leafGreen,
+                                  foregroundColor: Colors.white,
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 24,
+                                    vertical: 16,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
@@ -2365,6 +2369,8 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
                   ),
                 ],
               ),
+        ),
+      ),
     );
   }
 

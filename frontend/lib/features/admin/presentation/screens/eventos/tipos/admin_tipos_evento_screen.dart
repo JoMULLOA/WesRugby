@@ -246,78 +246,106 @@ class _AdminTiposEventoScreenState extends State<AdminTiposEventoScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const WessexAppBar(title: 'Administrar Tipos de Evento'),
-      body:
-          _isLoading
-              ? const Center(child: CircularProgressIndicator())
+      extendBodyBehindAppBar: true,
+      appBar: const WessexAppBar(
+        title: 'Administrar Tipos de Evento',
+        elevation: 2,
+      ),
+      body: WessexBackground(
+        child: SafeArea(
+          child: _isLoading
+              ? const Center(
+                  child: CircularProgressIndicator(
+                    color: WessexColors.deepRoyalBlue,
+                  ),
+                )
               : RefreshIndicator(
-                onRefresh: _cargarTiposEvento,
-                child: ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
+                  onRefresh: _cargarTiposEvento,
+                  child: ListView(
+                    padding: const EdgeInsets.all(24),
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: WessexColors.deepRoyalBlue.withOpacity(0.1),
+                          ),
+                        ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'Gestión de Tipos de Evento',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
+                                color: WessexColors.darkGrape,
                               ),
                             ),
                             const SizedBox(height: 8),
-                            const Text(
+                            Text(
                               'Los tipos deportivos mostrarán la selección de categorías al crear eventos. Los tipos no deportivos ocultarán esta opción.',
-                              style: TextStyle(color: Colors.grey),
+                              style: TextStyle(
+                                color: WessexColors.darkGrape.withOpacity(0.7),
+                              ),
                             ),
                             const SizedBox(height: 16),
                             ElevatedButton.icon(
                               onPressed: _mostrarDialogoCrearTipo,
                               icon: const Icon(Icons.add),
                               label: const Text('Crear Nuevo Tipo'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: WessexColors.leafGreen,
+                                foregroundColor: Colors.white,
+                              ),
                             ),
                           ],
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    ..._tiposEvento
-                        .map(
-                          (tipo) => Card(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor:
-                                    tipo.esDeportivo
-                                        ? WessexColors.leafGreen
-                                        : WessexColors.goldenYellow,
-                                child: Icon(
-                                  tipo.esDeportivo
-                                      ? Icons.sports_soccer
-                                      : Icons.event,
-                                  color: Colors.white,
+                      const SizedBox(height: 16),
+                      ..._tiposEvento
+                          .map(
+                            (tipo) => Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: WessexColors.deepRoyalBlue.withOpacity(0.1),
                                 ),
                               ),
-                              title: Text(
-                                tipo.nombre,
-                                style: TextStyle(
-                                  decoration:
-                                      tipo.activo
-                                          ? null
-                                          : TextDecoration.lineThrough,
-                                  color: tipo.activo ? null : Colors.grey,
-                                ),
-                              ),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
+                              child: ListTile(
+                                leading: CircleAvatar(
+                                  backgroundColor:
+                                      tipo.esDeportivo
+                                          ? WessexColors.leafGreen
+                                          : WessexColors.goldenYellow,
+                                  child: Icon(
                                     tipo.esDeportivo
-                                        ? 'Deportivo'
-                                        : 'No deportivo',
+                                        ? Icons.sports_soccer
+                                        : Icons.event,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                title: Text(
+                                  tipo.nombre,
+                                  style: TextStyle(
+                                    decoration:
+                                        tipo.activo
+                                            ? null
+                                            : TextDecoration.lineThrough,
+                                    color: tipo.activo ? null : Colors.grey,
+                                  ),
+                                ),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      tipo.esDeportivo
+                                          ? 'Deportivo'
+                                          : 'No deportivo',
                                   ),
                                   Text(
                                     tipo.activo ? 'Activo' : 'Inactivo',
@@ -360,9 +388,11 @@ class _AdminTiposEventoScreenState extends State<AdminTiposEventoScreen> {
                           ),
                         )
                         .toList(),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+        ),
+      ),
     );
   }
 }

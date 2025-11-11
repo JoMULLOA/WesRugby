@@ -9,7 +9,6 @@ import 'package:wesrugby/features/admin/presentation/screens/usuarios/registro/r
 import 'package:wesrugby/features/admin/presentation/screens/usuarios/gestion/gestion_usuarios_screen.dart';
 import 'package:wesrugby/features/admin/presentation/screens/usuarios/base_datos/base_datos_screen.dart';
 import 'package:wesrugby/features/admin/presentation/screens/eventos/gestion/gestion_eventos_screen.dart';
-import 'package:wesrugby/features/admin/presentation/screens/eventos/tipos/admin_tipos_evento_screen.dart';
 import 'package:wesrugby/features/admin/presentation/screens/actas/gestion/gestion_actas_reunion_screen.dart';
 import 'package:wesrugby/features/admin/presentation/screens/informacion_publica/gestion_informacion_publica_screen.dart';
 import 'package:wesrugby/features/admin/presentation/screens/eventos/multimedia/multimedia_overview_screen.dart';
@@ -586,43 +585,20 @@ class _DirectivaDashboardState extends State<DirectivaDashboard> {
 
                 const SizedBox(height: 12),
 
-                // Cuarta fila: Tipos de Evento, Actas de Reunión
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildActionCard(
-                        'Tipos de Evento',
-                        'Administrar tipos de eventos',
-                        Icons.category,
-                        WessexColors.secondaryAction,
-                        () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => AdminTiposEventoScreen(),
-                          ),
-                        ),
-                        isDesktop: isDesktop,
-                        isTablet: isTablet,
-                      ),
+                // Cuarta fila: Actas de Reunión
+                _buildActionCard(
+                  'Actas de Reunión',
+                  'Gestionar actas y minutas de reuniones',
+                  Icons.description,
+                  WessexColors.accentAction,
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const GestionActasReunionScreen(),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildActionCard(
-                        'Actas de Reunión',
-                        'Gestionar actas y minutas de reuniones',
-                        Icons.description,
-                        WessexColors.accentAction,
-                        () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const GestionActasReunionScreen(),
-                          ),
-                        ),
-                        isDesktop: isDesktop,
-                        isTablet: isTablet,
-                      ),
-                    ),
-                  ],
+                  ),
+                  isDesktop: isDesktop,
+                  isTablet: isTablet,
                 ),
 
                 const SizedBox(height: 12),
