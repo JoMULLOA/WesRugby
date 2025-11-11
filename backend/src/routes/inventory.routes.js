@@ -13,6 +13,7 @@ import {
   postBulkScans,
   postVariosSale,
   getVariosProduct,
+  deleteSale,
 } from "../controllers/inventory.controller.js";
 
 const router = Router();
@@ -28,6 +29,7 @@ router.get("/barcodes/sheet", getBarcodeSheet);
 router.get("/sales/summary", getSalesSummary);
 router.post("/scans/bulk", postBulkScans);
 router.post("/sales/varios", postVariosSale);
+router.delete("/sales/:saleId", deleteSale);
 router.get("/products/varios", getVariosProduct);
 
 export default router;

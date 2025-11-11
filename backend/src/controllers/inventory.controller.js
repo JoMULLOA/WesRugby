@@ -14,6 +14,7 @@ import {
   createVariosSale,
   ensureVariosProduct,
   getSalesSummary as getSalesSummaryService,
+  deleteSale as deleteSaleService,
 } from "../services/inventory.service.js";
 import { INVENTORY_PRICING_MODES, INVENTORY_PRODUCT_CATEGORIES, INVENTORY_SOURCE_TYPES } from "../entity/inventoryProduct.entity.js";
 
@@ -286,6 +287,24 @@ export async function getVariosProduct(_req, res, next) {
     const product = await ensureVariosProduct();
     res.json(product);
   } catch (error) {
+    next(error);
+  }
+}
+
+export async function deleteSale(req, res, next) {
+  try {
+    const { saleId } = req.params;
+    
+    if (!saleId) {
+      return res.status(400).json({ error: "SALE_ID_REQUIRED" });
+    }
+    
+    const result = await deleteSaleService(saleId);
+    res.json(result);
+  } catch (error) {
+    if (error.message === "SALE_NOT_FOUND") {
+      return res.status(404).json({ error: "SALE_NOT_FOUND", message: "La venta no existe" });
+    }
     next(error);
   }
 }

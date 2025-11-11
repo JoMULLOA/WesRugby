@@ -440,6 +440,39 @@ export async function createVariosSale(payload) {
   };
 }
 
+export async function deleteSale(saleId) {
+  if (!saleId) {
+    throw new Error("SALE_ID_REQUIRED");
+  }
+  
+  const saleRepo = saleRepository();
+  const ingestRepo = ingestRepository();
+  
+  const sale = await saleRepo.findOne({
+    where: { id: saleId },
+    relations: { ingest: true, product: true },
+  });
+  
+  if (!sale) {
+    throw new Error("SALE_NOT_FOUND");
+  }
+  
+  // Si hay un ingest asociado, también eliminarlo
+  if (sale.ingest) {
+    await ingestRepo.remove(sale.ingest);
+  }
+  
+  await saleRepo.remove(sale);
+  
+  return {
+    id: saleId,
+    deleted: true,
+    productName: sale.product?.name || 'Unknown',
+    priceCents: sale.priceCents,
+    quantity: sale.quantity,
+  };
+}
+
 export async function seedInventoryProducts() {
   const repo = productRepository();
   for (const item of PRODUCT_SEED) {
