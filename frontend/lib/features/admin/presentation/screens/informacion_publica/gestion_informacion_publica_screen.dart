@@ -78,7 +78,19 @@ class _GestionInformacionPublicaScreenState
             ),
           ],
         ),
-        backgroundColor: WessexColors.crestPrimaryGreen,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                WessexColors.deepRoyalBlue.withOpacity(0.9),
+                WessexColors.darkGrape.withOpacity(0.9),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
+        backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: WessexColors.white),
@@ -87,7 +99,16 @@ class _GestionInformacionPublicaScreenState
         bottom: PreferredSize(
           preferredSize: Size.fromHeight(isDesktop ? 60 : 50),
           child: Container(
-            color: WessexColors.leafGreen,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  WessexColors.deepRoyalBlue.withOpacity(0.9),
+                  WessexColors.darkGrape.withOpacity(0.9),
+                ],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+              ),
+            ),
             child: TabBar(
               controller: _tabController,
               indicatorColor: WessexColors.goldenYellow,

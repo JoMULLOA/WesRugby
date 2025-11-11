@@ -622,3 +622,73 @@ export async function descargarMultimediaEvento(req, res) {
     handleErrorServer(res, 500, "Error interno del servidor", error.message);
   }
 }
+
+export async function eliminarMultimediaEvento(req, res) {
+  try {
+    const { id: eventoId, mediaId } = req.params;
+
+    const media = await multimediaRepository.findOne({
+      where: { id: mediaId },
+    });
+
+    if (!media) {
+      return handleErrorClient(
+        res,
+        404,
+        "Multimedia no encontrada",
+        "El recurso solicitado no está disponible.",
+      );
+    }
+
+    const matchesEventoDeportivo =
+      media.eventoDeportivoId &&
+      media.eventoDeportivoId.toString() === eventoId;
+    const matchesEventoGenerico =
+      media.eventoId !== undefined &&
+      media.eventoId !== null &&
+      String(media.eventoId) === eventoId;
+
+    if (!matchesEventoDeportivo && !matchesEventoGenerico) {
+      return handleErrorClient(
+        res,
+        404,
+        "Multimedia no encontrada",
+        "El recurso no corresponde al evento indicado.",
+      );
+    }
+
+    // Solo la directiva puede eliminar multimedia
+    if (req.user.rol !== "directiva") {
+      return handleErrorClient(
+        res,
+        403,
+        "No autorizado",
+        "Solo la directiva puede eliminar multimedia.",
+      );
+    }
+
+    // Eliminar el archivo físico si existe
+    const absolutePath = resolveAbsoluteMediaPath(media);
+    if (fs.existsSync(absolutePath)) {
+      try {
+        fs.unlinkSync(absolutePath);
+      } catch (fileError) {
+        console.error("Error eliminando archivo físico:", fileError);
+        // Continuar con la eliminación del registro aunque falle eliminar el archivo
+      }
+    }
+
+    // Eliminar el registro de la base de datos
+    await multimediaRepository.remove(media);
+
+    handleSuccess(
+      res,
+      200,
+      "Multimedia eliminada exitosamente",
+      { id: mediaId },
+    );
+  } catch (error) {
+    console.error("Error eliminando multimedia:", error);
+    handleErrorServer(res, 500, "Error interno del servidor", error.message);
+  }
+}

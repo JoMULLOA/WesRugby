@@ -16,6 +16,7 @@ import {
   obtenerMultimediaEventoCompartido,
   obtenerMultimediaGlobalDirectiva,
   descargarMultimediaEvento,
+  eliminarMultimediaEvento,
 } from "../controllers/eventoMultimedia.controller.js";
 import { authenticateJwt } from "../middlewares/authentication.middleware.js";
 import {
@@ -121,6 +122,14 @@ router.post(
   isRamaExterna,
   uploadEventoMultimedia.single("archivo"),
   subirMultimediaRama,
+);
+
+// Eliminar multimedia (Solo Directiva)
+router.delete(
+  "/:id/multimedia/:mediaId",
+  authenticateJwt,
+  isDirectiva,
+  eliminarMultimediaEvento,
 );
 
 export default router;

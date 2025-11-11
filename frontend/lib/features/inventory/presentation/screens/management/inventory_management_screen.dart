@@ -7,8 +7,8 @@ import 'package:wesrugby/core/config/colors.dart';
 import 'package:wesrugby/data/models/inventory_product_model.dart';
 import 'package:wesrugby/data/models/inventory_sales_summary_model.dart';
 import 'package:wesrugby/data/services/inventory_service.dart';
+import 'package:wesrugby/data/services/api_service.dart';
 import 'package:wesrugby/shared/widgets/layout/wessex_widgets.dart';
-import 'package:wesrugby/shared/widgets/navigation/custom_drawer.dart';
 
 const Map<String, String> _categoryLabels = {
   'bebida_latas': 'Bebidas (latas)',
@@ -52,12 +52,15 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen>
 
   List<InventoryProductModel> _products = <InventoryProductModel>[];
   List<InventorySalesSummaryModel> _salesSummary = <InventorySalesSummaryModel>[];
+  List<dynamic> _eventos = [];
 
   bool _loadingProducts = false;
   bool _loadingSummary = false;
+  bool _loadingEventos = false;
   bool _includeInactive = true;
   String? _productCategoryFilter;
   String? _summaryProductId;
+  String? _summaryEventoId;
   DateTime? _summaryFrom;
   DateTime? _summaryTo;
 
@@ -83,7 +86,42 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen>
     await Future.wait([
       _loadProducts(),
       _loadSalesSummary(),
+      _loadEventos(),
     ]);
+  }
+
+  Future<void> _loadEventos() async {
+    if (mounted) {
+      setState(() {
+        _loadingEventos = true;
+      });
+    }
+    try {
+      final response = await ApiService.obtenerEventosDeportivos();
+      final data = response['data'] as List<dynamic>? ?? [];
+      
+      // Filtrar eventos pasados
+      final ahora = DateTime.now();
+      final eventosPasados = data.where((evento) {
+        final fechaInicio = evento['fechaInicio'];
+        if (fechaInicio == null) return false;
+        final fecha = DateTime.tryParse(fechaInicio.toString());
+        if (fecha == null) return false;
+        return fecha.isBefore(ahora);
+      }).toList();
+      
+      if (!mounted) return;
+      setState(() {
+        _eventos = eventosPasados;
+      });
+    } catch (error) {
+      _showSnackBar('Error al cargar eventos: $error');
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _loadingEventos = false;
+      });
+    }
   }
 
   Future<void> _loadProducts() async {
@@ -357,6 +395,7 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen>
       _summaryFrom = null;
       _summaryTo = null;
       _summaryProductId = null;
+      _summaryEventoId = null;
     });
     await _loadSalesSummary();
   }
@@ -1076,6 +1115,142 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen>
     return _dateFormat.format(value.toLocal());
   }
 
+  Widget _buildEventoSelector() {
+    final TextEditingController searchController = TextEditingController();
+    
+    return StatefulBuilder(
+      builder: (context, setStateLocal) {
+        String searchQuery = searchController.text.toLowerCase();
+        
+        // Filtrar eventos por búsqueda
+        final eventosFiltrados = _eventos.where((evento) {
+          final titulo = (evento['titulo'] ?? evento['nombre'] ?? '').toString().toLowerCase();
+          return titulo.contains(searchQuery);
+        }).toList();
+        
+        // Limitar a 8 eventos
+        final eventosLimitados = eventosFiltrados.take(8).toList();
+        
+        return PopupMenuButton<String>(
+          offset: const Offset(0, 50),
+          child: InputDecorator(
+            decoration: const InputDecoration(
+              labelText: 'Filtrar por evento',
+              prefixIcon: Icon(Icons.event),
+              border: OutlineInputBorder(),
+              suffixIcon: Icon(Icons.arrow_drop_down),
+            ),
+            child: Text(
+              _summaryEventoId == null
+                  ? 'Todos los eventos'
+                  : _eventos.firstWhere(
+                      (e) => e['id'].toString() == _summaryEventoId,
+                      orElse: () => {'titulo': 'Evento seleccionado'},
+                    )['titulo'] ?? 'Evento seleccionado',
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          itemBuilder: (context) {
+            return [
+              PopupMenuItem<String>(
+                enabled: false,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: TextField(
+                    controller: searchController,
+                    decoration: const InputDecoration(
+                      hintText: 'Buscar evento...',
+                      prefixIcon: Icon(Icons.search, size: 20),
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      isDense: true,
+                    ),
+                    onChanged: (value) {
+                      setStateLocal(() {});
+                    },
+                  ),
+                ),
+              ),
+              const PopupMenuDivider(),
+              PopupMenuItem<String>(
+                value: _allOptionValue,
+                child: Row(
+                  children: const [
+                    Icon(Icons.clear_all, size: 18),
+                    SizedBox(width: 8),
+                    Text('Todos los eventos'),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              if (eventosLimitados.isEmpty)
+                const PopupMenuItem<String>(
+                  enabled: false,
+                  child: Text(
+                    'No se encontraron eventos',
+                    style: TextStyle(fontStyle: FontStyle.italic),
+                  ),
+                )
+              else
+                ...eventosLimitados.map((evento) {
+                  final titulo = evento['titulo'] ?? evento['nombre'] ?? 'Evento sin título';
+                  final fecha = evento['fechaInicio'] != null
+                      ? DateTime.tryParse(evento['fechaInicio'].toString())
+                      : null;
+                  final fechaStr = fecha != null ? DateFormat('dd/MM/yyyy').format(fecha) : '';
+                  
+                  return PopupMenuItem<String>(
+                    value: evento['id'].toString(),
+                    child: Container(
+                      constraints: const BoxConstraints(maxWidth: 350),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            titulo,
+                            style: const TextStyle(fontWeight: FontWeight.w500),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (fechaStr.isNotEmpty)
+                            Text(
+                              fechaStr,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: WessexColors.midnightNavy.withOpacity(0.6),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+              if (eventosFiltrados.length > 8)
+                const PopupMenuItem<String>(
+                  enabled: false,
+                  child: Padding(
+                    padding: EdgeInsets.only(top: 8),
+                    child: Text(
+                      'Usa la búsqueda para ver más eventos',
+                      style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ];
+          },
+          onSelected: (value) async {
+            if (!mounted) return;
+            setState(() {
+              _summaryEventoId = value == _allOptionValue ? null : value;
+            });
+            await _loadSalesSummary();
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildSummaryTab() {
     if (_loadingSummary) {
       return const Center(child: CircularProgressIndicator());
@@ -1100,14 +1275,9 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen>
                   runSpacing: 12,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    OutlinedButton.icon(
-                      onPressed: _pickSummaryDateRange,
-                      icon: const Icon(Icons.calendar_today),
-                      label: Text(
-                        _summaryFrom == null || _summaryTo == null
-                            ? 'Rango de fechas'
-                            : '${_dateFormat.format(_summaryFrom!)} - ${_dateFormat.format(_summaryTo!)}',
-                      ),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 420),
+                      child: _buildEventoSelector(),
                     ),
                     ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 320),
@@ -1454,7 +1624,6 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen>
           ],
         ),
       ),
-      drawer: const CustomDrawer(),
       body: WessexBackground(
         child: SafeArea(
           child: TabBarView(

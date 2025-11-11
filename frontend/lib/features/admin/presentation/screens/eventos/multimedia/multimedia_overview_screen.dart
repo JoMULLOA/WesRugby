@@ -22,7 +22,6 @@ class _MultimediaOverviewScreenState extends State<MultimediaOverviewScreen> {
   String _visibilidadSeleccionada = 'todas';
 
   bool _cargando = true;
-  bool _cargandoEventos = false;
   List<dynamic> _multimedia = [];
   List<dynamic> _eventos = [];
 
@@ -45,7 +44,6 @@ class _MultimediaOverviewScreenState extends State<MultimediaOverviewScreen> {
   }
 
   Future<void> _cargarEventos() async {
-    setState(() => _cargandoEventos = true);
     try {
       final response = await ApiService.obtenerEventosDeportivos();
       final data = response['data'] as List<dynamic>? ?? [];
@@ -60,9 +58,11 @@ class _MultimediaOverviewScreenState extends State<MultimediaOverviewScreen> {
             return fecha.isBefore(ahora);
           }).toList();
 
-      setState(() {
-        _eventos = eventosPasados;
-      });
+      if (mounted) {
+        setState(() {
+          _eventos = eventosPasados;
+        });
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -71,10 +71,6 @@ class _MultimediaOverviewScreenState extends State<MultimediaOverviewScreen> {
             backgroundColor: WessexColors.crimsonAlert,
           ),
         );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _cargandoEventos = false);
       }
     }
   }
@@ -329,7 +325,7 @@ class _MultimediaOverviewScreenState extends State<MultimediaOverviewScreen> {
                               ),
                             ),
                             SizedBox(
-                              width: 200,
+                              width: 220,
                               child: DropdownButtonFormField<String>(
                                 value: _rolSeleccionado,
                                 items: const [
@@ -358,7 +354,7 @@ class _MultimediaOverviewScreenState extends State<MultimediaOverviewScreen> {
                               ),
                             ),
                             SizedBox(
-                              width: 200,
+                              width: 240,
                               child: DropdownButtonFormField<String>(
                                 value: _visibilidadSeleccionada,
                                 items: const [
@@ -424,24 +420,50 @@ class _MultimediaOverviewScreenState extends State<MultimediaOverviewScreen> {
                         ? const Center(child: CircularProgressIndicator())
                         : _multimedia.isEmpty
                         ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.photo_outlined,
-                                size: 72,
-                                color: WessexColors.darkGrape.withOpacity(0.4),
-                              ),
-                              const SizedBox(height: 16),
-                              const Text(
-                                'No se encontraron imágenes con los filtros seleccionados.',
-                                style: TextStyle(
-                                  color: WessexColors.darkGrape,
-                                  fontSize: 16,
+                          child: Container(
+                            padding: const EdgeInsets.all(32),
+                            margin: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
                                 ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
+                              ],
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.photo_outlined,
+                                  size: 80,
+                                  color: WessexColors.darkGrape,
+                                ),
+                                const SizedBox(height: 20),
+                                const Text(
+                                  'No se encontraron imágenes con los filtros seleccionados.',
+                                  style: TextStyle(
+                                    color: WessexColors.darkGrape,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Intenta ajustar los filtros o agregar nueva multimedia.',
+                                  style: TextStyle(
+                                    color: WessexColors.midnightNavy.withOpacity(0.7),
+                                    fontSize: 14,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
                           ),
                         )
                         : GridView.builder(
@@ -451,7 +473,7 @@ class _MultimediaOverviewScreenState extends State<MultimediaOverviewScreen> {
                                 crossAxisCount: 3,
                                 crossAxisSpacing: 16,
                                 mainAxisSpacing: 16,
-                                childAspectRatio: 1.1,
+                                childAspectRatio: 0.68,
                               ),
                           itemCount: _multimedia.length,
                           itemBuilder: (context, index) {
@@ -496,6 +518,74 @@ class _MultimediaOverviewScreenState extends State<MultimediaOverviewScreen> {
     );
   }
 
+  Future<void> _eliminarMultimedia(Map<String, dynamic> media) async {
+    final eventoId =
+        (media['eventoDeportivoId'] ?? media['eventoId'])?.toString();
+    final mediaId = media['id']?.toString();
+
+    if (eventoId == null || mediaId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error: No se pudo identificar la imagen'),
+          backgroundColor: WessexColors.crimsonAlert,
+        ),
+      );
+      return;
+    }
+
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Confirmar eliminación'),
+        content: const Text(
+          '¿Estás seguro de que deseas eliminar esta imagen? Esta acción no se puede deshacer.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: WessexColors.crimsonAlert,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true) return;
+
+    try {
+      await ApiService.eliminarMultimediaEvento(
+        eventoId: eventoId,
+        mediaId: mediaId,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Imagen eliminada exitosamente'),
+            backgroundColor: WessexColors.leafGreen,
+          ),
+        );
+        await _cargarMultimedia();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al eliminar imagen: $e'),
+            backgroundColor: WessexColors.crimsonAlert,
+          ),
+        );
+      }
+    }
+  }
+
   Widget _buildMediaCard(Map<String, dynamic> media) {
     final tituloEvento = media['tituloEvento'] ?? 'Evento';
     final uploader = media['uploadedByNombre'] ?? media['uploadedByRut'] ?? '';
@@ -514,95 +604,147 @@ class _MultimediaOverviewScreenState extends State<MultimediaOverviewScreen> {
       elevation: 3,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: InkWell(
-              onTap: () {
-                final eventoId =
-                    (media['eventoDeportivoId'] ?? media['eventoId'])
-                        ?.toString();
-                if (eventoId != null) {
-                  _abrirDialogoMultimedia(eventoId);
-                }
-              },
-              child: Ink.image(
-                image: NetworkImage(media['url']),
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  tituloEvento.toString(),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: WessexColors.darkGrape,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  uploader.toString(),
-                  style: TextStyle(
-                    color: WessexColors.midnightNavy.withOpacity(0.7),
-                    fontSize: 12,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Row(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Stack(
                   children: [
-                    Icon(
-                      isPrivate ? Icons.lock : Icons.groups,
-                      size: 16,
-                      color:
-                          isPrivate
-                              ? WessexColors.midnightNavy
-                              : WessexColors.leafGreen,
+                    InkWell(
+                      onTap: () {
+                        final eventoId =
+                            (media['eventoDeportivoId'] ?? media['eventoId'])
+                                ?.toString();
+                        if (eventoId != null) {
+                          _abrirDialogoMultimedia(eventoId);
+                        }
+                      },
+                      child: Ink.image(
+                        image: NetworkImage(media['url']),
+                        fit: BoxFit.cover,
+                      ),
                     ),
-                    const SizedBox(width: 6),
-                    Text(
-                      isPrivate ? 'Solo directiva' : 'Compartido',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color:
-                            isPrivate
-                                ? WessexColors.midnightNavy
-                                : WessexColors.leafGreen,
+                    Positioned(
+                      top: 4,
+                      right: 4,
+                      child: Material(
+                        color: Colors.black.withOpacity(0.6),
+                        borderRadius: BorderRadius.circular(20),
+                        child: InkWell(
+                          onTap: () => _eliminarMultimedia(media),
+                          borderRadius: BorderRadius.circular(20),
+                          child: const Padding(
+                            padding: EdgeInsets.all(6),
+                            child: Icon(
+                              Icons.delete_outline,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ],
                 ),
-                if (fechaTexto.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    fechaTexto,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: WessexColors.midnightNavy.withOpacity(0.6),
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 4),
-                Text(
-                  rol.toString(),
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: WessexColors.midnightNavy.withOpacity(0.6),
+              ),
+              SizedBox(
+                width: constraints.maxWidth,
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        tituloEvento.toString(),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: WessexColors.darkGrape,
+                          fontSize: 12,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        uploader.toString(),
+                        style: TextStyle(
+                          color: WessexColors.midnightNavy.withOpacity(0.7),
+                          fontSize: 10,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      const SizedBox(height: 2),
+                      SizedBox(
+                        width: constraints.maxWidth - 16,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              isPrivate ? Icons.lock : Icons.groups,
+                              size: 12,
+                              color:
+                                  isPrivate
+                                      ? WessexColors.midnightNavy
+                                      : WessexColors.leafGreen,
+                            ),
+                            const SizedBox(width: 2),
+                            Expanded(
+                              child: Text(
+                                isPrivate ? 'Solo directiva' : 'Compartido',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color:
+                                      isPrivate
+                                          ? WessexColors.midnightNavy
+                                          : WessexColors.leafGreen,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (fechaTexto.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        SizedBox(
+                          width: constraints.maxWidth - 16,
+                          child: Text(
+                            fechaTexto,
+                            style: TextStyle(
+                              fontSize: 9,
+                              color: WessexColors.midnightNavy.withOpacity(0.6),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 2),
+                      SizedBox(
+                        width: constraints.maxWidth - 16,
+                        child: Text(
+                          rol.toString(),
+                          style: TextStyle(
+                            fontSize: 9,
+                            color: WessexColors.midnightNavy.withOpacity(0.6),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
-          ),
-        ],
+              ),
+            ],
+          );
+        },
       ),
     );
   }

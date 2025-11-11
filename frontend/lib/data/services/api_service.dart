@@ -760,6 +760,22 @@ class ApiService {
     }
   }
 
+  static Future<Map<String, dynamic>> eliminarMultimediaEvento({
+    required String eventoId,
+    required String mediaId,
+  }) async {
+    final response = await delete(
+      '/eventos-deportivos/$eventoId/multimedia/$mediaId',
+    );
+    if (response.success) {
+      return response.data;
+    } else {
+      throw Exception(
+        response.message ?? 'Error al eliminar multimedia',
+      );
+    }
+  }
+
   static Future<Map<String, dynamic>> uploadAvatar({
     required Uint8List bytes,
     required String fileName,
