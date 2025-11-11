@@ -26,7 +26,7 @@ class _GestionInformacionPublicaScreenState
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
   }
 
   @override
@@ -114,6 +114,11 @@ class _GestionInformacionPublicaScreenState
                   text: 'Merchandising',
                   height: isDesktop ? 60 : 50,
                 ),
+                Tab(
+                  icon: const Icon(Icons.sports),
+                  text: 'Entrenadores',
+                  height: isDesktop ? 60 : 50,
+                ),
               ],
             ),
           ),
@@ -126,6 +131,7 @@ class _GestionInformacionPublicaScreenState
             _NoticiasTab(),
             _AuspiciadoresTab(),
             _MerchandisingTab(),
+            _EntrenadoresTab(),
           ],
         ),
       ),
@@ -2935,5 +2941,629 @@ class _MerchandisingDialogState extends State<_MerchandisingDialog> {
     _descripcionController.dispose();
     _precioController.dispose();
     super.dispose();
+  }
+}
+
+// Tab de Entrenadores
+class _EntrenadoresTab extends StatelessWidget {
+  const _EntrenadoresTab();
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: WessexColors.deepRoyalBlue.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.sports,
+                        color: WessexColors.deepRoyalBlue,
+                        size: 32,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Gestión de Entrenadores',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: WessexColors.deepNavyBlue,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'Administra la información pública de los entrenadores del club',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: WessexColors.charcoalGray,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: _buildEntrenadoresContent(context),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEntrenadoresContent(BuildContext context) {
+    // Importar la pantalla de gestión de entrenadores
+    return Navigator(
+      onGenerateRoute: (settings) {
+        return MaterialPageRoute(
+          builder: (context) => const _EntrenadoresManagementWidget(),
+        );
+      },
+    );
+  }
+}
+
+// Widget interno para la gestión de entrenadores
+class _EntrenadoresManagementWidget extends StatefulWidget {
+  const _EntrenadoresManagementWidget();
+
+  @override
+  State<_EntrenadoresManagementWidget> createState() =>
+      _EntrenadoresManagementWidgetState();
+}
+
+class _EntrenadoresManagementWidgetState
+    extends State<_EntrenadoresManagementWidget> {
+  List<Map<String, dynamic>> _entrenadores = [];
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarEntrenadores();
+  }
+
+  Future<void> _cargarEntrenadores() async {
+    setState(() => _isLoading = true);
+    try {
+      final response = await ApiService.get('/entrenadores/gestion');
+      if (response.success && response.data != null) {
+        final List<dynamic> data = response.data is Map
+            ? (response.data['data'] as List? ?? [])
+            : (response.data is List ? response.data : []);
+
+        setState(() {
+          _entrenadores = data.cast<Map<String, dynamic>>();
+        });
+      }
+    } catch (e) {
+      _mostrarError('Error al cargar entrenadores: $e');
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  void _mostrarError(String mensaje) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(mensaje),
+        backgroundColor: WessexColors.crimsonAlert,
+      ),
+    );
+  }
+
+  void _mostrarExito(String mensaje) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(mensaje),
+        backgroundColor: WessexColors.leafGreen,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_entrenadores.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.sports, size: 64, color: WessexColors.ashGray),
+            const SizedBox(height: 16),
+            const Text(
+              'No hay entrenadores registrados',
+              style: TextStyle(
+                fontSize: 16,
+                color: WessexColors.charcoalGray,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(8),
+      itemCount: _entrenadores.length,
+      itemBuilder: (context, index) {
+        return _buildEntrenadorCard(_entrenadores[index]);
+      },
+    );
+  }
+
+  Widget _buildEntrenadorCard(Map<String, dynamic> entrenador) {
+    final bool tienePerfil = entrenador['tienePerfil'] == true;
+    final Map<String, dynamic>? perfil = entrenador['perfilPublico'];
+    final bool visible = perfil?['visible'] ?? false;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 1,
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: WessexColors.deepRoyalBlue,
+          child: Text(
+            (entrenador['nombreCompleto'] ?? 'N')[0].toUpperCase(),
+            style: const TextStyle(color: Colors.white),
+          ),
+        ),
+        title: Text(entrenador['nombreCompleto'] ?? 'Sin nombre'),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(entrenador['email'] ?? ''),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: tienePerfil
+                        ? WessexColors.leafGreen.withOpacity(0.1)
+                        : WessexColors.ashGray.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    tienePerfil ? 'CON PERFIL' : 'SIN PERFIL',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: tienePerfil
+                          ? WessexColors.leafGreen
+                          : WessexColors.ashGray,
+                    ),
+                  ),
+                ),
+                if (tienePerfil) ...[
+                  const SizedBox(width: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: visible
+                          ? WessexColors.deepRoyalBlue.withOpacity(0.1)
+                          : WessexColors.crimsonAlert.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      visible ? 'VISIBLE' : 'OCULTO',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: visible
+                            ? WessexColors.deepRoyalBlue
+                            : WessexColors.crimsonAlert,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ],
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (tienePerfil)
+              IconButton(
+                icon: Icon(
+                  visible ? Icons.visibility_off : Icons.visibility,
+                  color: WessexColors.deepRoyalBlue,
+                ),
+                onPressed: () => _toggleVisibilidad(perfil!),
+                tooltip: visible ? 'Ocultar' : 'Mostrar',
+              ),
+            IconButton(
+              icon: Icon(
+                tienePerfil ? Icons.edit : Icons.add,
+                color: WessexColors.leafGreen,
+              ),
+              onPressed: () => _editarPerfil(entrenador),
+              tooltip: tienePerfil ? 'Editar' : 'Crear Perfil',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _toggleVisibilidad(Map<String, dynamic> perfil) async {
+    try {
+      final int id = perfil['id'];
+      final bool visible = perfil['visible'] ?? false;
+
+      final response = await ApiService.patch(
+        '/entrenadores/$id/visibilidad',
+        {'visible': !visible},
+      );
+
+      if (response.success) {
+        _mostrarExito('Visibilidad actualizada');
+        _cargarEntrenadores();
+      } else {
+        _mostrarError('Error al cambiar visibilidad');
+      }
+    } catch (e) {
+      _mostrarError('Error: $e');
+    }
+  }
+
+  void _editarPerfil(Map<String, dynamic> entrenador) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => _FormularioEntrenadorDialog(
+          entrenador: entrenador,
+          perfilExistente: entrenador['perfilPublico'],
+          onGuardado: () {
+            _cargarEntrenadores();
+            _mostrarExito('Perfil actualizado correctamente');
+          },
+        ),
+      ),
+    );
+  }
+}
+
+// Formulario para editar perfil de entrenador
+class _FormularioEntrenadorDialog extends StatefulWidget {
+  final Map<String, dynamic> entrenador;
+  final Map<String, dynamic>? perfilExistente;
+  final VoidCallback onGuardado;
+
+  const _FormularioEntrenadorDialog({
+    required this.entrenador,
+    this.perfilExistente,
+    required this.onGuardado,
+  });
+
+  @override
+  State<_FormularioEntrenadorDialog> createState() =>
+      _FormularioEntrenadorDialogState();
+}
+
+class _FormularioEntrenadorDialogState
+    extends State<_FormularioEntrenadorDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late TextEditingController _tituloController;
+  late TextEditingController _especialidadController;
+  late TextEditingController _aniosExperienciaController;
+  late TextEditingController _certificacionesController;
+  late TextEditingController _logrosController;
+  late TextEditingController _biografiaController;
+  late TextEditingController _categoriasController;
+  bool _visible = true;
+  bool _guardando = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final perfil = widget.perfilExistente;
+
+    _tituloController = TextEditingController(text: perfil?['titulo'] ?? '');
+    _especialidadController =
+        TextEditingController(text: perfil?['especialidad'] ?? '');
+    _aniosExperienciaController = TextEditingController(
+      text: perfil?['aniosExperiencia']?.toString() ?? '',
+    );
+    _certificacionesController =
+        TextEditingController(text: perfil?['certificaciones'] ?? '');
+    _logrosController = TextEditingController(text: perfil?['logros'] ?? '');
+    _biografiaController =
+        TextEditingController(text: perfil?['biografia'] ?? '');
+    _categoriasController =
+        TextEditingController(text: perfil?['categorias'] ?? '');
+    _visible = perfil?['visible'] ?? true;
+  }
+
+  @override
+  void dispose() {
+    _tituloController.dispose();
+    _especialidadController.dispose();
+    _aniosExperienciaController.dispose();
+    _certificacionesController.dispose();
+    _logrosController.dispose();
+    _biografiaController.dispose();
+    _categoriasController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          widget.perfilExistente == null ? 'Crear Perfil Público' : 'Editar Perfil Público',
+        ),
+        backgroundColor: WessexColors.deepRoyalBlue,
+      ),
+      body: Form(
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            // Info del entrenador
+            Card(
+              color: WessexColors.deepRoyalBlue.withOpacity(0.1),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Entrenador',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: WessexColors.charcoalGray,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      widget.entrenador['nombreCompleto'] ?? '',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: WessexColors.deepNavyBlue,
+                      ),
+                    ),
+                    Text(
+                      widget.entrenador['email'] ?? '',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: WessexColors.charcoalGray,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            _buildTextField(
+              controller: _tituloController,
+              label: 'Título Profesional',
+              hint: 'Ej: Entrenador Nivel 1 World Rugby',
+              icon: Icons.workspace_premium,
+            ),
+            const SizedBox(height: 16),
+
+            _buildTextField(
+              controller: _especialidadController,
+              label: 'Especialidad',
+              hint: 'Ej: Entrenamiento Físico y Técnico',
+              icon: Icons.sports_kabaddi,
+            ),
+            const SizedBox(height: 16),
+
+            _buildTextField(
+              controller: _aniosExperienciaController,
+              label: 'Años de Experiencia',
+              hint: 'Ej: 10',
+              icon: Icons.timer,
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 16),
+
+            _buildTextField(
+              controller: _categoriasController,
+              label: 'Categorías que Entrena',
+              hint: 'Ej: sub-8, sub-10, sub-12',
+              icon: Icons.groups,
+            ),
+            const SizedBox(height: 16),
+
+            _buildTextField(
+              controller: _biografiaController,
+              label: 'Biografía',
+              hint: 'Describe la trayectoria y experiencia del entrenador...',
+              icon: Icons.person,
+              maxLines: 4,
+            ),
+            const SizedBox(height: 16),
+
+            _buildTextField(
+              controller: _logrosController,
+              label: 'Logros Destacados',
+              hint: 'Enumera los logros más importantes...',
+              icon: Icons.emoji_events,
+              maxLines: 3,
+            ),
+            const SizedBox(height: 16),
+
+            _buildTextField(
+              controller: _certificacionesController,
+              label: 'Certificaciones',
+              hint: 'Lista certificaciones y cursos relevantes...',
+              icon: Icons.school,
+              maxLines: 3,
+            ),
+            const SizedBox(height: 16),
+
+            Card(
+              child: SwitchListTile(
+                title: const Text('Visible públicamente'),
+                subtitle: const Text(
+                  'El perfil será visible en la página pública de entrenadores',
+                ),
+                value: _visible,
+                onChanged: (value) => setState(() => _visible = value),
+                activeColor: WessexColors.leafGreen,
+                secondary: Icon(
+                  _visible ? Icons.visibility : Icons.visibility_off,
+                  color: _visible ? WessexColors.leafGreen : WessexColors.ashGray,
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: _guardando ? null : () => Navigator.pop(context),
+                  child: const Text('Cancelar'),
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton.icon(
+                  onPressed: _guardando ? null : _guardar,
+                  icon: _guardando
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation(Colors.white),
+                          ),
+                        )
+                      : const Icon(Icons.save),
+                  label: Text(_guardando ? 'Guardando...' : 'Guardar'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: WessexColors.leafGreen,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    String? hint,
+    IconData? icon,
+    int maxLines = 1,
+    TextInputType? keyboardType,
+  }) {
+    return TextFormField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        prefixIcon: icon != null ? Icon(icon) : null,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        filled: true,
+        fillColor: Colors.white,
+      ),
+      maxLines: maxLines,
+      keyboardType: keyboardType,
+    );
+  }
+
+  Future<void> _guardar() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _guardando = true);
+
+    try {
+      final data = {
+        'userRut': widget.entrenador['rut'],
+        'titulo': _tituloController.text.trim(),
+        'especialidad': _especialidadController.text.trim(),
+        'aniosExperiencia': int.tryParse(_aniosExperienciaController.text),
+        'certificaciones': _certificacionesController.text.trim(),
+        'logros': _logrosController.text.trim(),
+        'biografia': _biografiaController.text.trim(),
+        'categorias': _categoriasController.text.trim(),
+        'visible': _visible,
+      };
+
+      final response = widget.perfilExistente == null
+          ? await ApiService.post('/entrenadores', data)
+          : await ApiService.put(
+              '/entrenadores/${widget.perfilExistente!['id']}',
+              data,
+            );
+
+      if (response.success) {
+        if (mounted) {
+          Navigator.pop(context);
+          widget.onGuardado();
+        }
+      } else {
+        throw Exception(response.message ?? 'Error al guardar');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al guardar: $e'),
+            backgroundColor: WessexColors.crimsonAlert,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _guardando = false);
+      }
+    }
   }
 }

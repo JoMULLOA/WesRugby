@@ -129,7 +129,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadEntrenadoresPreview() async {
     setState(() => _isEntrenadoresLoading = true);
     try {
-      final response = await ApiService.get('/users/entrenadores');
+      final response = await ApiService.get('/entrenadores/publicos');
 
       if (!mounted) return;
 
@@ -370,7 +370,7 @@ class _HomeScreenState extends State<HomeScreen> {
         crossAxisCount: crossAxisCount,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
-        childAspectRatio: 0.85,
+        childAspectRatio: 0.9, // Ajustado para imagen más grande
       ),
       itemCount: items.length,
       itemBuilder: (context, index) =>
@@ -564,64 +564,309 @@ class _HomeScreenState extends State<HomeScreen> {
     final String nombre = entrenador['nombreCompleto'] ?? 'Sin nombre';
     final String? avatar = entrenador['avatar'];
     
-    return Container(
-      decoration: _homeCardDecoration(),
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Avatar circular
-          Container(
-            width: 70,
-            height: 70,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: WessexColors.deepRoyalBlue.withOpacity(0.1),
-              border: Border.all(
-                color: WessexColors.deepRoyalBlue,
-                width: 2,
+    return GestureDetector(
+      onTap: () => _mostrarDetalleEntrenador(entrenador),
+      child: Container(
+        decoration: _homeCardDecoration(),
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Avatar circular más grande
+            Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: WessexColors.deepRoyalBlue.withOpacity(0.1),
+                border: Border.all(
+                  color: WessexColors.deepRoyalBlue,
+                  width: 3,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: WessexColors.deepRoyalBlue.withOpacity(0.2),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: ClipOval(
+                child:
+                    avatar != null && avatar.isNotEmpty
+                        ? Image.network(
+                          avatar,
+                          fit: BoxFit.cover,
+                          errorBuilder:
+                              (context, error, stackTrace) => _buildDefaultAvatarPreview(nombre),
+                        )
+                        : _buildDefaultAvatarPreview(nombre),
               ),
             ),
-            child: ClipOval(
-              child:
-                  avatar != null && avatar.isNotEmpty
-                      ? Image.network(
-                        avatar,
-                        fit: BoxFit.cover,
-                        errorBuilder:
-                            (context, error, stackTrace) => _buildDefaultAvatarPreview(nombre),
-                      )
-                      : _buildDefaultAvatarPreview(nombre),
-            ),
-          ),
-          const SizedBox(height: 10),
-          // Nombre del entrenador
-          Text(
-            nombre,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-              color: WessexColors.deepNavyBlue,
-            ),
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 6),
-          // Badge de entrenador
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: WessexColors.leafGreen.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Text(
-              'ENTRENADOR',
-              style: TextStyle(
-                fontSize: 9,
+            const SizedBox(height: 12),
+            // Nombre del entrenador
+            Text(
+              nombre,
+              style: const TextStyle(
+                fontSize: 14,
                 fontWeight: FontWeight.bold,
-                color: WessexColors.leafGreen,
+                color: WessexColors.deepNavyBlue,
               ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 8),
+            // Badge de entrenador
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: WessexColors.leafGreen.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: WessexColors.leafGreen.withOpacity(0.3),
+                  width: 1,
+                ),
+              ),
+              child: const Text(
+                'ENTRENADOR',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: WessexColors.leafGreen,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _mostrarDetalleEntrenador(Map<String, dynamic> entrenador) {
+    final String nombre = entrenador['nombreCompleto'] ?? 'Sin nombre';
+    final String? avatar = entrenador['avatar'];
+    final String? titulo = entrenador['titulo'];
+    final String? especialidad = entrenador['especialidad'];
+    final int? aniosExperiencia = entrenador['aniosExperiencia'];
+    final String? biografia = entrenador['biografia'];
+    final String? logros = entrenador['logros'];
+    final String? certificaciones = entrenador['certificaciones'];
+    final String? categorias = entrenador['categorias'];
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Container(
+          width: 600,
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.85,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header con gradiente
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      WessexColors.deepRoyalBlue,
+                      WessexColors.deepRoyalBlue.withOpacity(0.8),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const SizedBox(width: 40),
+                        const Text(
+                          'Perfil del Entrenador',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.close, color: Colors.white),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    // Avatar grande
+                    Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white,
+                        border: Border.all(
+                          color: Colors.white,
+                          width: 4,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: ClipOval(
+                        child:
+                            avatar != null && avatar.isNotEmpty
+                                ? Image.network(
+                                  avatar,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      _buildDefaultAvatarPreview(nombre),
+                                )
+                                : _buildDefaultAvatarPreview(nombre),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      nombre,
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    if (titulo != null && titulo.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        titulo,
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.white.withOpacity(0.9),
+                          fontWeight: FontWeight.w500,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              // Contenido scrolleable
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (especialidad != null && especialidad.isNotEmpty) ...[
+                        _buildInfoSection(
+                          icon: Icons.sports_kabaddi,
+                          title: 'Especialidad',
+                          content: especialidad,
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                      if (aniosExperiencia != null) ...[
+                        _buildInfoSection(
+                          icon: Icons.timer,
+                          title: 'Experiencia',
+                          content: '$aniosExperiencia años en rugby',
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                      if (categorias != null && categorias.isNotEmpty) ...[
+                        _buildInfoSection(
+                          icon: Icons.groups,
+                          title: 'Categorías',
+                          content: categorias,
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                      if (biografia != null && biografia.isNotEmpty) ...[
+                        _buildInfoSection(
+                          icon: Icons.person,
+                          title: 'Biografía',
+                          content: biografia,
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                      if (logros != null && logros.isNotEmpty) ...[
+                        _buildInfoSection(
+                          icon: Icons.emoji_events,
+                          title: 'Logros Destacados',
+                          content: logros,
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                      if (certificaciones != null &&
+                          certificaciones.isNotEmpty) ...[
+                        _buildInfoSection(
+                          icon: Icons.school,
+                          title: 'Certificaciones',
+                          content: certificaciones,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoSection({
+    required IconData icon,
+    required String title,
+    required String content,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: WessexColors.lightGray.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: WessexColors.darkGrape.withOpacity(0.1),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: WessexColors.deepRoyalBlue, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: WessexColors.deepNavyBlue,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            content,
+            style: const TextStyle(
+              fontSize: 14,
+              color: WessexColors.charcoalGray,
+              height: 1.5,
             ),
           ),
         ],

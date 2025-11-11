@@ -23,8 +23,8 @@ class _EntrenadoresScreenState extends State<EntrenadoresScreen> {
   Future<void> _loadEntrenadores() async {
     setState(() => _isLoading = true);
     try {
-      // Obtenemos usuarios con rol "entrenador"
-      final response = await ApiService.get('/users/entrenadores');
+      // Obtenemos entrenadores con información pública
+      final response = await ApiService.get('/entrenadores/publicos');
       if (response.success && response.data != null) {
         final List<dynamic> entrenadoresData =
             response.data is Map
@@ -155,28 +155,12 @@ class _EntrenadoresScreenState extends State<EntrenadoresScreen> {
   }
 
   Widget _buildEntrenadoresGrid() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final screenWidth = constraints.maxWidth;
-        final isDesktop = screenWidth > 1200;
-        final isTablet = screenWidth > 600;
-        
-        int crossAxisCount = isDesktop ? 4 : (isTablet ? 3 : 2);
-        
-        return GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            childAspectRatio: 0.85,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
-          ),
-          itemCount: _entrenadores.length,
-          itemBuilder: (context, index) {
-            return _buildEntrenadorCard(_entrenadores[index]);
-          },
-        );
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: _entrenadores.length,
+      itemBuilder: (context, index) {
+        return _buildEntrenadorCard(_entrenadores[index]);
       },
     );
   }
@@ -184,122 +168,203 @@ class _EntrenadoresScreenState extends State<EntrenadoresScreen> {
   Widget _buildEntrenadorCard(Map<String, dynamic> entrenador) {
     final String nombre = entrenador['nombreCompleto'] ?? 'Sin nombre';
     final String? avatar = entrenador['avatar'];
-    final String email = entrenador['email'] ?? '';
+    final String? titulo = entrenador['titulo'];
+    final String? especialidad = entrenador['especialidad'];
+    final int? aniosExperiencia = entrenador['aniosExperiencia'];
+    final String? biografia = entrenador['biografia'];
+    final String? logros = entrenador['logros'];
+    final String? certificaciones = entrenador['certificaciones'];
+    final String? categorias = entrenador['categorias'];
     
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-        border: Border.all(
-          color: WessexColors.lightGray.withOpacity(0.3),
-          width: 1,
-        ),
-      ),
+    return WessexCard(
+      margin: const EdgeInsets.only(bottom: 16),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 16),
-          // Avatar circular
-          Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: WessexColors.deepRoyalBlue.withOpacity(0.1),
-              border: Border.all(
-                color: WessexColors.deepRoyalBlue,
-                width: 3,
+          // Header con avatar y nombre
+          Row(
+            children: [
+              // Avatar circular
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: WessexColors.deepRoyalBlue.withOpacity(0.1),
+                  border: Border.all(
+                    color: WessexColors.deepRoyalBlue,
+                    width: 3,
+                  ),
+                ),
+                child: ClipOval(
+                  child:
+                      avatar != null && avatar.isNotEmpty
+                          ? Image.network(
+                            avatar,
+                            fit: BoxFit.cover,
+                            errorBuilder:
+                                (context, error, stackTrace) => _buildDefaultAvatar(nombre),
+                          )
+                          : _buildDefaultAvatar(nombre),
+                ),
               ),
-            ),
-            child: ClipOval(
-              child:
-                  avatar != null && avatar.isNotEmpty
-                      ? Image.network(
-                        avatar,
-                        fit: BoxFit.cover,
-                        errorBuilder:
-                            (context, error, stackTrace) => _buildDefaultAvatar(nombre),
-                      )
-                      : _buildDefaultAvatar(nombre),
-            ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      nombre,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: WessexColors.deepNavyBlue,
+                      ),
+                    ),
+                    if (titulo != null && titulo.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        titulo,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: WessexColors.leafGreen,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                    if (especialidad != null && especialidad.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        especialidad,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: WessexColors.charcoalGray,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
           ),
+          
+          const SizedBox(height: 16),
+          const Divider(),
           const SizedBox(height: 12),
-          // Nombre del entrenador
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Text(
-              nombre,
+
+          // Información adicional
+          if (aniosExperiencia != null) ...[
+            _buildInfoRow(
+              icon: Icons.stars,
+              label: 'Experiencia',
+              value: '$aniosExperiencia años en rugby',
+            ),
+            const SizedBox(height: 8),
+          ],
+
+          if (categorias != null && categorias.isNotEmpty) ...[
+            _buildInfoRow(
+              icon: Icons.groups,
+              label: 'Categorías',
+              value: categorias,
+            ),
+            const SizedBox(height: 8),
+          ],
+
+          if (biografia != null && biografia.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Biografía',
               style: const TextStyle(
-                fontSize: 16,
+                fontSize: 14,
                 fontWeight: FontWeight.bold,
                 color: WessexColors.deepNavyBlue,
               ),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
-          ),
-          const SizedBox(height: 4),
-          // Rol
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            decoration: BoxDecoration(
-              color: WessexColors.leafGreen.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Text(
-              'ENTRENADOR',
+            const SizedBox(height: 4),
+            Text(
+              biografia,
               style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: WessexColors.leafGreen,
-              ),
-            ),
-          ),
-          if (email.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.email,
-                    size: 12,
-                    color: WessexColors.ashGray,
-                  ),
-                  const SizedBox(width: 4),
-                  Flexible(
-                    child: Text(
-                      email,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: WessexColors.ashGray,
-                      ),
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
+                fontSize: 13,
+                color: WessexColors.charcoalGray,
+                height: 1.4,
               ),
             ),
           ],
-          const SizedBox(height: 12),
+
+          if (logros != null && logros.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              'Logros Destacados',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: WessexColors.deepNavyBlue,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              logros,
+              style: TextStyle(
+                fontSize: 13,
+                color: WessexColors.charcoalGray,
+                height: 1.4,
+              ),
+            ),
+          ],
+
+          if (certificaciones != null && certificaciones.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              'Certificaciones',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: WessexColors.deepNavyBlue,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              certificaciones,
+              style: TextStyle(
+                fontSize: 13,
+                color: WessexColors.charcoalGray,
+                height: 1.4,
+              ),
+            ),
+          ],
         ],
       ),
+    );
+  }
+
+  Widget _buildInfoRow({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: WessexColors.deepRoyalBlue),
+        const SizedBox(width: 8),
+        Text(
+          '$label: ',
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: WessexColors.deepNavyBlue,
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(
+              fontSize: 13,
+              color: WessexColors.charcoalGray,
+            ),
+          ),
+        ),
+      ],
     );
   }
 

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:universal_html/html.dart' as html;
 import 'package:wesrugby/features/admin/presentation/screens/eventos/gestion/widgets/event_multimedia_dialog.dart';
 import 'package:wesrugby/data/services/api_service.dart';
 import 'package:wesrugby/data/services/tokenManager.dart';
@@ -1874,6 +1875,71 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
     }
   }
 
+  void _descargarCsvEjemplo(List<String> categoriasDisponibles) {
+    // Crear contenido del CSV de ejemplo
+    final ejemplos = [
+      'categoria,participantes',
+      '',
+      '# Ejemplo 1: Una categoría con varios participantes separados por comas',
+    ];
+    
+    // Usar las categorías disponibles o valores por defecto
+    final categorias = categoriasDisponibles.isNotEmpty
+        ? categoriasDisponibles
+        : ['sub-8', 'sub-10', 'sub-12', 'sub-14', 'sub-16', 'sub-18'];
+    
+    // Agregar ejemplos con las primeras 3 categorías
+    if (categorias.isNotEmpty) {
+      ejemplos.add('${categorias[0]},Luis Pereira,Joaquin Muñoz,Martin Silva');
+    }
+    if (categorias.length > 1) {
+      ejemplos.add('${categorias[1]},Ana Torres,Pedro González');
+    }
+    if (categorias.length > 2) {
+      ejemplos.add('${categorias[2]},Carlos Rojas,María Fernández,Juan López');
+    }
+    
+    ejemplos.addAll([
+      '',
+      '# Notas importantes:',
+      '# - La primera columna debe ser la categoría (ej: ${categorias.isNotEmpty ? categorias[0] : 'sub-8'})',
+      '# - Los nombres de participantes van después, separados por comas',
+      '# - Las líneas que comienzan con # son comentarios y serán ignoradas',
+      '# - Puedes usar todas las categorías disponibles: ${categorias.join(", ")}',
+      '# - El orden de las filas no importa',
+      '# - Asegúrate de no dejar espacios extra al inicio o final de los nombres',
+    ]);
+    
+    final csvContent = ejemplos.join('\n');
+    
+    // Crear el archivo y descargarlo con BOM UTF-8 para correcta visualización de acentos
+    // BOM (Byte Order Mark) para UTF-8: 0xEF, 0xBB, 0xBF
+    final utf8Bom = [0xEF, 0xBB, 0xBF];
+    final contentBytes = utf8.encode(csvContent);
+    final bytes = Uint8List.fromList([...utf8Bom, ...contentBytes]);
+    
+    final blob = html.Blob([bytes], 'text/csv;charset=utf-8');
+    final url = html.Url.createObjectUrlFromBlob(blob);
+    
+    final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+    final fileName = 'participantes_ejemplo_$timestamp.csv';
+    
+    html.AnchorElement(href: url)
+      ..setAttribute('download', fileName)
+      ..click();
+    
+    html.Url.revokeObjectUrl(url);
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Archivo CSV de ejemplo descargado: $fileName'),
+          backgroundColor: WessexColors.leafGreen,
+        ),
+      );
+    }
+  }
+
   Future<void> _subirImagenesRama(Map<String, dynamic> evento) async {
     final String eventoId = evento['id']?.toString() ?? '';
     if (eventoId.isEmpty) {
@@ -2169,6 +2235,24 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
                                     color: WessexColors.deepRoyalBlue,
+                                  ),
+                                ),
+                              ),
+                              Tooltip(
+                                message: 'Descarga un archivo CSV de ejemplo',
+                                child: TextButton.icon(
+                                  onPressed: () => _descargarCsvEjemplo(categorias),
+                                  icon: Icon(
+                                    Icons.download,
+                                    color: WessexColors.leafGreen,
+                                    size: 20,
+                                  ),
+                                  label: Text(
+                                    'Ejemplo CSV',
+                                    style: TextStyle(
+                                      color: WessexColors.leafGreen,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ),
                               ),

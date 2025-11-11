@@ -26,6 +26,7 @@ import homepageRoutes from "./homepage.routes.js";
 import uploadRoutes from "./upload.routes.js";
 import inventoryRoutes from "./inventory.routes.js";
 import configuracionPrecioRoutes from "./configuracionPrecio.routes.js";
+import entrenadorPublicoRoutes from "./entrenadorPublico.routes.js";
 
 const router = Router();
 
@@ -53,6 +54,7 @@ router
     .use("/homepage", homepageRoutes)
     .use("/inventario", inventoryRoutes)
     .use("/configuracion-precios", configuracionPrecioRoutes)
+    .use("/entrenadores", entrenadorPublicoRoutes)
     .use("/upload", uploadRoutes);
 
 export default router;

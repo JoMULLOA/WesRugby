@@ -1,7 +1,12 @@
 "use strict";
 import PDFDocument from "pdfkit";
 
-const normalizeText = (value = "") => value.toString().trim();
+const normalizeText = (value = "") => {
+  // Mantener caracteres especiales y acentos, asegurando UTF-8
+  const text = value.toString().trim();
+  // Normalizar caracteres Unicode a su forma canónica
+  return text.normalize("NFC");
+};
 
 const formatDateTime = (raw) => {
   if (!raw) return "Sin fecha";
@@ -34,10 +39,16 @@ export async function buildParticipacionesPdf({
   const doc = new PDFDocument({
     size: "A4",
     margins: { top: 40, bottom: 48, left: 48, right: 48 },
+    bufferPages: true,
+    autoFirstPage: true,
+    compress: false,
   });
 
   const chunks = [];
   doc.on("data", (chunk) => chunks.push(chunk));
+
+  // Usar fuente Helvetica con codificación WinAnsi que soporta caracteres latinos
+  doc.font("Helvetica");
 
   const renderHeader = () => {
     doc
@@ -148,17 +159,28 @@ export async function buildParticipacionesPdf({
             a.localeCompare(b, "es", { sensitivity: "base" }),
           );
 
-          doc
-            .fontSize(10)
-            .fillColor(nombres.length ? "#444444" : "#888888")
-            .text(
-              nombres.length ? nombres.join(", ") : "Sin nombres registrados",
-              {
+          if (nombres.length === 0) {
+            doc
+              .fontSize(10)
+              .fillColor("#888888")
+              .text("Sin nombres registrados", {
                 indent: 22,
                 width: doc.page.width - doc.page.margins.left - doc.page.margins.right - 16,
-              },
-            )
-            .moveDown(0.3);
+              })
+              .moveDown(0.3);
+          } else {
+            // Mostrar nombres numerados
+            nombres.forEach((nombre, index) => {
+              doc
+                .fontSize(10)
+                .fillColor("#444444")
+                .text(`${index + 1}) ${nombre}`, {
+                  indent: 22,
+                  width: doc.page.width - doc.page.margins.left - doc.page.margins.right - 16,
+                });
+            });
+            doc.moveDown(0.3);
+          }
         }
       }
 

@@ -1,4 +1,4 @@
-﻿name: wesrugby
+name: wesrugby
 description: "AplicaciÃ³n mÃ³vil para la gestiÃ³n del Club de Rugby Wessex."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -29,7 +29,7 @@ dependencies:
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
-  intl: ^0.20.2
+  intl: 0.19.0
   cupertino_icons: ^1.0.8
   permission_handler: ^12.0.1
   http: ^1.5.0
@@ -46,6 +46,7 @@ dependencies:
   cached_network_image: ^3.3.1
   spreadsheet_decoder: ^2.3.0
   path_provider: ^2.1.3
+  universal_html: ^2.2.4
   
 
 
