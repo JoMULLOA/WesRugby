@@ -377,7 +377,12 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
           crossAxisCount: crossAxisCount,
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,
-          childAspectRatio: crossAxisCount == 1 ? 3.5 : crossAxisCount == 2 ? 3.2 : 3.5,
+          childAspectRatio:
+              crossAxisCount == 1
+                  ? 3.4
+                  : crossAxisCount == 2
+                  ? 2.6
+                  : 3.4,
           children: tarjetas,
         );
       },
@@ -391,61 +396,68 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
     required Color color,
     required String detalle,
   }) {
-    return WessexCard(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icono, color: color, size: 22),
+    return LayoutBuilder( // 🔹 Detecta el espacio disponible
+      builder: (context, constraints) {
+        return WessexCard(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(9),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icono, color: color, size: 20),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: FittedBox( // 🔹 Ajusta automáticamente el tamaño del contenido
+                  fit: BoxFit.scaleDown, // 🔹 Evita overflow horizontal y vertical
+                  alignment: Alignment.centerLeft,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min, // 🔹 Ajusta al contenido
+                    children: [
+                      Text(
+                        valor,
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: WessexColors.darkGrape,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        titulo,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: WessexColors.darkGrape.withOpacity(0.8),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        detalle,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: WessexColors.darkGrape.withOpacity(0.6),
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  valor,
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: WessexColors.darkGrape,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  titulo,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: WessexColors.darkGrape.withOpacity(0.8),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  detalle,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: WessexColors.darkGrape.withOpacity(0.6),
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
+
 
   Widget _buildFiltros() {
     return WessexCard(
