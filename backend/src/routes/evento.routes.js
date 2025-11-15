@@ -13,6 +13,7 @@ import {
   eliminarEvento,
   obtenerParticipacionesEvento,
   descargarParticipacionesEventoPdf,
+  descargarParticipacionesEventoCsv,
 } from "../controllers/evento.controller.js";
 import { isDirectiva, isRamaExterna, isAuthenticated } from "../middlewares/authorization.middleware.js";
 
@@ -27,6 +28,12 @@ router
   .get("/todos", authenticateJWT, isDirectiva, obtenerEventos)
   .put("/:id", authenticateJWT, isDirectiva, actualizarEvento)
   .delete("/:id", authenticateJWT, isDirectiva, eliminarEvento)
+  .get(
+    "/:id/participaciones/csv",
+    authenticateJWT,
+    isDirectiva,
+    descargarParticipacionesEventoCsv,
+  )
   .get("/:id/participaciones/pdf", authenticateJWT, isDirectiva, descargarParticipacionesEventoPdf)
   .get("/:id/participaciones", authenticateJWT, isDirectiva, obtenerParticipacionesEvento);
 

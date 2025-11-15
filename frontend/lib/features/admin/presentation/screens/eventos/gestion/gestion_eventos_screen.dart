@@ -59,7 +59,7 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
     return fechaUTC.subtract(Duration(hours: 3));
   }
 
-  String _generarNombreArchivoPdf(String titulo) {
+  String _generarNombreArchivoCsv(String titulo) {
     final normalized = titulo
         .toLowerCase()
         .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
@@ -68,20 +68,20 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
     final now = DateTime.now();
     final stamp =
         '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
-    return '${normalized.isEmpty ? 'participaciones' : normalized}_$stamp.pdf';
+    return '${normalized.isEmpty ? 'participaciones' : normalized}_$stamp.csv';
   }
 
-  Future<void> _descargarParticipacionesPdfArchivo({
+  Future<void> _descargarParticipacionesCsvArchivo({
     required dynamic eventoId,
     required String titulo,
     List<String>? categorias,
   }) async {
-    final bytes = await ApiService.descargarParticipacionesPdf(
+    final bytes = await ApiService.descargarParticipacionesCsv(
       eventoId,
       categorias: categorias,
     );
-    final fileName = _generarNombreArchivoPdf(titulo);
-    final blob = html.Blob([bytes], 'application/pdf');
+    final fileName = _generarNombreArchivoCsv(titulo);
+    final blob = html.Blob([bytes], 'text/csv');
     final url = html.Url.createObjectUrlFromBlob(blob);
     final anchor = html.AnchorElement(href: url)
       ..setAttribute('download', fileName)
@@ -161,7 +161,7 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
         context: context,
         builder: (dialogContext) {
           bool isFiltering = false;
-          bool isExportingPdf = false;
+          bool isExportingCsv = false;
           List<dynamic> estadisticasVisibles = List<dynamic>.from(
             estadisticasIniciales,
           );
@@ -225,43 +225,43 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
                 }
               }
 
-              Future<void> descargarPdf() async {
-                if (isExportingPdf) return;
+              Future<void> descargarCsv() async {
+                if (isExportingCsv) return;
                 setDialogState(() {
-                  isExportingPdf = true;
+                  isExportingCsv = true;
                 });
 
                 try {
-                  final categoriasParaPdf =
+                  final categoriasParaCsv =
                       categoriasDisponibles.isEmpty ||
                               categoriasSeleccionadas.length ==
                                   categoriasDisponibles.length
                           ? null
                           : categoriasSeleccionadas.toList();
 
-                  await _descargarParticipacionesPdfArchivo(
+                  await _descargarParticipacionesCsvArchivo(
                     eventoId: evento['id'],
                     titulo: evento['titulo'] ?? evento['nombre'] ?? 'evento',
-                    categorias: categoriasParaPdf,
+                    categorias: categoriasParaCsv,
                   );
 
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('PDF de participaciones generado'),
+                        content: Text('CSV de participaciones generado'),
                       ),
                     );
                   }
                 } catch (error) {
                   ScaffoldMessenger.of(dialogContext).showSnackBar(
                     SnackBar(
-                      content: Text('Error al descargar PDF: $error'),
+                      content: Text('Error al descargar CSV: $error'),
                       backgroundColor: WessexColors.crimsonAlert,
                     ),
                   );
                 } finally {
                   setDialogState(() {
-                    isExportingPdf = false;
+                    isExportingCsv = false;
                   });
                 }
               }
@@ -380,8 +380,8 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
                             ),
                             const SizedBox(width: 8),
                             TextButton.icon(
-                              onPressed: descargarPdf,
-                              icon: isExportingPdf
+                              onPressed: descargarCsv,
+                              icon: isExportingCsv
                                   ? SizedBox(
                                       width: 18,
                                       height: 18,
@@ -393,13 +393,13 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
                                       ),
                                     )
                                   : const Icon(
-                                      Icons.picture_as_pdf,
+                                      Icons.table_view,
                                       color: WessexColors.deepRoyalBlue,
                                     ),
                               label: Text(
-                                isExportingPdf
+                                isExportingCsv
                                     ? 'Generando...'
-                                    : 'Descargar PDF',
+                                    : 'Descargar CSV',
                                 style: const TextStyle(
                                   color: WessexColors.deepRoyalBlue,
                                   fontWeight: FontWeight.w600,

@@ -639,11 +639,11 @@ class ApiService {
     }
   }
 
-  static Future<Uint8List> descargarParticipacionesPdf(
+  static Future<Uint8List> descargarParticipacionesCsv(
     dynamic eventoId, {
     List<String>? categorias,
   }) async {
-    String endpoint = '/eventos/$eventoId/participaciones/pdf';
+    String endpoint = '/eventos/$eventoId/participaciones/csv';
     if (categorias != null && categorias.isNotEmpty) {
       final joinedCategorias = categorias
           .map((categoria) => Uri.encodeComponent(categoria))

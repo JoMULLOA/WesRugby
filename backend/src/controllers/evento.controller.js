@@ -26,6 +26,83 @@ const normalizeParticipantsInput = (raw) => {
 const formatParticipantsList = (participants = []) =>
   participants.map((name) => sanitizeWhitespace(name)).join(", ");
 
+const escapeCsvValue = (value) => {
+  if (value === null || value === undefined) return "";
+  const normalized = value
+    .toString()
+    .replace(/\r?\n|\r/g, " ")
+    .trim();
+  if (normalized === "") return "";
+  if (/[",\n]/.test(normalized)) {
+    return `"${normalized.replace(/"/g, '""')}"`;
+  }
+  return normalized;
+};
+
+const buildParticipacionesCsv = ({ evento, participaciones = [] }) => {
+  const headers = [
+    "Evento",
+    "Categoria",
+    "Rama",
+    "RutRama",
+    "CantidadNinos",
+    "Estudiante",
+    "FechaRegistro",
+  ];
+  const rows = [headers];
+
+  const eventoNombre =
+    evento?.nombre || evento?.titulo || evento?.evento || "Evento";
+
+  if (!Array.isArray(participaciones) || participaciones.length === 0) {
+    return rows.map((row) => row.map(escapeCsvValue).join(",")).join("\r\n");
+  }
+
+  for (const participacion of participaciones) {
+    const nombreRama =
+      participacion.nombreRama ||
+      participacion.ramaExterna?.nombreCompleto ||
+      "Rama no identificada";
+    const rutRama =
+      participacion.rutRamaExterna || participacion.ramaExterna?.rut || "";
+    const categoria = participacion.categoria || "Sin categoria";
+    const cantidad = Number(participacion.cantidadNinos) || 0;
+    const fechaRegistro = participacion.createdAt
+      ? new Date(participacion.createdAt).toISOString()
+      : "";
+
+    const estudiantes = normalizeParticipantsInput(
+      participacion.listaInvitados || "",
+    );
+
+    if (estudiantes.length === 0) {
+      rows.push([
+        eventoNombre,
+        categoria,
+        nombreRama,
+        rutRama,
+        cantidad.toString(),
+        "",
+        fechaRegistro,
+      ]);
+    } else {
+      estudiantes.forEach((estudiante) => {
+        rows.push([
+          eventoNombre,
+          categoria,
+          nombreRama,
+          rutRama,
+          cantidad.toString(),
+          estudiante,
+          fechaRegistro,
+        ]);
+      });
+    }
+  }
+
+  return rows.map((row) => row.map(escapeCsvValue).join(",")).join("\r\n");
+};
+
 const esUUID = (str = "") => {
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   return uuidRegex.test(str);
@@ -973,6 +1050,33 @@ export async function descargarParticipacionesEventoPdf(req, res) {
     res.send(buffer);
   } catch (error) {
     console.error("Error al generar PDF de participaciones:", error);
+    handleErrorServer(res, 500, error.message);
+  }
+}
+
+export async function descargarParticipacionesEventoCsv(req, res) {
+  try {
+    const { id } = req.params;
+    const { categorias } = req.query;
+    const { evento, payload } = await fetchParticipacionesEventoData({ id, categorias });
+
+    const csvContent = buildParticipacionesCsv({
+      evento,
+      participaciones: payload.participaciones,
+    });
+
+    const baseNombre = (evento?.nombre || `evento_${id}`)
+      .toString()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/gi, "_")
+      .replace(/^_+|_+$/g, "");
+    const fileName = `${baseNombre || "participaciones"}_participantes.csv`;
+
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+    res.send(`\ufeff${csvContent}`);
+  } catch (error) {
+    console.error("Error al generar CSV de participaciones:", error);
     handleErrorServer(res, 500, error.message);
   }
 }
