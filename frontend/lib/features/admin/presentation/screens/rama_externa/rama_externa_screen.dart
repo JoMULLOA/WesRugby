@@ -13,6 +13,25 @@ import 'package:wesrugby/shared/widgets/layout/wessex_widgets.dart';
 import 'package:wesrugby/shared/widgets/effects/pulse_on_tap.dart';
 import 'package:wesrugby/shared/widgets/event/event_date_time_row.dart';
 
+// Función para ordenar categorías alfanuméricamente (M6, M8, M10, M12, etc.)
+int _ordenarCategoriasAlfanumericamente(String a, String b) {
+  // Extraer números de las categorías (ej: M6 -> 6, M10 -> 10)
+  final regExp = RegExp(r'\d+');
+  final matchA = regExp.firstMatch(a);
+  final matchB = regExp.firstMatch(b);
+  
+  if (matchA != null && matchB != null) {
+    final numA = int.tryParse(matchA.group(0)!) ?? 0;
+    final numB = int.tryParse(matchB.group(0)!) ?? 0;
+    if (numA != numB) {
+      return numA.compareTo(numB);
+    }
+  }
+  
+  // Si no hay números o son iguales, ordenar alfabéticamente
+  return a.toLowerCase().compareTo(b.toLowerCase());
+}
+
 class RamaExternaScreen extends StatefulWidget {
   @override
   _RamaExternaScreenState createState() => _RamaExternaScreenState();
@@ -285,7 +304,18 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
   Future<void> _cargarEventos() async {
     try {
       final response = await ApiService.obtenerEventosDisponibles();
-      setState(() => _eventos = response['data'] ?? []);
+      final eventos = (response['data'] ?? []) as List<dynamic>;
+      // Ordenar eventos futuros: más próximos primero
+      eventos.sort((a, b) {
+        try {
+          final fechaA = DateTime.parse(a['fechaInicio'] ?? a['fecha'] ?? '');
+          final fechaB = DateTime.parse(b['fechaInicio'] ?? b['fecha'] ?? '');
+          return fechaA.compareTo(fechaB);
+        } catch (e) {
+          return 0;
+        }
+      });
+      setState(() => _eventos = eventos);
     } catch (e) {
       debugPrint('Error cargando eventos: $e');
     }
@@ -303,6 +333,17 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
           eventosAgrupados = List<dynamic>.from(rawEventos);
         }
       }
+
+      // Ordenar por fecha descendente (más reciente primero)
+      eventosAgrupados.sort((a, b) {
+        try {
+          final fechaA = DateTime.parse(a['fechaInicio'] ?? a['fecha'] ?? '');
+          final fechaB = DateTime.parse(b['fechaInicio'] ?? b['fecha'] ?? '');
+          return fechaB.compareTo(fechaA);
+        } catch (e) {
+          return 0;
+        }
+      });
 
       setState(() {
         _misParticipaciones = eventosAgrupados;
@@ -1798,8 +1839,8 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
 
       final categoriasReferencia =
           categoriasDisponibles.isEmpty
-              ? ['sub-8', 'sub-10', 'sub-12', 'sub-14', 'sub-16', 'sub-18']
-              : categoriasDisponibles;
+              ? ['M6', 'M8', 'M10', 'M12']
+              : (categoriasDisponibles..sort(_ordenarCategoriasAlfanumericamente));
 
       final Map<String, String> lookup = {
         for (final categoria in categoriasReferencia)
@@ -1885,8 +1926,8 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
     
     // Usar las categorías disponibles o valores por defecto
     final categorias = categoriasDisponibles.isNotEmpty
-        ? categoriasDisponibles
-        : ['sub-8', 'sub-10', 'sub-12', 'sub-14', 'sub-16', 'sub-18'];
+        ? (categoriasDisponibles..sort(_ordenarCategoriasAlfanumericamente))
+        : ['M6', 'M8', 'M10', 'M12'];
     
     // Agregar ejemplos con las primeras 3 categorías
     if (categorias.isNotEmpty) {
@@ -1902,7 +1943,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
     ejemplos.addAll([
       '',
       '# Notas importantes:',
-      '# - La primera columna debe ser la categoría (ej: ${categorias.isNotEmpty ? categorias[0] : 'sub-8'})',
+      '# - La primera columna debe ser la categoría (ej: ${categorias.isNotEmpty ? categorias[0] : 'M6'}),'
       '# - Los nombres de participantes van después, separados por comas',
       '# - Las líneas que comienzan con # son comentarios y serán ignoradas',
       '# - Puedes usar todas las categorías disponibles: ${categorias.join(", ")}',
@@ -2145,21 +2186,22 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
     List<String> categoriasDisponibles = [];
     if (evento['categoria'] != null &&
         evento['categoria'].toString().isNotEmpty) {
-      // Las categorias vienen separadas por comas: "sub-8,sub-10"
+      // Las categorias vienen separadas por comas: "M6,M8,M10"
       categoriasDisponibles =
           evento['categoria']
               .toString()
               .split(',')
               .map((cat) => cat.trim())
               .where((cat) => cat.isNotEmpty)
-              .toList();
+              .toList()
+              ..sort(_ordenarCategoriasAlfanumericamente);
     }
 
     // Si no hay categorias especificadas, usar todas como fallback
     final categorias =
         categoriasDisponibles.isNotEmpty
             ? categoriasDisponibles
-            : ['sub-8', 'sub-10', 'sub-12', 'sub-14', 'sub-16', 'sub-18'];
+            : ['M6', 'M8', 'M10', 'M12'];
 
     // Lista para almacenar multiples participaciones
     List<Map<String, dynamic>> participaciones = [

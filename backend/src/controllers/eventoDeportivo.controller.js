@@ -169,7 +169,7 @@ export async function obtenerEventosDeportivos(req, res) {
     const [eventos, total] = await eventoRepository.findAndCount({
       where: whereCondition,
       relations: ["organizadoPor", "tipoEvento"],
-      order: { fechaInicio: "ASC" },
+      order: { fechaInicio: "DESC" },
       take: parseInt(limite),
       skip: skip
     });

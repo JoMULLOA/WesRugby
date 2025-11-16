@@ -3437,7 +3437,7 @@ class _FormularioEntrenadorDialogState
             _buildTextField(
               controller: _categoriasController,
               label: 'Categorías que Entrena',
-              hint: 'Ej: sub-8, sub-10, sub-12',
+              hint: 'Ej: M6, M8, M10, M12',
               icon: Icons.groups,
             ),
             const SizedBox(height: 16),

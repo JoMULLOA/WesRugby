@@ -57,7 +57,7 @@ async function createInitialData() {
       // Usuario 5: RamaExterna - GestiÃ³n de eventos deportivos
       const userRamaExterna = userRepository.create({
         rut: "56.789.012-3",
-        nombreCompleto: "Rama Externa Rugby Sub-12",
+        nombreCompleto: "Rama Externa Rugby M10",
         email: "coordinador@wessex.cl",
         password: await encryptPassword("Coordinador2024"),
         rol: "RamaExterna",
@@ -200,18 +200,18 @@ async function ensureSampleRamaUsers(userRepository) {
     const sampleRamas = [
       {
         rut: "56.789.012-3",
-        nombreCompleto: "Rama Externa Rugby Sub-12",
+        nombreCompleto: "Rama Externa Rugby M10",
         email: "coordinador@wessex.cl",
       },
       {
         rut: "57.321.654-1",
-        nombreCompleto: "Rama Externa Rugby Sub-11",
-        email: "rama.sub11@wessex.cl",
+        nombreCompleto: "Rama Externa Rugby M6",
+        email: "rama.m6@wessex.cl",
       },
       {
         rut: "58.654.321-9",
-        nombreCompleto: "Rama Externa Femenina Sub-13",
-        email: "rama.sub13@wessex.cl",
+        nombreCompleto: "Rama Externa Femenina M12",
+        email: "rama.m12@wessex.cl",
       },
     ];
 
@@ -281,7 +281,7 @@ async function ensureDemoEventoDeportivo(userRepository, tipoEventoRepository) {
         titulo: demoTitle,
         descripcion: "Evento demostrativo con multiples ramas y categorias para pruebas internas.",
         tipoEventoId: tipoDeportivo.id,
-        categoria: "sub-11,sub-12,sub-13",
+        categoria: "M6,M8,M10,M12",
         fechaInicio,
         fechaFin,
         lugar: "Cancha Principal Wessex",
@@ -300,11 +300,11 @@ async function ensureDemoEventoDeportivo(userRepository, tipoEventoRepository) {
 
     if (participacionesExistentes === 0) {
       const participacionesDemo = [
-        { rutRamaExterna: "56.789.012-3", categoria: "sub-12", cantidadNinos: 16 },
-        { rutRamaExterna: "56.789.012-3", categoria: "sub-13", cantidadNinos: 9 },
-        { rutRamaExterna: "57.321.654-1", categoria: "sub-11", cantidadNinos: 18 },
-        { rutRamaExterna: "57.321.654-1", categoria: "sub-12", cantidadNinos: 7 },
-        { rutRamaExterna: "58.654.321-9", categoria: "sub-13", cantidadNinos: 14 },
+        { rutRamaExterna: "56.789.012-3", categoria: "M10", cantidadNinos: 16 },
+        { rutRamaExterna: "56.789.012-3", categoria: "M12", cantidadNinos: 9 },
+        { rutRamaExterna: "57.321.654-1", categoria: "M6", cantidadNinos: 18 },
+        { rutRamaExterna: "57.321.654-1", categoria: "M8", cantidadNinos: 7 },
+        { rutRamaExterna: "58.654.321-9", categoria: "M12", cantidadNinos: 14 },
       ];
 
       const registros = participacionesDemo.map((item) =>

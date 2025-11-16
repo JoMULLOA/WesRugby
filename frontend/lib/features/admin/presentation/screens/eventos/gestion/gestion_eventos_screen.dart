@@ -8,6 +8,25 @@ import 'package:wesrugby/features/admin/presentation/screens/eventos/gestion/wid
 import 'package:wesrugby/shared/widgets/layout/wessex_widgets.dart';
 // Versión 2.0 - Con gestión de categorías mejorada
 
+// Función para ordenar categorías alfanuméricamente (M6, M8, M10, M12, etc.)
+int _ordenarCategoriasAlfanumericamente(String a, String b) {
+  // Extraer números de las categorías (ej: M6 -> 6, M10 -> 10)
+  final regExp = RegExp(r'\d+');
+  final matchA = regExp.firstMatch(a);
+  final matchB = regExp.firstMatch(b);
+  
+  if (matchA != null && matchB != null) {
+    final numA = int.tryParse(matchA.group(0)!) ?? 0;
+    final numB = int.tryParse(matchB.group(0)!) ?? 0;
+    if (numA != numB) {
+      return numA.compareTo(numB);
+    }
+  }
+  
+  // Si no hay números o son iguales, ordenar alfabéticamente
+  return a.toLowerCase().compareTo(b.toLowerCase());
+}
+
 class GestionEventosScreen extends StatefulWidget {
   @override
   _GestionEventosScreenState createState() => _GestionEventosScreenState();
@@ -18,7 +37,7 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
   late TabController _tabController;
   List<dynamic> _eventos = [];
   bool _isLoading = false;
-  List<String> _categorias = ['sub-11', 'sub-12', 'sub-13'];
+  List<String> _categorias = ['M6', 'M8', 'M10', 'M12'];
 
   // Variables para filtros
   final TextEditingController _filtroNombreController = TextEditingController();
@@ -152,7 +171,7 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
         (datos['categoriasDisponibles'] as List<dynamic>? ?? []).map(
           (categoria) => categoria.toString(),
         ),
-      );
+      )..sort(_ordenarCategoriasAlfanumericamente);
       final int totalGeneralInicial = datos['totalGeneral'] ?? 0;
       final int totalRamasInicial =
           datos['totalRamas'] ?? estadisticasIniciales.length;
@@ -286,7 +305,7 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
                 );
 
                 chips.addAll(
-                  categoriasDisponibles.map((categoria) {
+                  (categoriasDisponibles..sort(_ordenarCategoriasAlfanumericamente)).map((categoria) {
                     final bool estaSeleccionada = categoriasSeleccionadas
                         .contains(categoria);
                     return FilterChip(
@@ -1424,7 +1443,7 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
                               child: TextFormField(
                                 controller: _nuevaCategoriaController,
                                 decoration: InputDecoration(
-                                  hintText: 'ej: sub-20, veteranos',
+                                  hintText: 'M14, M16, etc.',
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(8),
                                   ),
@@ -1453,7 +1472,7 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
                                   setDialogState(() {
                                     _categorias.add(nuevaCategoria);
                                     _categorias
-                                        .sort(); // Ordenar alfabéticamente
+                                        .sort(_ordenarCategoriasAlfanumericamente); // Ordenar alfanuméricamente
                                   });
                                   setState(
                                     () {},
@@ -1698,7 +1717,7 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
                                         child: Column(
                                           mainAxisSize: MainAxisSize.min,
                                           children:
-                                              _categorias
+                                              (_categorias..sort(_ordenarCategoriasAlfanumericamente))
                                                   .map(
                                                     (
                                                       categoria,
@@ -2404,7 +2423,12 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
           }
 
           return true;
-        }).toList();
+        }).toList()
+          ..sort((a, b) {
+            final fechaA = DateTime.parse(a['fechaInicio']);
+            final fechaB = DateTime.parse(b['fechaInicio']);
+            return fechaA.compareTo(fechaB); // Eventos futuros: más próximos primero
+          });
 
     if (eventosActivos.isEmpty) {
       return Center(
@@ -2465,7 +2489,12 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
           }
 
           return true;
-        }).toList();
+        }).toList()
+          ..sort((a, b) {
+            final fechaA = DateTime.parse(a['fechaInicio']);
+            final fechaB = DateTime.parse(b['fechaInicio']);
+            return fechaB.compareTo(fechaA); // Ordenar de más reciente a más antiguo
+          });
 
     if (eventosPasados.isEmpty) {
       return Center(

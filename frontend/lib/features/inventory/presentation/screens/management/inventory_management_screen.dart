@@ -1510,14 +1510,22 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen>
                         ),
                       ],
                     )
-                    : SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: DataTable(
-                        columnSpacing: 20,
-                        headingRowColor: MaterialStateProperty.all(
-                          WessexColors.midnightNavy.withOpacity(0.08),
-                        ),
-                        columns: const [
+                    : LayoutBuilder(
+                      builder: (context, constraints) {
+                        return SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              minWidth: constraints.maxWidth,
+                            ),
+                            child: DataTable(
+                              columnSpacing: 12,
+                              horizontalMargin: 12,
+                              headingRowColor: MaterialStateProperty.all(
+                                WessexColors.midnightNavy.withOpacity(0.08),
+                              ),
+                              dataRowHeight: 56,
+                              columns: const [
                           DataColumn(label: Text('Producto')),
                           DataColumn(label: Text('Categoria')),
                           DataColumn(label: Text('Origen')),
@@ -1531,7 +1539,7 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen>
                             ),
                           ),
                         ],
-                        rows: products
+                              rows: products
                             .map(
                               (product) => DataRow(
                                 cells: [
@@ -1555,24 +1563,32 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen>
                                       children: [
                                         IconButton(
                                           tooltip: 'Editar',
-                                          icon: const Icon(Icons.edit, size: 20),
+                                          icon: const Icon(Icons.edit, size: 18),
+                                          padding: EdgeInsets.all(4),
+                                          constraints: BoxConstraints(minWidth: 32, minHeight: 32),
                                           onPressed: () => _showProductDialog(product: product),
                                         ),
                                         IconButton(
                                           tooltip: 'Regenerar codigo',
-                                          icon: const Icon(Icons.qr_code, size: 20),
+                                          icon: const Icon(Icons.qr_code, size: 18),
+                                          padding: EdgeInsets.all(4),
+                                          constraints: BoxConstraints(minWidth: 32, minHeight: 32),
                                           onPressed: () => _handleReissueBarcode(product),
                                         ),
                                         IconButton(
                                           tooltip: 'Descargar etiqueta',
-                                          icon: const Icon(Icons.download, size: 20),
+                                          icon: const Icon(Icons.download, size: 18),
+                                          padding: EdgeInsets.all(4),
+                                          constraints: BoxConstraints(minWidth: 32, minHeight: 32),
                                           onPressed: () => _downloadSheetForProductId(product.id),
                                         ),
                                         IconButton(
                                           tooltip: product.active ? 'Desactivar' : 'Activar',
+                                          padding: EdgeInsets.all(4),
+                                          constraints: BoxConstraints(minWidth: 32, minHeight: 32),
                                           icon: Icon(
                                             product.active ? Icons.toggle_on : Icons.toggle_off,
-                                            size: 20,
+                                            size: 18,
                                             color: product.active
                                                 ? WessexColors.leafGreen
                                                 : WessexColors.maximumGrayMint,
@@ -1583,9 +1599,14 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen>
                                                   : () => _toggleProductActive(product),
                                         ),
                                         IconButton(
-                                          tooltip: 'Eliminar',
-                                          icon: const Icon(Icons.delete_forever, size: 20),
-                                          color: WessexColors.crimsonAlert,
+                                          tooltip: 'Eliminar permanentemente',
+                                          padding: EdgeInsets.all(4),
+                                          constraints: BoxConstraints(minWidth: 32, minHeight: 32),
+                                          icon: const Icon(
+                                            Icons.delete_forever, 
+                                            size: 18,
+                                            color: WessexColors.crimsonAlert,
+                                          ),
                                           onPressed:
                                               product.category == 'varios'
                                                   ? null
@@ -1598,7 +1619,10 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen>
                               ),
                             )
                             .toList(),
-                      ),
+                            ),
+                          ),
+                        );
+                      },
                     ),
           ),
         ],

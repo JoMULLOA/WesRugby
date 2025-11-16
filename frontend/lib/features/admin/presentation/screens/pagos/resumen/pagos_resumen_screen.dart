@@ -3,6 +3,25 @@ import 'package:wesrugby/core/config/colors.dart';
 import 'package:wesrugby/data/services/estudiante_service.dart';
 import 'package:wesrugby/shared/widgets/layout/wessex_widgets.dart';
 
+// Función para ordenar categorías alfanuméricamente (M6, M8, M10, M12, etc.)
+int _ordenarCategoriasAlfanumericamente(String a, String b) {
+  // Extraer números de las categorías (ej: M6 -> 6, M10 -> 10)
+  final regExp = RegExp(r'\d+');
+  final matchA = regExp.firstMatch(a);
+  final matchB = regExp.firstMatch(b);
+  
+  if (matchA != null && matchB != null) {
+    final numA = int.tryParse(matchA.group(0)!) ?? 0;
+    final numB = int.tryParse(matchB.group(0)!) ?? 0;
+    if (numA != numB) {
+      return numA.compareTo(numB);
+    }
+  }
+  
+  // Si no hay números o son iguales, ordenar alfabéticamente
+  return a.toLowerCase().compareTo(b.toLowerCase());
+}
+
 class PagosResumenScreen extends StatefulWidget {
   const PagosResumenScreen({super.key});
 
@@ -100,7 +119,7 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
     setState(() {
       _todosEstudiantes = estudiantes;
       _cursosDisponibles = ['Todos', ...cursos.toList()..sort()];
-      _categoriasDisponibles = ['Todas', ...categorias.toList()..sort()];
+      _categoriasDisponibles = ['Todas', ...categorias.toList()..sort(_ordenarCategoriasAlfanumericamente)];
       _estudiantesFiltrados = _aplicarFiltros(estudiantes);
       _isLoading = false;
     });
