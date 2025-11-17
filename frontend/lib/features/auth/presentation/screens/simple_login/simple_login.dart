@@ -32,6 +32,11 @@ class _LoginPageState extends State<LoginPage> {
     _checkExistingSession();
   }
 
+  void _submitLogin() {
+    if (_isLoading) return;
+    _login();
+  }
+
   Future<void> _checkExistingSession() async {
     final isValid = await TokenManager.isLoggedIn();
     final userInfo = isValid ? await TokenManager.getUserInfo() : null;
@@ -44,7 +49,8 @@ class _LoginPageState extends State<LoginPage> {
         _storedUser = Map<String, dynamic>.from(userInfo);
         final email = userInfo['email']?.toString();
         if (email != null && email.isNotEmpty) {
-          _emailController.text = email;
+          final normalizedEmail = email.toLowerCase();
+          _emailController.text = normalizedEmail;
         }
       });
     } else {
@@ -230,8 +236,16 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => _isLoading = true);
 
     try {
+      final email = _emailController.text.trim().toLowerCase();
+      if (_emailController.text != email) {
+        _emailController.value = TextEditingValue(
+          text: email,
+          selection: TextSelection.collapsed(offset: email.length),
+        );
+      }
+
       final response = await ApiService.login(
-        _emailController.text.trim(),
+        email,
         _passwordController.text,
       );
 
@@ -571,6 +585,7 @@ class _LoginPageState extends State<LoginPage> {
                               TextFormField(
                                 controller: _emailController,
                                 keyboardType: TextInputType.emailAddress,
+                                textInputAction: TextInputAction.next,
                                 decoration: InputDecoration(
                                   labelText: "Email",
                                   hintText: "usuario@wessexrugby.com",
@@ -620,6 +635,8 @@ class _LoginPageState extends State<LoginPage> {
                                   }
                                   return null;
                                 },
+                                onFieldSubmitted: (_) =>
+                                    FocusScope.of(context).nextFocus(),
                               ),
                               SizedBox(height: 20),
 
@@ -627,6 +644,7 @@ class _LoginPageState extends State<LoginPage> {
                               TextFormField(
                                 controller: _passwordController,
                                 obscureText: _obscurePassword,
+                                textInputAction: TextInputAction.done,
                                 decoration: InputDecoration(
                                   labelText: "Contraseña",
                                   labelStyle: TextStyle(
@@ -685,6 +703,7 @@ class _LoginPageState extends State<LoginPage> {
                                   }
                                   return null;
                                 },
+                                onFieldSubmitted: (_) => _submitLogin(),
                               ),
                               SizedBox(height: 12),
 
