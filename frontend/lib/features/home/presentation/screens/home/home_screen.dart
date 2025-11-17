@@ -603,7 +603,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildEntrenadorPreviewCard(Map<String, dynamic> entrenador) {
     final String nombre = entrenador['nombreCompleto'] ?? 'Sin nombre';
-    final String? avatar = entrenador['avatar'];
+    final String? avatar =
+        (entrenador['foto'] as String?) ?? (entrenador['avatar'] as String?);
     
     return GestureDetector(
       onTap: () => _mostrarDetalleEntrenador(entrenador),
@@ -687,7 +688,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _mostrarDetalleEntrenador(Map<String, dynamic> entrenador) {
     final String nombre = entrenador['nombreCompleto'] ?? 'Sin nombre';
-    final String? avatar = entrenador['avatar'];
+    final String? avatar =
+        (entrenador['foto'] as String?) ?? (entrenador['avatar'] as String?);
     final String? titulo = entrenador['titulo'];
     final String? especialidad = entrenador['especialidad'];
     final int? aniosExperiencia = entrenador['aniosExperiencia'];

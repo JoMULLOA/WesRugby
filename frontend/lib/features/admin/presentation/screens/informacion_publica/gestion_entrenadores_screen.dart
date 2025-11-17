@@ -162,6 +162,12 @@ class _GestionEntrenadoresScreenState extends State<GestionEntrenadoresScreen> {
     final Map<String, dynamic>? perfil = entrenador['perfilPublico'];
     final bool visible = perfil?['visible'] ?? false;
 
+    final String? fotoUrl =
+        (perfil?['fotoUrl'] as String?) ??
+        (perfil?['foto'] as String?) ??
+        entrenador['foto'] as String? ??
+        entrenador['avatar'] as String?;
+
     return WessexCard(
       margin: const EdgeInsets.only(bottom: 16),
       child: Column(
@@ -181,10 +187,10 @@ class _GestionEntrenadoresScreenState extends State<GestionEntrenadoresScreen> {
                       width: 2,
                     ),
                   ),
-                  child: entrenador['avatar'] != null
+                  child: fotoUrl != null
                       ? ClipOval(
                           child: Image.network(
-                            entrenador['avatar'],
+                            fotoUrl,
                             fit: BoxFit.cover,
                             errorBuilder: (context, error, stackTrace) =>
                                 _buildDefaultAvatar(

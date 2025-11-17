@@ -24,7 +24,7 @@ function createUploader(subDir, { fileSize, allowedMimeTypes }) {
   const acceptedTypes =
     Array.isArray(allowedMimeTypes) && allowedMimeTypes.length > 0
       ? allowedMimeTypes
-      : ["image/jpeg", "image/png", "image/webp", "image/gif"];
+      : ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif", "image/bmp"];
   const storage = multer.diskStorage({
     destination: function (req, file, cb) {
       try {
@@ -84,4 +84,8 @@ export const uploadVoucherComprobante = createUploader(path.join("comprobantes")
     "image/gif",
     "application/pdf",
   ],
+});
+
+export const uploadEntrenadorFoto = createUploader(path.join("imagenes", "entrenadores"), {
+  fileSize: 5 * 1024 * 1024,
 });

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'dart:html' as html;
 import 'dart:convert';
 import 'dart:typed_data';
@@ -3080,6 +3081,7 @@ class _EntrenadoresManagementWidgetState
     extends State<_EntrenadoresManagementWidget> {
   List<Map<String, dynamic>> _entrenadores = [];
   bool _isLoading = false;
+  String? _rutSubiendoFoto;
 
   @override
   void initState() {
@@ -3127,6 +3129,119 @@ class _EntrenadoresManagementWidgetState
     );
   }
 
+  Uint8List? _bytesDesdeResultado(Object? result) {
+    if (result == null) return null;
+    if (result is Uint8List) return result;
+    if (result is ByteBuffer) return Uint8List.view(result);
+    if (result is List<int>) return Uint8List.fromList(result);
+    return null;
+  }
+
+  String? _resolverMimeType(html.File file) {
+    final provided = file.type;
+    if (provided != null && provided.isNotEmpty) {
+      return provided;
+    }
+
+    final lowerName = file.name.toLowerCase();
+    if (lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg')) {
+      return 'image/jpeg';
+    }
+    if (lowerName.endsWith('.png')) {
+      return 'image/png';
+    }
+    if (lowerName.endsWith('.gif')) {
+      return 'image/gif';
+    }
+    if (lowerName.endsWith('.webp')) {
+      return 'image/webp';
+    }
+    if (lowerName.endsWith('.bmp')) {
+      return 'image/bmp';
+    }
+    return null;
+  }
+
+  void _seleccionarFotoEntrenador(Map<String, dynamic> entrenador) {
+    final String? rut = entrenador['rut'] as String?;
+    if (rut == null || rut.isEmpty) {
+      _mostrarError('No se puede adjuntar una foto sin RUT asociado.');
+      return;
+    }
+
+    if (!kIsWeb) {
+      _mostrarError(
+        'La carga de fotos está disponible actualmente desde la versión web.',
+      );
+      return;
+    }
+
+    final html.FileUploadInputElement uploadInput = html.FileUploadInputElement()
+      ..accept = 'image/*';
+    uploadInput.click();
+
+    uploadInput.onChange.listen((event) {
+      final files = uploadInput.files;
+      if (files == null || files.isEmpty) return;
+      final file = files.first;
+      final reader = html.FileReader()..readAsArrayBuffer(file);
+
+      reader.onLoad.listen((event) async {
+        final bytes = _bytesDesdeResultado(reader.result);
+        if (bytes == null) {
+          _mostrarError(
+            'No se pudo leer el archivo seleccionado. Usa una imagen JPEG, PNG, WEBP, GIF o BMP.',
+          );
+          return;
+        }
+
+        final mimeType = _resolverMimeType(file);
+        if (mimeType == null) {
+          _mostrarError(
+            'Formato no soportado. Usa una imagen JPEG, PNG, WEBP, GIF o BMP.',
+          );
+          return;
+        }
+
+        await _subirFotoEntrenador(
+          rut: rut,
+          bytes: bytes,
+          fileName: file.name,
+          mimeType: mimeType,
+        );
+      });
+
+      reader.onError.listen((event) {
+        _mostrarError('No se pudo leer el archivo seleccionado.');
+      });
+    });
+  }
+
+  Future<void> _subirFotoEntrenador({
+    required String rut,
+    required Uint8List bytes,
+    required String fileName,
+    required String mimeType,
+  }) async {
+    setState(() => _rutSubiendoFoto = rut);
+    try {
+      await ApiService.actualizarFotoEntrenador(
+        rut: rut,
+        bytes: bytes,
+        fileName: fileName,
+        mimeType: mimeType,
+      );
+      _mostrarExito('Foto del entrenador actualizada.');
+      await _cargarEntrenadores();
+    } catch (e) {
+      _mostrarError('Error al subir foto: $e');
+    } finally {
+      if (mounted && _rutSubiendoFoto == rut) {
+        setState(() => _rutSubiendoFoto = null);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -3166,16 +3281,28 @@ class _EntrenadoresManagementWidgetState
     final Map<String, dynamic>? perfil = entrenador['perfilPublico'];
     final bool visible = perfil?['visible'] ?? false;
 
+    final String? fotoUrl =
+        (perfil?['fotoUrl'] as String?) ??
+        (perfil?['foto'] as String?) ??
+        entrenador['foto'] as String? ??
+        entrenador['avatar'] as String?;
+    final bool subiendoFoto = _rutSubiendoFoto == entrenador['rut'];
+    final bool puedeActualizarFoto =
+        (entrenador['rut'] as String?)?.trim().isNotEmpty == true;
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 1,
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: WessexColors.deepRoyalBlue,
-          child: Text(
-            (entrenador['nombreCompleto'] ?? 'N')[0].toUpperCase(),
-            style: const TextStyle(color: Colors.white),
-          ),
+          backgroundImage: fotoUrl != null ? NetworkImage(fotoUrl) : null,
+          child: fotoUrl == null
+              ? Text(
+                  (entrenador['nombreCompleto'] ?? 'N')[0].toUpperCase(),
+                  style: const TextStyle(color: Colors.white),
+                )
+              : null,
         ),
         title: Text(entrenador['nombreCompleto'] ?? 'Sin nombre'),
         subtitle: Column(
@@ -3233,6 +3360,20 @@ class _EntrenadoresManagementWidgetState
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            IconButton(
+              icon: subiendoFoto
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.photo_camera),
+              color: WessexColors.deepRoyalBlue,
+              tooltip: 'Actualizar foto pública',
+              onPressed: (!puedeActualizarFoto || subiendoFoto)
+                  ? null
+                  : () => _seleccionarFotoEntrenador(entrenador),
+            ),
             if (tienePerfil)
               IconButton(
                 icon: Icon(
@@ -3324,6 +3465,64 @@ class _FormularioEntrenadorDialogState
   bool _visible = true;
   bool _guardando = false;
 
+  String? _validarTextoRequerido(
+    String? value, {
+    required String nombreCampo,
+    int minLength = 3,
+    int maxLength = 255,
+  }) {
+    final texto = value?.trim() ?? '';
+    if (texto.isEmpty) {
+      return 'El $nombreCampo es obligatorio.';
+    }
+    if (texto.length < minLength) {
+      return 'El $nombreCampo debe tener al menos $minLength caracteres.';
+    }
+    if (texto.length > maxLength) {
+      return 'El $nombreCampo no puede superar los $maxLength caracteres.';
+    }
+    return null;
+  }
+
+  String? _validarTextoOpcional(
+    String? value, {
+    int maxLength = 1500,
+  }) {
+    final texto = value?.trim() ?? '';
+    if (texto.isEmpty) return null;
+    if (texto.length > maxLength) {
+      return 'No puede superar los $maxLength caracteres.';
+    }
+    return null;
+  }
+
+  String? _validarAnios(String? value) {
+    final texto = value?.trim() ?? '';
+    if (texto.isEmpty) {
+      return 'Los a��os de experiencia son obligatorios.';
+    }
+    final numero = int.tryParse(texto);
+    if (numero == null) {
+      return 'Ingresa un nǧmero válido.';
+    }
+    if (numero <= 0) {
+      return 'Debe ser mayor a 0.';
+    }
+    if (numero >= 100) {
+      return 'Debe ser menor a 100.';
+    }
+    return null;
+  }
+
+  String? _textoONull(TextEditingController controller, {int? maxLength}) {
+    final texto = controller.text.trim();
+    if (texto.isEmpty) return null;
+    if (maxLength != null && texto.length > maxLength) {
+      return texto.substring(0, maxLength);
+    }
+    return texto;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -3409,63 +3608,106 @@ class _FormularioEntrenadorDialogState
             ),
             const SizedBox(height: 24),
 
-            _buildTextField(
-              controller: _tituloController,
-              label: 'Título Profesional',
-              hint: 'Ej: Entrenador Nivel 1 World Rugby',
-              icon: Icons.workspace_premium,
+            _buildTextField(
+              controller: _tituloController,
+              label: 'T��tulo Profesional',
+              hint: 'Ej: Entrenador Nivel 1 World Rugby',
+              icon: Icons.workspace_premium,
+              maxLength: 255,
+              validator: (value) => _validarTextoRequerido(
+                value,
+                nombreCampo: 'titulo profesional',
+                minLength: 3,
+                maxLength: 255,
+              ),
             ),
             const SizedBox(height: 16),
 
-            _buildTextField(
-              controller: _especialidadController,
-              label: 'Especialidad',
-              hint: 'Ej: Entrenamiento Físico y Técnico',
-              icon: Icons.sports_kabaddi,
+            _buildTextField(
+              controller: _especialidadController,
+              label: 'Especialidad',
+              hint: 'Ej: Entrenamiento F��sico y TǸcnico',
+              icon: Icons.sports_kabaddi,
+              maxLength: 255,
+              validator: (value) => _validarTextoRequerido(
+                value,
+                nombreCampo: 'especialidad',
+                minLength: 3,
+                maxLength: 255,
+              ),
             ),
             const SizedBox(height: 16),
 
-            _buildTextField(
-              controller: _aniosExperienciaController,
-              label: 'Años de Experiencia',
-              hint: 'Ej: 10',
-              icon: Icons.timer,
-              keyboardType: TextInputType.number,
+            _buildTextField(
+              controller: _aniosExperienciaController,
+              label: 'A��os de Experiencia',
+              hint: 'Ej: 10',
+              icon: Icons.timer,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              validator: _validarAnios,
+              maxLength: 2,
             ),
             const SizedBox(height: 16),
 
-            _buildTextField(
-              controller: _categoriasController,
-              label: 'Categorías que Entrena',
-              hint: 'Ej: M6, M8, M10, M12',
-              icon: Icons.groups,
+            _buildTextField(
+              controller: _categoriasController,
+              label: 'Categor��as que Entrena',
+              hint: 'Ej: M6, M8, M10, M12',
+              icon: Icons.groups,
+              maxLength: 500,
+              validator: (value) => _validarTextoRequerido(
+                value,
+                nombreCampo: 'categorias',
+                minLength: 2,
+                maxLength: 500,
+              ),
             ),
             const SizedBox(height: 16),
 
-            _buildTextField(
-              controller: _biografiaController,
-              label: 'Biografía',
-              hint: 'Describe la trayectoria y experiencia del entrenador...',
-              icon: Icons.person,
-              maxLines: 4,
+            _buildTextField(
+              controller: _biografiaController,
+              label: 'Biograf��a',
+              hint: 'Describe la trayectoria y experiencia del entrenador...',
+              icon: Icons.person,
+              maxLines: 4,
+              maxLength: 2000,
+              validator: (value) => _validarTextoRequerido(
+                value,
+                nombreCampo: 'biografia',
+                minLength: 20,
+                maxLength: 2000,
+              ),
             ),
             const SizedBox(height: 16),
 
-            _buildTextField(
-              controller: _logrosController,
-              label: 'Logros Destacados',
-              hint: 'Enumera los logros más importantes...',
-              icon: Icons.emoji_events,
-              maxLines: 3,
+            _buildTextField(
+              controller: _logrosController,
+              label: 'Logros Destacados',
+              hint: 'Enumera los logros mǭs importantes...',
+              icon: Icons.emoji_events,
+              maxLines: 3,
+              maxLength: 1500,
+              helperText: 'Opcional',
+              validator: (value) => _validarTextoOpcional(
+                value,
+                maxLength: 1500,
+              ),
             ),
             const SizedBox(height: 16),
 
-            _buildTextField(
-              controller: _certificacionesController,
-              label: 'Certificaciones',
-              hint: 'Lista certificaciones y cursos relevantes...',
-              icon: Icons.school,
-              maxLines: 3,
+            _buildTextField(
+              controller: _certificacionesController,
+              label: 'Certificaciones',
+              hint: 'Lista certificaciones y cursos relevantes...',
+              icon: Icons.school,
+              maxLines: 3,
+              maxLength: 1500,
+              helperText: 'Opcional',
+              validator: (value) => _validarTextoOpcional(
+                value,
+                maxLength: 1500,
+              ),
             ),
             const SizedBox(height: 16),
 
@@ -3531,6 +3773,10 @@ class _FormularioEntrenadorDialogState
     IconData? icon,
     int maxLines = 1,
     TextInputType? keyboardType,
+    String? Function(String?)? validator,
+    List<TextInputFormatter>? inputFormatters,
+    String? helperText,
+    int? maxLength,
   }) {
     return TextFormField(
       controller: controller,
@@ -3538,6 +3784,7 @@ class _FormularioEntrenadorDialogState
         labelText: label,
         hintText: hint,
         prefixIcon: icon != null ? Icon(icon) : null,
+        helperText: helperText,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
         ),
@@ -3546,6 +3793,10 @@ class _FormularioEntrenadorDialogState
       ),
       maxLines: maxLines,
       keyboardType: keyboardType,
+      validator: validator,
+      inputFormatters: inputFormatters,
+      autovalidateMode: AutovalidateMode.onUserInteraction,
+      maxLength: maxLength,
     );
   }
 
@@ -3555,13 +3806,21 @@ class _FormularioEntrenadorDialogState
     setState(() => _guardando = true);
 
     try {
+      final rutValor = widget.entrenador['rut']?.toString().trim();
+      if (rutValor == null || rutValor.isEmpty) {
+        throw Exception('No se pudo identificar al entrenador seleccionado.');
+      }
+
+      final experienciaTexto = _aniosExperienciaController.text.trim();
+      final experiencia = int.parse(experienciaTexto);
+
       final data = {
-        'userRut': widget.entrenador['rut'],
+        'userRut': rutValor,
         'titulo': _tituloController.text.trim(),
         'especialidad': _especialidadController.text.trim(),
-        'aniosExperiencia': int.tryParse(_aniosExperienciaController.text),
-        'certificaciones': _certificacionesController.text.trim(),
-        'logros': _logrosController.text.trim(),
+        'aniosExperiencia': experiencia,
+        'certificaciones': _textoONull(_certificacionesController),
+        'logros': _textoONull(_logrosController),
         'biografia': _biografiaController.text.trim(),
         'categorias': _categoriasController.text.trim(),
         'visible': _visible,

@@ -66,6 +66,18 @@ const EntrenadorPublicoSchema = new EntitySchema({
       nullable: false,
       comment: "Orden de visualizaciÃ³n en la pÃ¡gina pÃºblica",
     },
+    fotoPath: {
+      type: "varchar",
+      length: 500,
+      nullable: true,
+      comment: "Ruta del archivo de foto pública del entrenador",
+    },
+    fotoVersion: {
+      type: "int",
+      default: 0,
+      nullable: false,
+      comment: "Versión de la foto pública para control de caché",
+    },
     createdAt: {
       type: "timestamp with time zone",
       default: () => "CURRENT_TIMESTAMP",

@@ -2,6 +2,7 @@
 import express from "express";
 import { authenticateJwt } from "../middlewares/authentication.middleware.js";
 import { isDirectiva } from "../middlewares/authorization.middleware.js";
+import { uploadEntrenadorFoto } from "../middlewares/upload.middleware.js";
 import {
   getEntrenadoresPublicos,
   getEntrenadorPublico,
@@ -10,6 +11,7 @@ import {
   eliminarEntrenadorPublico,
   toggleVisibilidadEntrenador,
   getEntrenadoresParaGestion,
+  actualizarFotoEntrenador,
 } from "../controllers/entrenadorPublico.controller.js";
 
 const router = express.Router();
@@ -23,6 +25,11 @@ router.use(authenticateJwt);
 router.use(isDirectiva);
 
 router.get("/gestion", getEntrenadoresParaGestion);
+router.post(
+  "/:rut/foto",
+  uploadEntrenadorFoto.single("foto"),
+  actualizarFotoEntrenador,
+);
 router.post("/", crearEntrenadorPublico);
 router.put("/:id", actualizarEntrenadorPublico);
 router.delete("/:id", eliminarEntrenadorPublico);

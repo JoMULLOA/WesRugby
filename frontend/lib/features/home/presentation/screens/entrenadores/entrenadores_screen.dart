@@ -167,7 +167,8 @@ class _EntrenadoresScreenState extends State<EntrenadoresScreen> {
 
   Widget _buildEntrenadorCard(Map<String, dynamic> entrenador) {
     final String nombre = entrenador['nombreCompleto'] ?? 'Sin nombre';
-    final String? avatar = entrenador['avatar'];
+    final String? avatar =
+        (entrenador['foto'] as String?) ?? (entrenador['avatar'] as String?);
     final String? titulo = entrenador['titulo'];
     final String? especialidad = entrenador['especialidad'];
     final int? aniosExperiencia = entrenador['aniosExperiencia'];
@@ -197,9 +198,9 @@ class _EntrenadoresScreenState extends State<EntrenadoresScreen> {
                   ),
                 ),
                 child: ClipOval(
-                  child:
-                      avatar != null && avatar.isNotEmpty
-                          ? Image.network(
+                child:
+                    avatar != null && avatar.isNotEmpty
+                        ? Image.network(
                             avatar,
                             fit: BoxFit.cover,
                             errorBuilder:

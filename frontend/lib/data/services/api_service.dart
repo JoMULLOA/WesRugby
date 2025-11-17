@@ -799,6 +799,34 @@ class ApiService {
     );
   }
 
+  static Future<Map<String, dynamic>> actualizarFotoEntrenador({
+    required String rut,
+    required Uint8List bytes,
+    required String fileName,
+    required String mimeType,
+  }) async {
+    final response = await _subirMultimediaEvento(
+      endpoint: '/entrenadores/$rut/foto',
+      bytes: bytes,
+      fileName: fileName,
+      mimeType: mimeType,
+      fieldName: 'foto',
+    );
+
+    final data = response['data'];
+    if (data is Map<String, dynamic>) {
+      return data;
+    }
+
+    if (response['success'] == true) {
+      return {};
+    }
+
+    throw Exception(
+      response['message'] ?? 'Error al actualizar la foto del entrenador',
+    );
+  }
+
   static Future<Map<String, dynamic>> _subirMultimediaEvento({
     required String endpoint,
     required Uint8List bytes,

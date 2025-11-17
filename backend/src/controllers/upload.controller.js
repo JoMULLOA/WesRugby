@@ -32,7 +32,7 @@ export async function uploadImagen(req, res) {
     }
 
     // Validar tipo de archivo
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'];
     if (!allowedTypes.includes(mimeType)) {
       return handleErrorClient(res, 400, "Tipo de archivo no permitido", {
         permitidos: allowedTypes
