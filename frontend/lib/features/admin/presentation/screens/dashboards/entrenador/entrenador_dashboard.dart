@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:wesrugby/shared/widgets/layout/wessex_widgets.dart';
@@ -154,77 +155,94 @@ class _EntrenadorDashboardState extends State<EntrenadorDashboard> {
   }
 
   void _showProfileDialog() {
+    final media = MediaQuery.of(context);
+    final screenWidth = media.size.width;
+    final isCompact = screenWidth < 420;
+    final maxDialogWidth = math.min(screenWidth * 0.9, 420.0);
+    final avatarRadius = isCompact ? 38.0 : 50.0;
+    final titleSize = isCompact ? 20.0 : 24.0;
+    final chipFontSize = isCompact ? 12.0 : 14.0;
+    final padding = EdgeInsets.all(isCompact ? 18 : 24);
+
     showDialog(
       context: context,
       builder: (context) => Dialog(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
-        child: Container(
-          width: 400,
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircleAvatar(
-                radius: 50,
-                backgroundColor: WessexColors.deepRoyalBlue.withOpacity(0.1),
-                backgroundImage:
-                    _avatarUrl != null ? NetworkImage(_avatarUrl!) : null,
-                child: _avatarUrl == null
-                    ? const Icon(
-                        Icons.person,
-                        size: 50,
-                        color: WessexColors.deepRoyalBlue,
-                      )
-                    : null,
-              ),
-              const SizedBox(height: 20),
-              Text(
-                _userName ?? 'Usuario',
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: WessexColors.crestShadow,
+        insetPadding: EdgeInsets.symmetric(
+          horizontal: isCompact ? 16 : 24,
+          vertical: 24,
+        ),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: maxDialogWidth),
+          child: Padding(
+            padding: padding,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircleAvatar(
+                  radius: avatarRadius,
+                  backgroundColor: WessexColors.deepRoyalBlue.withOpacity(0.1),
+                  backgroundImage:
+                      _avatarUrl != null ? NetworkImage(_avatarUrl!) : null,
+                  child: _avatarUrl == null
+                      ? Icon(
+                          Icons.person,
+                          size: avatarRadius,
+                          color: WessexColors.deepRoyalBlue,
+                        )
+                      : null,
                 ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: WessexColors.deepRoyalBlue.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Text(
-                  'ENTRENADOR',
+                SizedBox(height: isCompact ? 16 : 20),
+                Text(
+                  _userName ?? 'Usuario',
                   style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: WessexColors.deepRoyalBlue,
-                    letterSpacing: 0.5,
+                    fontSize: titleSize,
+                    fontWeight: FontWeight.bold,
+                    color: WessexColors.crestShadow,
                   ),
+                  textAlign: TextAlign.center,
                 ),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: WessexColors.deepRoyalBlue,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                const SizedBox(height: 8),
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: isCompact ? 4 : 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: WessexColors.deepRoyalBlue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Text(
+                    'ENTRENADOR',
+                    style: TextStyle(
+                      fontSize: chipFontSize,
+                      fontWeight: FontWeight.w600,
+                      color: WessexColors.deepRoyalBlue,
+                      letterSpacing: 0.5,
                     ),
                   ),
-                  child: const Text('Cerrar'),
                 ),
-              ),
-            ],
+                SizedBox(height: isCompact ? 18 : 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: WessexColors.deepRoyalBlue,
+                      padding: EdgeInsets.symmetric(
+                        vertical: isCompact ? 10 : 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: const Text('Cerrar'),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -391,49 +409,44 @@ class _EntrenadorDashboardState extends State<EntrenadorDashboard> {
               children: [
                 // Header de bienvenida con diseño Wessex
                 WessexCard(
-                  margin: const EdgeInsets.only(bottom: 32),
+                  margin: EdgeInsets.only(bottom: isDesktop ? 28 : 20),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isDesktop ? 20 : 16,
+                    vertical: isDesktop ? 18 : 14,
+                  ),
                   child: Row(
                     children: [
                       Container(
-                        padding: EdgeInsets.all(
-                          isDesktop ? 20 : (isTablet ? 16 : 12),
-                        ),
+                        width: isDesktop ? 48 : 42,
+                        height: isDesktop ? 48 : 42,
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              WessexColors.crimsonAlert,
-                              WessexColors.deepRoyalBlue,
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(16),
+                          color: WessexColors.deepRoyalBlue.withOpacity(0.1),
+                          shape: BoxShape.circle,
                         ),
-                        child: Icon(
+                        child: const Icon(
                           Icons.sports_rugby,
-                          color: WessexColors.white,
-                          size: isDesktop ? 48 : (isTablet ? 40 : 32),
+                          color: WessexColors.deepRoyalBlue,
                         ),
                       ),
-                      SizedBox(width: isDesktop ? 24 : (isTablet ? 20 : 16)),
+                      SizedBox(width: isDesktop ? 18 : 14),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '¡Bienvenido Entrenador!',
+                              'Bienvenido, Entrenador',
                               style: TextStyle(
                                 color: WessexColors.darkGrape,
-                                fontSize: isDesktop ? 28 : (isTablet ? 24 : 22),
-                                fontWeight: FontWeight.bold,
+                                fontSize: isDesktop ? 22 : 18,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 4),
                             Text(
-                              'Panel de gestión deportiva\nWessex Rugby Club',
+                              'Panel deportivo Wessex Rugby',
                               style: TextStyle(
                                 color: WessexColors.darkGrape.withOpacity(0.7),
-                                fontSize: isDesktop ? 16 : (isTablet ? 15 : 14),
+                                fontSize: isDesktop ? 15 : 13,
                               ),
                             ),
                           ],
@@ -452,58 +465,96 @@ class _EntrenadorDashboardState extends State<EntrenadorDashboard> {
                 const SizedBox(height: 20),
 
                 // Botones principales de asistencia
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildActionCard(
-                        'Tomar Asistencia',
-                        'Iniciar nueva sesión de entrenamiento',
-                        Icons.how_to_reg,
-                        WessexColors.leafGreen,
-                        () => _navigateToGestionAsistencia(context),
-                        isDesktop: isDesktop,
-                        isTablet: isTablet,
+                if (isTablet) ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildActionCard(
+                          'Tomar Asistencia',
+                          'Iniciar nueva sesión de entrenamiento',
+                          Icons.how_to_reg,
+                          WessexColors.leafGreen,
+                          () => _navigateToGestionAsistencia(context),
+                          isDesktop: isDesktop,
+                          isTablet: isTablet,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _buildActionCard(
-                        'Ver Historial',
-                        'Consultar registros anteriores',
-                        Icons.history,
-                        WessexColors.deepRoyalBlue,
-                        () => _navigateToHistorialAsistencia(context),
-                        isDesktop: isDesktop,
-                        isTablet: isTablet,
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _buildActionCard(
+                          'Ver Historial',
+                          'Consultar registros anteriores',
+                          Icons.history,
+                          WessexColors.deepRoyalBlue,
+                          () => _navigateToHistorialAsistencia(context),
+                          isDesktop: isDesktop,
+                          isTablet: isTablet,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                ] else ...[
+                  _buildActionCard(
+                    'Tomar Asistencia',
+                    'Iniciar nueva sesión de entrenamiento',
+                    Icons.how_to_reg,
+                    WessexColors.leafGreen,
+                    () => _navigateToGestionAsistencia(context),
+                    isDesktop: isDesktop,
+                    isTablet: isTablet,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildActionCard(
+                    'Ver Historial',
+                    'Consultar registros anteriores',
+                    Icons.history,
+                    WessexColors.deepRoyalBlue,
+                    () => _navigateToHistorialAsistencia(context),
+                    isDesktop: isDesktop,
+                    isTablet: isTablet,
+                  ),
+                ],
                 const SizedBox(height: 16),
 
-                // Fila adicional para justificantes
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildActionCard(
-                        'Ver Justificantes',
-                        'Consultar justificantes de jugadores',
-                        Icons.assignment_outlined,
-                        WessexColors.leafGreen,
-                        () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder:
-                                (context) =>
-                                    const EntrenadorJustificantesScreen(),
+                // Acceso a justificantes
+                if (isTablet)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildActionCard(
+                          'Ver Justificantes',
+                          'Consultar justificantes de jugadores',
+                          Icons.assignment_outlined,
+                          WessexColors.leafGreen,
+                          () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const EntrenadorJustificantesScreen(),
+                            ),
                           ),
+                          isDesktop: isDesktop,
+                          isTablet: isTablet,
                         ),
-                        isDesktop: isDesktop,
-                        isTablet: isTablet,
+                      ),
+                    ],
+                  )
+                else
+                  _buildActionCard(
+                    'Ver Justificantes',
+                    'Consultar justificantes de jugadores',
+                    Icons.assignment_outlined,
+                    WessexColors.leafGreen,
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            const EntrenadorJustificantesScreen(),
                       ),
                     ),
-                  ],
-                ),
+                    isDesktop: isDesktop,
+                    isTablet: isTablet,
+                  ),
                 const SizedBox(height: 16),
               ],
             ),
@@ -522,17 +573,21 @@ class _EntrenadorDashboardState extends State<EntrenadorDashboard> {
     required bool isDesktop,
     required bool isTablet,
   }) {
+    final isCompact = !isDesktop && !isTablet;
+
     return WessexCard(
-      margin: const EdgeInsets.only(bottom: 0),
+      margin: EdgeInsets.only(bottom: isCompact ? 12 : 0),
       child: InkWell(
         onTap: onPressed,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: EdgeInsets.all(isDesktop ? 20 : (isTablet ? 16 : 14)),
+          padding: EdgeInsets.all(isDesktop ? 20 : (isTablet ? 16 : 12)),
           child: Row(
+            crossAxisAlignment:
+                isCompact ? CrossAxisAlignment.start : CrossAxisAlignment.center,
             children: [
               Container(
-                padding: EdgeInsets.all(isDesktop ? 16 : (isTablet ? 14 : 12)),
+                padding: EdgeInsets.all(isDesktop ? 16 : (isTablet ? 14 : 10)),
                 decoration: BoxDecoration(
                   color: color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
@@ -540,7 +595,7 @@ class _EntrenadorDashboardState extends State<EntrenadorDashboard> {
                 child: Icon(
                   icon,
                   color: color,
-                  size: isDesktop ? 28 : (isTablet ? 24 : 20),
+                  size: isDesktop ? 28 : (isTablet ? 24 : 22),
                 ),
               ),
               SizedBox(width: isDesktop ? 20 : (isTablet ? 16 : 12)),
@@ -551,8 +606,8 @@ class _EntrenadorDashboardState extends State<EntrenadorDashboard> {
                     Text(
                       title,
                       style: TextStyle(
-                        fontSize: isDesktop ? 18 : (isTablet ? 16 : 14),
-                        fontWeight: FontWeight.bold,
+                        fontSize: isDesktop ? 18 : (isTablet ? 16 : 15),
+                        fontWeight: FontWeight.w700,
                         color: WessexColors.darkGrape,
                       ),
                     ),
@@ -562,11 +617,13 @@ class _EntrenadorDashboardState extends State<EntrenadorDashboard> {
                       style: TextStyle(
                         fontSize: isDesktop ? 14 : (isTablet ? 13 : 12),
                         color: WessexColors.darkGrape.withOpacity(0.7),
+                        height: 1.3,
                       ),
                     ),
                   ],
                 ),
               ),
+              SizedBox(width: isCompact ? 4 : 8),
               Icon(
                 Icons.chevron_right,
                 color: WessexColors.darkGrape.withOpacity(0.5),
