@@ -1,10 +1,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:wesrugby/core/config/confGlobal.dart';
 import 'package:wesrugby/data/models/asistencia_model.dart';
 import 'package:wesrugby/data/services/tokenManager.dart';
 
 class AsistenciaService {
-  static const String baseUrl = 'http://localhost:3000/api';
+  static String get baseUrl => confGlobal.baseUrl;
 
   /// Obtiene todos los alumnos activos del sistema
   static Future<List<Alumno>> obtenerAlumnos({String? categoria}) async {

@@ -1,9 +1,20 @@
 import 'package:flutter/material.dart';
 
 class confGlobal {
-  //static const String baseUrl = "http://10.0.2.2:3000/api";
-  static const String baseUrl = "http://localhost:3000/api";
-  //static const String baseUrl = "http://146.83.198.35:1245/api";
+  /// Cambia a `true` cuando quieras apuntar a producción.
+  static const bool useProduction = false;
+
+  /// Host/puerto del backend en desarrollo.
+  static const String _devHost = "http://localhost:3000";
+
+  /// Host/puerto del backend en producción (ajústalo una sola vez).
+  static const String _prodHost = "http://192.168.1.113:3000";
+
+  static const String _basePath = "/api";
+
+  static String get _baseHost => useProduction ? _prodHost : _devHost;
+
+  static String get baseUrl => "$_baseHost$_basePath";
 }
 
 // Colores del Wessex Rugby Club

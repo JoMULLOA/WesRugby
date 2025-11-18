@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
+import 'package:wesrugby/core/config/confGlobal.dart';
 import 'package:wesrugby/data/services/tokenManager.dart';
 
 class ApiResponse {
@@ -16,7 +17,7 @@ class ApiResponse {
 }
 
 class ApiService {
-  static const String baseUrl = 'http://localhost:3000/api';
+  static String get baseUrl => confGlobal.baseUrl;
 
   static Map<String, String> _getHeaders({bool includeAuth = true}) {
     final headers = {'Content-Type': 'application/json'};
