@@ -3,8 +3,6 @@ import { AppDataSource } from "./configDb.js";
 import { encryptPassword } from "../helpers/bcrypt.helper.js";
 import User from "../entity/user.entity.js";
 import TipoEvento from "../entity/tipoEvento.entity.js";
-import EventoDeportivo from "../entity/eventoDeportivo.entity.js";
-import ParticipacionEventoDeportivo from "../entity/participacionEventoDeportivo.entity.js";
 import { seedInventoryProducts } from "../services/inventory.service.js";
 
 
@@ -118,7 +116,6 @@ async function createInitialData() {
       console.log("Tipos de evento ya existen...");
     }
 
-    await ensureDemoEventoDeportivo(userRepository, tipoEventoRepository);
     await seedInventoryProducts();
 
   } catch (error) {
@@ -235,90 +232,6 @@ async function ensureSampleRamaUsers(userRepository) {
     }
   } catch (error) {
     console.error("Error asegurando ramas deportivas demo:", error);
-  }
-}
-
-async function ensureDemoEventoDeportivo(userRepository, tipoEventoRepository) {
-  try {
-    const eventoRepository = AppDataSource.getRepository(EventoDeportivo);
-    const participacionRepository = AppDataSource.getRepository(ParticipacionEventoDeportivo);
-
-    const demoTitle = "Clinica Deportiva Multicategoria";
-    let eventoDemo = await eventoRepository.findOne({
-      where: { titulo: demoTitle },
-    });
-
-    const organizador = await userRepository.findOne({
-      where: { rol: "directiva" },
-    });
-
-    if (!organizador) {
-      console.warn("No se encontro usuario directiva para crear evento demo.");
-      return;
-    }
-
-    let tipoDeportivo = await tipoEventoRepository.findOne({
-      where: { nombre: "Partido", activo: true },
-    });
-
-    if (!tipoDeportivo) {
-      tipoDeportivo = await tipoEventoRepository.findOne({
-        where: { esDeportivo: true, activo: true },
-      });
-    }
-
-    if (!tipoDeportivo) {
-      console.warn("No se encontro tipo de evento deportivo activo para crear el demo.");
-      return;
-    }
-
-    if (!eventoDemo) {
-      const fechaInicio = new Date();
-      fechaInicio.setDate(fechaInicio.getDate() + 7);
-      const fechaFin = new Date(fechaInicio.getTime() + 2 * 60 * 60 * 1000);
-
-      eventoDemo = eventoRepository.create({
-        titulo: demoTitle,
-        descripcion: "Evento demostrativo con multiples ramas y categorias para pruebas internas.",
-        tipoEventoId: tipoDeportivo.id,
-        categoria: "M6,M8,M10,M12",
-        fechaInicio,
-        fechaFin,
-        lugar: "Cancha Principal Wessex",
-        estado: "programado",
-        organizadoPorRut: organizador.rut,
-        notificarParticipantes: false,
-      });
-
-      await eventoRepository.save(eventoDemo);
-      console.log("   - Evento deportivo demo creado para pruebas");
-    }
-
-    const participacionesExistentes = await participacionRepository.count({
-      where: { eventoDeportivoId: eventoDemo.id },
-    });
-
-    if (participacionesExistentes === 0) {
-      const participacionesDemo = [
-        { rutRamaExterna: "56.789.012-3", categoria: "M10", cantidadNinos: 16 },
-        { rutRamaExterna: "56.789.012-3", categoria: "M12", cantidadNinos: 9 },
-        { rutRamaExterna: "57.321.654-1", categoria: "M6", cantidadNinos: 18 },
-        { rutRamaExterna: "57.321.654-1", categoria: "M8", cantidadNinos: 7 },
-        { rutRamaExterna: "58.654.321-9", categoria: "M12", cantidadNinos: 14 },
-      ];
-
-      const registros = participacionesDemo.map((item) =>
-        participacionRepository.create({
-          ...item,
-          eventoDeportivoId: eventoDemo.id,
-        }),
-      );
-
-      await participacionRepository.save(registros);
-      console.log("   - Participaciones demo creadas para el evento deportivo de ejemplo");
-    }
-  } catch (error) {
-    console.error("Error asegurando evento deportivo demo:", error);
   }
 }
 

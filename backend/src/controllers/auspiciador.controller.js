@@ -1,6 +1,4 @@
 "use strict";
-import fs from "fs";
-import path from "path";
 import {
   createAuspiciadorService,
   getAuspiciadoresService,
@@ -14,104 +12,12 @@ import {
   handleErrorServer,
   handleSuccess,
 } from "../handlers/responseHandlers.js";
-import { optimizeUploadedImage } from "../utils/image.utils.js";
+import { resolveFileUrl, deleteFromS3 } from "../utils/storage.utils.js";
 
-const uploadsRoot = path.resolve("uploads");
-
-function toRelativeUploadPath(absolutePath) {
-  if (!absolutePath) {
-    throw new Error("Ruta de archivo inválida");
+async function cleanupUploadedAsset(file) {
+  if (file?.location) {
+    await deleteFromS3(file.location);
   }
-
-  const normalizedAbsolute = path.resolve(absolutePath);
-
-  if (!normalizedAbsolute.startsWith(uploadsRoot)) {
-    throw new Error("Ruta de archivo fuera del directorio permitido");
-  }
-
-  return path.relative(uploadsRoot, normalizedAbsolute).replace(/\\/g, "/");
-}
-
-function buildUploadUrl(req, relativePath) {
-  const normalized = relativePath.replace(/\\/g, "/").replace(/^\/+/, "");
-  return `${req.protocol}://${req.get("host")}/uploads/${normalized}`;
-}
-
-function deleteUploadFile(relativePath) {
-  if (!relativePath) {
-    return;
-  }
-
-  const sanitized = relativePath.replace(/\\/g, "/").replace(/^\/+/, "");
-  const absolute = path.resolve(uploadsRoot, sanitized);
-
-  if (!absolute.startsWith(uploadsRoot)) {
-    return;
-  }
-
-  if (fs.existsSync(absolute)) {
-    try {
-      fs.unlinkSync(absolute);
-    } catch (error) {
-      console.warn("No se pudo eliminar el archivo en uploads:", error.message);
-    }
-  }
-}
-
-function deleteUploadedFileFromRequest(file) {
-  if (!file?.path) {
-    return;
-  }
-
-  try {
-    const relative = toRelativeUploadPath(file.path);
-    deleteUploadFile(relative);
-  } catch (error) {
-    if (fs.existsSync(file.path)) {
-      try {
-        fs.unlinkSync(file.path);
-      } catch (unlinkError) {
-        console.warn("No se pudo limpiar el archivo temporal:", unlinkError.message);
-      }
-    }
-  }
-}
-
-function normalizeUploadsPath(rawPath) {
-  if (!rawPath) {
-    return null;
-  }
-
-  const sanitized = rawPath.replace(/\\/g, "/");
-
-  if (sanitized.startsWith("/uploads/") || sanitized.startsWith("uploads/")) {
-    return sanitized.replace(/^\/?uploads\//, "");
-  }
-
-  return null;
-}
-
-function extractUploadsRelativePath(value) {
-  if (!value) {
-    return null;
-  }
-
-  const raw = String(value).trim();
-
-  if (!raw) {
-    return null;
-  }
-
-  if (raw.includes("://")) {
-    try {
-      const parsed = new URL(raw);
-      return normalizeUploadsPath(parsed.pathname);
-    } catch {
-      return null;
-    }
-  }
-
-  return normalizeUploadsPath(raw);
 }
 
 function formatOrden(value) {
@@ -128,31 +34,26 @@ function formatOrden(value) {
   return parsed;
 }
 
-function mapAuspiciadorForResponse(entity, req) {
+function mapAuspiciadorForResponse(entity) {
   if (!entity) {
     return entity;
   }
 
   const plain = { ...entity };
-  const relativePath = extractUploadsRelativePath(plain.imagen);
-
-  if (relativePath) {
-    plain.imagen = buildUploadUrl(req, relativePath);
-  }
-
+  plain.imagen = resolveFileUrl(plain.imagen);
   return plain;
 }
 
-function mapAuspiciadoresCollection(collection, req) {
+function mapAuspiciadoresCollection(collection) {
   if (!collection) {
     return collection;
   }
 
   if (Array.isArray(collection)) {
-    return collection.map((item) => mapAuspiciadorForResponse(item, req));
+    return collection.map((item) => mapAuspiciadorForResponse(item));
   }
 
-  return mapAuspiciadorForResponse(collection, req);
+  return mapAuspiciadorForResponse(collection);
 }
 
 export async function createAuspiciador(req, res) {
@@ -175,23 +76,9 @@ export async function createAuspiciador(req, res) {
     } else {
       delete auspiciadorData.orden;
     }
-
-    let uploadedRelativePath = null;
-
-    if (req.file) {
-      try {
-        await optimizeUploadedImage(req.file, {
-          maxWidth: 1200,
-          maxHeight: 1200,
-          quality: 80,
-        });
-      } catch (error) {
-        deleteUploadedFileFromRequest(req.file);
-        return handleErrorServer(res, 500, "Error procesando la imagen", error.message);
-      }
-
-      uploadedRelativePath = toRelativeUploadPath(req.file.path);
-      auspiciadorData.imagen = uploadedRelativePath;
+    const uploadedUrl = req.file?.location || null;
+    if (uploadedUrl) {
+      auspiciadorData.imagen = uploadedUrl;
     } else if (typeof auspiciadorData.imagen === "string") {
       auspiciadorData.imagen = auspiciadorData.imagen.trim();
     }
@@ -201,12 +88,12 @@ export async function createAuspiciador(req, res) {
     }
 
     if (!auspiciadorData.titulo) {
-      deleteUploadFile(uploadedRelativePath);
+      await cleanupUploadedAsset(req.file);
       return handleErrorClient(res, 400, "Título es obligatorio");
     }
 
     if (!auspiciadorData.imagen) {
-      deleteUploadFile(uploadedRelativePath);
+      await cleanupUploadedAsset(req.file);
       return handleErrorClient(res, 400, "La imagen es obligatoria");
     }
 
@@ -219,14 +106,14 @@ export async function createAuspiciador(req, res) {
     const [auspiciador, error] = await createAuspiciadorService(dataWithCreator);
 
     if (error) {
-      deleteUploadFile(uploadedRelativePath);
+      await cleanupUploadedAsset(req.file);
       return handleErrorClient(res, 400, error);
     }
 
-    const responseData = mapAuspiciadorForResponse(auspiciador, req);
+    const responseData = mapAuspiciadorForResponse(auspiciador);
     handleSuccess(res, 201, "Auspiciador creado exitosamente", responseData);
   } catch (error) {
-    deleteUploadedFileFromRequest(req.file);
+    await cleanupUploadedAsset(req.file);
     handleErrorServer(res, 500, error.message);
   }
 }
@@ -254,7 +141,7 @@ export async function getAuspiciadores(req, res) {
       return handleErrorClient(res, 404, error);
     }
 
-    const responseData = mapAuspiciadoresCollection(auspiciadores, req);
+    const responseData = mapAuspiciadoresCollection(auspiciadores);
     handleSuccess(res, 200, "Auspiciadores encontrados", responseData);
   } catch (error) {
     handleErrorServer(res, 500, error.message);
@@ -274,7 +161,7 @@ export async function getAuspiciadoresPublicos(req, res) {
       return handleErrorClient(res, 404, error);
     }
 
-    const responseData = mapAuspiciadoresCollection(auspiciadores, req);
+    const responseData = mapAuspiciadoresCollection(auspiciadores);
     handleSuccess(res, 200, "Auspiciadores públicos encontrados", responseData);
   } catch (error) {
     handleErrorServer(res, 500, error.message);
@@ -301,7 +188,7 @@ export async function getAuspiciador(req, res) {
       return handleErrorClient(res, 403, "No tienes permisos para ver este auspiciador");
     }
 
-    const responseData = mapAuspiciadorForResponse(auspiciador, req);
+    const responseData = mapAuspiciadorForResponse(auspiciador);
     handleSuccess(res, 200, "Auspiciador encontrado", responseData);
   } catch (error) {
     handleErrorServer(res, 500, error.message);
@@ -314,7 +201,7 @@ export async function updateAuspiciador(req, res) {
     const updateData = { ...req.body };
 
     if (!id) {
-      deleteUploadedFileFromRequest(req.file);
+      await cleanupUploadedAsset(req.file);
       return handleErrorClient(res, 400, "ID del auspiciador es obligatorio");
     }
 
@@ -342,22 +229,11 @@ export async function updateAuspiciador(req, res) {
       }
     }
 
-    let newRelativePath = null;
+    let newImageUrl = null;
 
     if (req.file) {
-      try {
-        await optimizeUploadedImage(req.file, {
-          maxWidth: 1200,
-          maxHeight: 1200,
-          quality: 80,
-        });
-      } catch (error) {
-        deleteUploadedFileFromRequest(req.file);
-        return handleErrorServer(res, 500, "Error procesando la imagen", error.message);
-      }
-
-      newRelativePath = toRelativeUploadPath(req.file.path);
-      updateData.imagen = newRelativePath;
+      newImageUrl = req.file.location;
+      updateData.imagen = newImageUrl;
     } else if (typeof updateData.imagen === "string") {
       updateData.imagen = updateData.imagen.trim();
 
@@ -369,37 +245,27 @@ export async function updateAuspiciador(req, res) {
     const [existing, existingError] = await getAuspiciadorService(id);
 
     if (existingError || !existing) {
-      if (newRelativePath) {
-        deleteUploadFile(newRelativePath);
-      } else {
-        deleteUploadedFileFromRequest(req.file);
-      }
-
+      await cleanupUploadedAsset(req.file);
       return handleErrorClient(res, 404, existingError || "Auspiciador no encontrado");
     }
 
-    const previousRelativePath = extractUploadsRelativePath(existing.imagen);
+    const previousImageUrl = existing.imagen;
 
     const [auspiciador, error] = await updateAuspiciadorService(id, updateData);
 
     if (error) {
-      if (newRelativePath) {
-        deleteUploadFile(newRelativePath);
-      } else {
-        deleteUploadedFileFromRequest(req.file);
-      }
-
+      await cleanupUploadedAsset(req.file);
       return handleErrorClient(res, 404, error);
     }
 
-    if (newRelativePath && previousRelativePath && previousRelativePath !== newRelativePath) {
-      deleteUploadFile(previousRelativePath);
+    if (newImageUrl && previousImageUrl && previousImageUrl !== newImageUrl) {
+      await deleteFromS3(previousImageUrl);
     }
 
-    const responseData = mapAuspiciadorForResponse(auspiciador, req);
+    const responseData = mapAuspiciadorForResponse(auspiciador);
     handleSuccess(res, 200, "Auspiciador actualizado exitosamente", responseData);
   } catch (error) {
-    deleteUploadedFileFromRequest(req.file);
+    await cleanupUploadedAsset(req.file);
     handleErrorServer(res, 500, error.message);
   }
 }
@@ -418,7 +284,7 @@ export async function deleteAuspiciador(req, res) {
       return handleErrorClient(res, 404, existingError || "Auspiciador no encontrado");
     }
 
-    const previousRelativePath = extractUploadsRelativePath(existing.imagen);
+    const previousImageUrl = existing.imagen;
 
     const [result, error] = await deleteAuspiciadorService(id);
 
@@ -426,8 +292,8 @@ export async function deleteAuspiciador(req, res) {
       return handleErrorClient(res, 404, error);
     }
 
-    if (previousRelativePath) {
-      deleteUploadFile(previousRelativePath);
+    if (previousImageUrl) {
+      await deleteFromS3(previousImageUrl);
     }
 
     handleSuccess(res, 200, "Auspiciador eliminado exitosamente", result);
@@ -455,7 +321,7 @@ export async function changeEstadoAuspiciador(req, res) {
       return handleErrorClient(res, 400, error);
     }
 
-    const responseData = mapAuspiciadorForResponse(auspiciador, req);
+    const responseData = mapAuspiciadorForResponse(auspiciador);
     handleSuccess(res, 200, `Estado del auspiciador cambiado a '${estado}' exitosamente`, responseData);
   } catch (error) {
     handleErrorServer(res, 500, error.message);

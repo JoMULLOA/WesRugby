@@ -1,6 +1,4 @@
 "use strict";
-import fs from "fs";
-import path from "path";
 import { randomUUID } from "crypto";
 import { In } from "typeorm";
 import { AppDataSource } from "../config/configDb.js";
@@ -12,15 +10,21 @@ import {
   handleErrorServer,
   handleSuccess,
 } from "../handlers/responseHandlers.js";
+import { resolveFileUrl, deleteFromS3 } from "../utils/storage.utils.js";
 
 const comprobanteRepository = AppDataSource.getRepository(ComprobantePago);
 const estudianteRepository = AppDataSource.getRepository(Estudiante);
 const userRepository = AppDataSource.getRepository(User);
 
-const UPLOADS_ROOT = path.resolve("uploads");
 const METODOS_PAGO = ["transferencia", "deposito", "efectivo", "cheque", "tarjeta"];
 const ESTADOS_VALIDOS = ["pendiente", "validado", "rechazado", "observado"];
 const TIPOS_PAGO = ["mensualidad", "matricula", "uniforme", "evento_especial", "multa", "otro"];
+
+async function cleanupUploadedAsset(file) {
+  if (file?.location) {
+    await deleteFromS3(file.location);
+  }
+}
 
 function splitNombreCompleto(nombreCompleto) {
   if (!nombreCompleto) {
@@ -124,24 +128,6 @@ function formatDateOnly(date) {
   return `${year}-${month}-${day}`;
 }
 
-function getRelativeUploadPath(absolutePath) {
-  if (!absolutePath) {
-    return null;
-  }
-  const relative = path.relative(UPLOADS_ROOT, absolutePath);
-  return relative.split(path.sep).join("/");
-}
-
-function cleanupFile(file) {
-  if (file?.path && fs.existsSync(file.path)) {
-    try {
-      fs.unlinkSync(file.path);
-    } catch (error) {
-      console.warn("No se pudo eliminar el archivo temporal:", error.message);
-    }
-  }
-}
-
 async function generateNumeroComprobante() {
   const prefix = `WR-${new Date().getFullYear()}`;
   for (let attempt = 0; attempt < 5; attempt += 1) {
@@ -200,7 +186,7 @@ function buildComprobanteDto(comprobante, estudiantesMap = new Map()) {
     observacionesTesorera: comprobante.observacionesTesorera,
     motivoRechazo: comprobante.motivoRechazo,
     nombreArchivoOriginal: comprobante.nombreArchivoOriginal,
-    rutaComprobante: comprobante.rutaComprobante,
+    rutaComprobante: resolveFileUrl(comprobante.rutaComprobante),
     tipoArchivo: comprobante.tipoArchivo,
     tamanoArchivo: comprobante.tamanoArchivo,
     fechaSubida: comprobante.fechaSubida ? comprobante.fechaSubida.toISOString() : null,
@@ -766,6 +752,8 @@ export async function eliminarComprobante(req, res) {
       return handleErrorClient(res, 404, "Comprobante no encontrado");
     }
 
+    await deleteFromS3(comprobante.rutaComprobante);
+
     await comprobanteRepository.remove(comprobante);
     handleSuccess(res, 200, "Comprobante eliminado exitosamente");
   } catch (error) {
@@ -805,31 +793,31 @@ export async function subirVoucherMensualidadApoderado(req, res) {
     } = req.body;
 
     if (!inscripcionId) {
-      cleanupFile(file);
+      await cleanupUploadedAsset(file);
       return handleErrorClient(res, 400, "Debe seleccionar un alumno");
     }
 
     const metodoValido = ensureMetodoPago(metodoPago);
     if (!metodoValido) {
-      cleanupFile(file);
+      await cleanupUploadedAsset(file);
       return handleErrorClient(res, 400, "Método de pago inválido");
     }
 
     const monto = parseDecimal(montoTotal);
     if (monto === null || monto <= 0) {
-      cleanupFile(file);
+      await cleanupUploadedAsset(file);
       return handleErrorClient(res, 400, "Monto total inválido");
     }
 
     const fechaPagoDate = parseFecha(fechaPago);
     if (!fechaPagoDate) {
-      cleanupFile(file);
+      await cleanupUploadedAsset(file);
       return handleErrorClient(res, 400, "Fecha de pago inválida");
     }
 
     const mesValido = normalizarMes(mesCorrespondiente);
     if (!mesValido) {
-      cleanupFile(file);
+      await cleanupUploadedAsset(file);
       return handleErrorClient(res, 400, "Mes correspondiente inválido");
     }
 
@@ -838,13 +826,13 @@ export async function subirVoucherMensualidadApoderado(req, res) {
       apoderadoRut,
     );
     if (errorEstudiante) {
-      cleanupFile(file);
+      await cleanupUploadedAsset(file);
       return handleErrorClient(res, 403, errorEstudiante);
     }
 
     const dependientes = await getDependientes(apoderadoRut);
     if (!dependientes.length) {
-      cleanupFile(file);
+      await cleanupUploadedAsset(file);
       return handleErrorClient(res, 400, "No se encontraron estudiantes asociados");
     }
 
@@ -877,13 +865,13 @@ export async function subirVoucherMensualidadApoderado(req, res) {
     } else {
       const seleccionUnica = Array.from(new Set(seleccionManual));
       if (!seleccionUnica.length) {
-        cleanupFile(file);
+        await cleanupUploadedAsset(file);
         return handleErrorClient(res, 400, "Debe seleccionar al menos un alumno");
       }
 
       const invalidos = seleccionUnica.filter((rutSeleccionado) => !dependientesMap.has(rutSeleccionado));
       if (invalidos.length) {
-        cleanupFile(file);
+        await cleanupUploadedAsset(file);
         return handleErrorClient(
           res,
           400,
@@ -898,7 +886,7 @@ export async function subirVoucherMensualidadApoderado(req, res) {
     }
 
     if (!estudiantesDestino?.length) {
-      cleanupFile(file);
+      await cleanupUploadedAsset(file);
       return handleErrorClient(res, 400, "No hay alumnos válidos para registrar el pago");
     }
 
@@ -908,7 +896,7 @@ export async function subirVoucherMensualidadApoderado(req, res) {
 
     const fileInfo = file
       ? {
-          rutaComprobante: getRelativeUploadPath(file.path),
+          rutaComprobante: file.location,
           nombreArchivoOriginal: file.originalname,
           tipoArchivo: file.mimetype,
           tamanoArchivo: file.size,
@@ -955,7 +943,7 @@ export async function subirVoucherMensualidadApoderado(req, res) {
       aplicarATodos,
     });
   } catch (error) {
-    cleanupFile(req.file);
+    await cleanupUploadedAsset(req.file);
     console.error("Error subiendo voucher:", error);
     handleErrorServer(res, 500, "Error interno del servidor", error.message);
   }

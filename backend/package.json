@@ -15,6 +15,7 @@
   "author": "José Manríquez Ulloa",
   "license": "ISC",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.657.0",
     "axios": "^1.7.9",
     "bcryptjs": "^2.4.3",
     "bwip-js": "^2.1.3",
@@ -30,6 +31,7 @@
     "jsonwebtoken": "^9.0.2",
     "moment-timezone": "^0.6.0",
     "multer": "^2.0.0",
+    "multer-s3": "^3.0.1",
     "node-cron": "^3.0.3",
     "node-fetch": "^3.3.2",
     "nodemailer": "^7.0.10",

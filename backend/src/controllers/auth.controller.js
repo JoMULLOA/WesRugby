@@ -11,15 +11,18 @@ import {
 } from "../handlers/responseHandlers.js";
 import jwt from "jsonwebtoken";
 import { ACCESS_TOKEN_SECRET } from "../config/configEnv.js";
+import { resolveFileUrl } from "../utils/storage.utils.js";
 
 function buildAvatarUrl(req, avatarPath, avatarVersion) {
-  if (!avatarPath) return null;
-  const normalized = avatarPath.replace(/\\/g, "/");
-  const baseUrl = `${req.protocol}://${req.get("host")}/uploads/${normalized}`;
-  if (typeof avatarVersion === "number" && !Number.isNaN(avatarVersion)) {
-    return `${baseUrl}?v=${avatarVersion}`;
+  const resolved = resolveFileUrl(avatarPath, req);
+  if (!resolved) {
+    return null;
   }
-  return baseUrl;
+  if (typeof avatarVersion === "number" && !Number.isNaN(avatarVersion)) {
+    const separator = resolved.includes("?") ? "&" : "?";
+    return `${resolved}${separator}v=${avatarVersion}`;
+  }
+  return resolved;
 }
 
 export async function login(req, res) {

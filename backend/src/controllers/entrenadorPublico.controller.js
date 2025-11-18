@@ -1,78 +1,35 @@
 "use strict";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
 import { AppDataSource } from "../config/configDb.js";
 import EntrenadorPublico from "../entity/entrenadorPublico.entity.js";
 import User from "../entity/user.entity.js";
 import { handleErrorClient, handleErrorServer, handleSuccess } from "../handlers/responseHandlers.js";
-import { optimizeUploadedImage } from "../utils/image.utils.js";
+import { resolveFileUrl, deleteFromS3 } from "../utils/storage.utils.js";
 
 const entrenadorPublicoRepository = AppDataSource.getRepository(EntrenadorPublico);
 const userRepository = AppDataSource.getRepository(User);
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const UPLOADS_BASE_PATH = path.resolve(__dirname, "..", "..", "uploads");
 
-function deleteIfExists(filePath) {
-  try {
-    if (filePath && fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
-  } catch (error) {
-    console.warn("No se pudo eliminar el archivo:", error.message);
-  }
-}
-
-function buildAvatarUrl(req, relativePath, version) {
-  if (!relativePath) {
+function buildAvatarUrl(req, storedValue, version) {
+  const resolved = resolveFileUrl(storedValue, req);
+  if (!resolved) {
     return null;
   }
-
-  const normalized = relativePath.replace(/\\/g, "/");
-  const prefixed = normalized.startsWith("uploads/")
-    ? normalized
-    : `uploads/${normalized}`;
-
-  const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get("host")}`;
   if (typeof version === "number" && !Number.isNaN(version)) {
-    return `${baseUrl}/${prefixed}?v=${version}`;
+    const separator = resolved.includes("?") ? "&" : "?";
+    return `${resolved}${separator}v=${version}`;
   }
-
-  return `${baseUrl}/${prefixed}`;
+  return resolved;
 }
 
-function buildPublicFileUrl(relativePath, version, req) {
-  if (!relativePath) {
+function buildPublicFileUrl(storedValue, version, req) {
+  const resolved = resolveFileUrl(storedValue, req);
+  if (!resolved) {
     return null;
   }
-
-  const normalized = relativePath.replace(/\\/g, "/");
-  const prefixed = normalized.startsWith("uploads/")
-    ? normalized
-    : `uploads/${normalized}`;
-
-  let baseUrl = process.env.BASE_URL;
-  if (!baseUrl && req) {
-    baseUrl = `${req.protocol}://${req.get("host")}`;
+  if (typeof version === "number" && !Number.isNaN(version)) {
+    const separator = resolved.includes("?") ? "&" : "?";
+    return `${resolved}${separator}v=${version}`;
   }
-
-  if (!baseUrl) {
-    return version ? `/${prefixed}?v=${version}` : `/${prefixed}`;
-  }
-
-  return version ? `${baseUrl}/${prefixed}?v=${version}` : `${baseUrl}/${prefixed}`;
-}
-
-function ensureRelativeUploadPath(filePath) {
-  if (!filePath) {
-    return "";
-  }
-  const relative = path.relative(UPLOADS_BASE_PATH, filePath).replace(/\\/g, "/");
-  if (!relative || relative.startsWith("..")) {
-    return path.basename(filePath).replace(/\\/g, "/");
-  }
-  return relative;
+  return resolved;
 }
 
 function validateTextField(value, field, { required = false, minLength = 0, maxLength = 255 } = {}, errors) {
@@ -460,8 +417,7 @@ export async function eliminarEntrenadorPublico(req, res) {
     }
 
     if (entrenador.fotoPath) {
-      const previousPath = path.resolve(UPLOADS_BASE_PATH, entrenador.fotoPath);
-      deleteIfExists(previousPath);
+      await deleteFromS3(entrenador.fotoPath);
     }
 
     await entrenadorPublicoRepository.remove(entrenador);
@@ -566,7 +522,7 @@ export async function actualizarFotoEntrenador(req, res) {
     const { rut } = req.params;
 
     if (!rut || typeof rut !== "string" || rut.trim().length < 5) {
-      deleteIfExists(req.file?.path);
+      await deleteFromS3(req.file?.location);
       return handleErrorClient(res, 400, "RUT del entrenador requerido");
     }
 
@@ -581,12 +537,12 @@ export async function actualizarFotoEntrenador(req, res) {
 
     const entrenador = await userRepository.findOne({ where: { rut } });
     if (!entrenador) {
-      deleteIfExists(req.file.path);
+      await deleteFromS3(req.file?.location);
       return handleErrorClient(res, 404, "Entrenador no encontrado");
     }
 
     if (entrenador.rol !== "entrenador") {
-      deleteIfExists(req.file.path);
+      await deleteFromS3(req.file?.location);
       return handleErrorClient(res, 400, "El usuario no corresponde a un entrenador");
     }
 
@@ -601,32 +557,17 @@ export async function actualizarFotoEntrenador(req, res) {
       });
     }
 
-    try {
-      await optimizeUploadedImage(req.file, {
-        maxWidth: 800,
-        maxHeight: 800,
-        quality: 80,
-      });
-    } catch (error) {
-      deleteIfExists(req.file.path);
-      return handleErrorServer(res, 500, "Error procesando la imagen", error.message);
-    }
-
     if (perfilPublico.fotoPath) {
-      const previousPath = path.resolve(UPLOADS_BASE_PATH, perfilPublico.fotoPath);
-      deleteIfExists(previousPath);
+      await deleteFromS3(perfilPublico.fotoPath);
     }
 
-    const relativePath = ensureRelativeUploadPath(req.file.path);
-
-    perfilPublico.fotoPath = relativePath;
+    perfilPublico.fotoPath = req.file.location;
     perfilPublico.fotoVersion = (perfilPublico.fotoVersion ?? 0) + 1;
     await entrenadorPublicoRepository.save(perfilPublico);
 
     const fotoUrl = buildPublicFileUrl(
       perfilPublico.fotoPath,
       perfilPublico.fotoVersion,
-      req,
     );
 
     handleSuccess(res, 200, "Foto de entrenador actualizada", {
@@ -637,7 +578,7 @@ export async function actualizarFotoEntrenador(req, res) {
     });
   } catch (error) {
     console.error("Error al actualizar foto de entrenador:", error);
-    deleteIfExists(req.file?.path);
+    await deleteFromS3(req.file?.location);
     handleErrorServer(res, 500, error.message);
   }
 }

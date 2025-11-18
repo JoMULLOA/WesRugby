@@ -23,9 +23,7 @@ import {
 } from "../handlers/responseHandlers.js";
 import { AppDataSource } from "../config/configDb.js";
 import User from "../entity/user.entity.js";
-import path from "path";
-import fs from "fs";
-import { optimizeUploadedImage } from "../utils/image.utils.js";
+import { resolveFileUrl, deleteFromS3 } from "../utils/storage.utils.js";
 
 // Obtener repositorio de usuarios
 const userRepository = AppDataSource.getRepository(User);
@@ -184,23 +182,16 @@ export async function getMisVehiculos(req, res) {
   }
 }
 
-function buildUploadUrl(req, relativePath, version) {
-  const normalized = relativePath.replace(/\\/g, "/");
-  const baseUrl = `${req.protocol}://${req.get("host")}/uploads/${normalized}`;
+function buildUploadUrl(req, storedValue, version) {
+  const resolved = resolveFileUrl(storedValue, req);
+  if (!resolved) {
+    return null;
+  }
   if (typeof version === "number" && !Number.isNaN(version)) {
-    return `${baseUrl}?v=${version}`;
+    const separator = resolved.includes("?") ? "&" : "?";
+    return `${resolved}${separator}v=${version}`;
   }
-  return baseUrl;
-}
-
-function deleteIfExists(absolutePath) {
-  try {
-    if (absolutePath && fs.existsSync(absolutePath)) {
-      fs.unlinkSync(absolutePath);
-    }
-  } catch (error) {
-    console.warn("No se pudo eliminar el archivo anterior:", error.message);
-  }
+  return resolved;
 }
 
 export async function updateAvatar(req, res) {
@@ -219,44 +210,28 @@ export async function updateAvatar(req, res) {
     });
 
     if (!user) {
-      deleteIfExists(req.file.path);
+      await deleteFromS3(req.file?.location);
       return handleErrorClient(res, 404, "Usuario no encontrado");
     }
 
-    try {
-      await optimizeUploadedImage(req.file, {
-        maxWidth: 600,
-        maxHeight: 600,
-        quality: 80,
-      });
-    } catch (error) {
-      deleteIfExists(req.file.path);
-      return handleErrorServer(res, 500, "Error procesando la imagen", error.message);
-    }
-
     if (user.avatarPath) {
-      const previousPath = path.resolve("uploads", user.avatarPath);
-      deleteIfExists(previousPath);
+      await deleteFromS3(user.avatarPath);
     }
 
-    const relativePath = path
-      .relative(path.resolve("uploads"), req.file.path)
-      .replace(/\\/g, "/");
-
-    user.avatarPath = relativePath;
+    user.avatarPath = req.file.location;
     user.avatarVersion = (user.avatarVersion ?? 0) + 1;
     await userRepository.save(user);
 
-    const avatarUrl = buildUploadUrl(req, relativePath, user.avatarVersion);
+    const avatarUrl = buildUploadUrl(req, user.avatarPath, user.avatarVersion);
 
     handleSuccess(res, 200, "Avatar actualizado exitosamente", {
-      avatarPath: relativePath,
+      avatarPath: user.avatarPath,
       avatarUrl,
       avatarVersion: user.avatarVersion,
     });
   } catch (error) {
     console.error("Error actualizando avatar:", error);
-    deleteIfExists(req.file?.path);
+    await deleteFromS3(req.file?.location);
     handleErrorServer(res, 500, "Error interno del servidor", error.message);
   }
 }

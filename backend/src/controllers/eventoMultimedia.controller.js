@@ -1,6 +1,4 @@
 "use strict";
-import path from "path";
-import fs from "fs";
 import { AppDataSource } from "../config/configDb.js";
 import EventoDeportivo from "../entity/eventoDeportivo.entity.js";
 import ParticipacionEventoDeportivo from "../entity/participacionEventoDeportivo.entity.js";
@@ -10,7 +8,7 @@ import {
   handleErrorServer,
   handleSuccess,
 } from "../handlers/responseHandlers.js";
-import { optimizeUploadedImage } from "../utils/image.utils.js";
+import { resolveFileUrl, deleteFromS3 } from "../utils/storage.utils.js";
 const eventoDeportivoRepository = AppDataSource.getRepository(EventoDeportivo);
 const participacionDeportivaRepository = AppDataSource.getRepository(
   ParticipacionEventoDeportivo,
@@ -18,6 +16,12 @@ const participacionDeportivaRepository = AppDataSource.getRepository(
 const multimediaRepository = AppDataSource.getRepository(EventoMultimedia);
 
 const ACTIVE_STATES = ["programado", "confirmado", "en_curso"];
+
+async function cleanupUploadedAsset(file) {
+  if (file?.location) {
+    await deleteFromS3(file.location);
+  }
+}
 
 function isEventoFinalizado(evento) {
   if (!evento) {
@@ -67,29 +71,20 @@ async function ensureEventoDeportivoFinalizado(eventoId) {
   };
 }
 
-function cleanupUploadedFile(file) {
-  if (file?.path && fs.existsSync(file.path)) {
-    fs.unlinkSync(file.path);
-  }
-}
-
 function getBaseUrl(req) {
   return `${req.protocol}://${req.get("host")}`;
 }
 
-function buildPublicUploadUrl(req, storagePath) {
-  const normalizedPath = storagePath.replace(/\\/g, "/");
-  return `${getBaseUrl(req)}/uploads/${normalizedPath}`;
-}
-
 function buildAvatarUrl(req, avatarPath, avatarVersion) {
-  if (!avatarPath) return null;
-  const normalized = avatarPath.replace(/\\/g, "/");
-  const baseUrl = `${getBaseUrl(req)}/uploads/${normalized}`;
-  if (typeof avatarVersion === "number" && !Number.isNaN(avatarVersion)) {
-    return `${baseUrl}?v=${avatarVersion}`;
+  const resolved = resolveFileUrl(avatarPath, req);
+  if (!resolved) {
+    return null;
   }
-  return baseUrl;
+  if (typeof avatarVersion === "number" && !Number.isNaN(avatarVersion)) {
+    const separator = resolved.includes("?") ? "&" : "?";
+    return `${resolved}${separator}v=${avatarVersion}`;
+  }
+  return resolved;
 }
 
 function resolveEventoIdForRoutes(media) {
@@ -103,15 +98,15 @@ function resolveEventoIdForRoutes(media) {
 }
 
 function buildMediaPayload(media, req) {
-  const url = buildPublicUploadUrl(req, media.storagePath);
+  const assetUrl = resolveFileUrl(media.storagePath, req);
   const routeEventoId = resolveEventoIdForRoutes(media);
   const routeSegment = routeEventoId
     ? encodeURIComponent(routeEventoId)
     : null;
   const viewUrl = routeSegment
     ? `${getBaseUrl(req)}/api/eventos-deportivos/${routeSegment}/multimedia/${media.id}`
-    : null;
-  const downloadUrl = routeSegment ? `${viewUrl}/download` : null;
+    : assetUrl;
+  const downloadUrl = assetUrl;
 
   const uploader = media.uploader || null;
   const uploaderNombre =
@@ -123,9 +118,7 @@ function buildMediaPayload(media, req) {
     typeof uploader?.avatarVersion === "number"
       ? uploader.avatarVersion
       : null;
-  const avatarUrl = uploader?.avatarPath
-    ? buildAvatarUrl(req, uploader.avatarPath, avatarVersion ?? undefined)
-    : null;
+  const avatarUrl = buildAvatarUrl(req, uploader?.avatarPath, avatarVersion ?? undefined);
 
   const createdAtDate =
     media.createdAt instanceof Date
@@ -150,7 +143,7 @@ function buildMediaPayload(media, req) {
     extension: media.extension,
     createdAt: media.createdAt,
     uploadedAt: createdAtDate ? createdAtDate.toISOString() : null,
-    url,
+    url: assetUrl,
     viewUrl,
     downloadUrl,
     uploader: {
@@ -228,12 +221,6 @@ async function ensureUserCanAccessMedia(req, media) {
   return { ok: true };
 }
 
-function resolveAbsoluteMediaPath(media) {
-  const storagePath = media.storagePath;
-  const normalized = storagePath.replace(/\\/g, path.sep);
-  return path.resolve("uploads", normalized);
-}
-
 export async function subirMultimediaDirectiva(req, res) {
   try {
     const { id: eventoId } = req.params;
@@ -251,7 +238,7 @@ export async function subirMultimediaDirectiva(req, res) {
 
     const validacion = await ensureEventoDeportivoFinalizado(eventoId);
     if (!validacion.ok) {
-      cleanupUploadedFile(archivo);
+      await cleanupUploadedAsset(archivo);
       return handleErrorClient(
         res,
         validacion.error.status,
@@ -259,23 +246,14 @@ export async function subirMultimediaDirectiva(req, res) {
       );
     }
 
-    const evento = validacion.evento;
-    const esPrivado = visibilidad === "privada";
-
-    try {
-      await optimizeUploadedImage(archivo, {
-        maxWidth: 1600,
-        maxHeight: 1600,
-        quality: 80,
-      });
-    } catch (error) {
-      cleanupUploadedFile(archivo);
-      return handleErrorServer(res, 500, "Error procesando la imagen", error.message);
+    if (!archivo.location) {
+      await cleanupUploadedAsset(archivo);
+      return handleErrorServer(res, 500, "Error procesando la imagen", "No se obtuvo la URL de almacenamiento.");
     }
 
-    const relativeStoragePath = path
-      .relative(path.resolve("uploads"), archivo.path)
-      .replace(/\\/g, "/");
+    const evento = validacion.evento;
+    const esPrivado = visibilidad === "privada";
+    const extension = archivo.originalname?.split(".").pop()?.toLowerCase() || null;
 
     const registro = multimediaRepository.create({
       eventoDeportivoId: evento.id,
@@ -283,14 +261,14 @@ export async function subirMultimediaDirectiva(req, res) {
       uploadedByRut: req.user.rut,
       uploadedByNombre: req.user.nombreCompleto || null,
       uploadedByRol: req.user.rol,
-      fileName: archivo.filename,
+      fileName: archivo.key || archivo.originalname,
       originalName: archivo.originalname,
       mimeType: archivo.mimetype,
       size: archivo.size,
-      extension: path.extname(archivo.originalname).replace(".", ""),
+      extension,
       isPrivate: esPrivado,
       sharedWithRamas: !esPrivado,
-      storagePath: relativeStoragePath,
+      storagePath: archivo.location,
     });
 
     const guardado = await multimediaRepository.save(registro);
@@ -307,7 +285,7 @@ export async function subirMultimediaDirectiva(req, res) {
 
     handleSuccess(res, 201, "Imagen subida exitosamente", payload);
   } catch (error) {
-    cleanupUploadedFile(req.file);
+    await cleanupUploadedAsset(req.file);
     console.error("Error subiendo multimedia directiva:", error);
     handleErrorServer(res, 500, "Error interno del servidor", error.message);
   }
@@ -329,7 +307,7 @@ export async function subirMultimediaRama(req, res) {
 
     const validacion = await ensureEventoDeportivoFinalizado(eventoId);
     if (!validacion.ok) {
-      cleanupUploadedFile(archivo);
+      await cleanupUploadedAsset(archivo);
       return handleErrorClient(
         res,
         validacion.error.status,
@@ -345,7 +323,7 @@ export async function subirMultimediaRama(req, res) {
     });
 
     if (!participacion) {
-      cleanupUploadedFile(archivo);
+      await cleanupUploadedAsset(archivo);
       return handleErrorClient(
         res,
         403,
@@ -354,20 +332,12 @@ export async function subirMultimediaRama(req, res) {
       );
     }
 
-    try {
-      await optimizeUploadedImage(archivo, {
-        maxWidth: 1600,
-        maxHeight: 1600,
-        quality: 80,
-      });
-    } catch (error) {
-      cleanupUploadedFile(archivo);
-      return handleErrorServer(res, 500, "Error procesando la imagen", error.message);
+    if (!archivo.location) {
+      await cleanupUploadedAsset(archivo);
+      return handleErrorServer(res, 500, "Error procesando la imagen", "No se obtuvo la URL de almacenamiento.");
     }
 
-    const relativeStoragePath = path
-      .relative(path.resolve("uploads"), archivo.path)
-      .replace(/\\/g, "/");
+    const extension = archivo.originalname?.split(".").pop()?.toLowerCase() || null;
 
     const registro = multimediaRepository.create({
       eventoDeportivoId: eventoId,
@@ -375,14 +345,14 @@ export async function subirMultimediaRama(req, res) {
       uploadedByRut: req.user.rut,
       uploadedByNombre: req.user.nombreCompleto || null,
       uploadedByRol: req.user.rol,
-      fileName: archivo.filename,
+      fileName: archivo.key || archivo.originalname,
       originalName: archivo.originalname,
       mimeType: archivo.mimetype,
       size: archivo.size,
-      extension: path.extname(archivo.originalname).replace(".", ""),
+      extension,
       isPrivate: false,
       sharedWithRamas: true,
-      storagePath: relativeStoragePath,
+      storagePath: archivo.location,
     });
 
     const guardado = await multimediaRepository.save(registro);
@@ -399,7 +369,7 @@ export async function subirMultimediaRama(req, res) {
 
     handleSuccess(res, 201, "Imagen subida exitosamente", payload);
   } catch (error) {
-    cleanupUploadedFile(req.file);
+    await cleanupUploadedAsset(req.file);
     console.error("Error subiendo multimedia rama externa:", error);
     handleErrorServer(res, 500, "Error interno del servidor", error.message);
   }
@@ -585,9 +555,8 @@ export async function descargarMultimediaEvento(req, res) {
       return handleErrorClient(res, status ?? 403, message, details);
     }
 
-    const absolutePath = resolveAbsoluteMediaPath(media);
-
-    if (!fs.existsSync(absolutePath)) {
+    const downloadUrl = resolveFileUrl(media.storagePath, req);
+    if (!downloadUrl) {
       return handleErrorClient(
         res,
         404,
@@ -596,27 +565,7 @@ export async function descargarMultimediaEvento(req, res) {
       );
     }
 
-    res.setHeader(
-      "Content-Type",
-      media.mimeType || "application/octet-stream",
-    );
-    if (media.size) {
-      res.setHeader("Content-Length", media.size);
-    }
-
-    return res.download(absolutePath, media.originalName, (downloadError) => {
-      if (downloadError) {
-        console.error("Error enviando archivo multimedia:", downloadError);
-        if (!res.headersSent) {
-          handleErrorServer(
-            res,
-            500,
-            "Error descargando archivo multimedia",
-            downloadError.message,
-          );
-        }
-      }
-    });
+    return res.redirect(downloadUrl);
   } catch (error) {
     console.error("Error general al descargar multimedia:", error);
     handleErrorServer(res, 500, "Error interno del servidor", error.message);
@@ -667,16 +616,7 @@ export async function eliminarMultimediaEvento(req, res) {
       );
     }
 
-    // Eliminar el archivo físico si existe
-    const absolutePath = resolveAbsoluteMediaPath(media);
-    if (fs.existsSync(absolutePath)) {
-      try {
-        fs.unlinkSync(absolutePath);
-      } catch (fileError) {
-        console.error("Error eliminando archivo físico:", fileError);
-        // Continuar con la eliminación del registro aunque falle eliminar el archivo
-      }
-    }
+    await deleteFromS3(media.storagePath);
 
     // Eliminar el registro de la base de datos
     await multimediaRepository.remove(media);
@@ -692,3 +632,4 @@ export async function eliminarMultimediaEvento(req, res) {
     handleErrorServer(res, 500, "Error interno del servidor", error.message);
   }
 }
+

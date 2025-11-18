@@ -1,94 +1,26 @@
 "use strict";
-import multer from "multer";
-import path from "path";
-import fs from "fs";
-import { fileURLToPath } from "url";
+import { createS3Uploader } from "../config/multer-s3.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const BASE_UPLOAD_DIR = path.resolve(__dirname, "..", "..", "uploads");
-
-function ensureUploadDir(subDir) {
-  const targetDir = path.resolve(BASE_UPLOAD_DIR, subDir);
-  if (!fs.existsSync(targetDir)) {
-    fs.mkdirSync(targetDir, { recursive: true });
-  }
-  return targetDir;
-}
-
-function sanitizeFileName(originalName) {
-  return originalName
-    .replace(/\s+/g, "_")
-    .replace(/[^\w.\-]/g, "")
-    .toLowerCase();
-}
-
-function createUploader(subDir, { fileSize, allowedMimeTypes }) {
-  const acceptedTypes =
-    Array.isArray(allowedMimeTypes) && allowedMimeTypes.length > 0
-      ? allowedMimeTypes
-      : ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif", "image/bmp"];
-  const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-      try {
-        const dir = ensureUploadDir(subDir);
-        cb(null, dir);
-      } catch (error) {
-        cb(error);
-      }
-    },
-    filename: function (req, file, cb) {
-      const timestamp = Date.now();
-      const safeName = sanitizeFileName(file.originalname);
-      cb(null, `${timestamp}-${safeName}`);
-    },
-  });
-
-  function fileFilter(req, file, cb) {
-    const allowed = acceptedTypes;
-    if (allowed.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(
-        new Error(
-          `Tipo de archivo no permitido. Tipos permitidos: ${allowed.join(", ")}.`,
-        ),
-      );
-    }
-  }
-
-  return multer({
-    storage,
-    fileFilter,
-    limits: {
-      fileSize,
-    },
-  });
-}
-
-export const uploadEventoMultimedia = createUploader("eventos", {
+export const uploadEventoMultimedia = createS3Uploader("eventos", {
   fileSize: 6 * 1024 * 1024,
 });
 
-export const uploadAvatar = createUploader("avatars", {
+export const uploadAvatar = createS3Uploader("avatars", {
   fileSize: 4 * 1024 * 1024,
 });
 
-export const uploadAuspiciadorLogo = createUploader(path.join("imagenes", "auspiciadores"), {
+export const uploadAuspiciadorLogo = createS3Uploader("imagenes/auspiciadores", {
   fileSize: 5 * 1024 * 1024,
 });
 
-export const uploadVoucherComprobante = createUploader(path.join("comprobantes"), {
+export const uploadVoucherComprobante = createS3Uploader("comprobantes", {
   fileSize: 10 * 1024 * 1024,
-  allowedMimeTypes: [
-    "image/jpeg",
-    "image/png",
-    "image/webp",
-    "image/gif",
-    "application/pdf",
-  ],
 });
 
-export const uploadEntrenadorFoto = createUploader(path.join("imagenes", "entrenadores"), {
+export const uploadEntrenadorFoto = createS3Uploader("imagenes/entrenadores", {
   fileSize: 5 * 1024 * 1024,
+});
+
+export const uploadPublicMedia = createS3Uploader("public", {
+  fileSize: 8 * 1024 * 1024,
 });
