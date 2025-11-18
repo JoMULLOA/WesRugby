@@ -134,7 +134,6 @@ export async function updateEstudiante(req, res) {
   try {
     const { rut } = req.params;
     const updateData = req.body;
-    const userId = req.user.id;
     const userRut = req.user.rut;
     const userRol = req.user.rol;
 
@@ -145,21 +144,17 @@ export async function updateEstudiante(req, res) {
     // Si es apoderado, verificar que puede modificar este estudiante
     if (userRol === "apoderado") {
       const estudianteRepository = AppDataSource.getRepository(Estudiante);
-      const estudiante = await estudianteRepository.findOne({
-        where: { rut },
-        relations: ["apoderado"],
-      });
+      const estudiante = await estudianteRepository.findOne({ where: { rut } });
       
       if (!estudiante) {
         return handleErrorClient(res, 404, "Estudiante no encontrado");
       }
 
       // Verificar que el usuario es responsable del estudiante
-      // Puede ser por RUT o por relación de apoderado
+      // Puede ser por los campos rutResponsable registrados
       const esResponsable = 
         estudiante.rutResponsable === userRut ||
-        estudiante.rutResponsable2 === userRut ||
-        (estudiante.apoderado && estudiante.apoderado.id === userId);
+        estudiante.rutResponsable2 === userRut;
 
       if (!esResponsable) {
         return handleErrorClient(res, 403, "No tienes permisos para modificar este estudiante");
