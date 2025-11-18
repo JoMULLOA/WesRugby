@@ -1,0 +1,89 @@
+# ============================
+# GENERAL
+# ============================
+.DS_Store
+Thumbs.db
+*.log
+logs/
+tmp/
+temp/
+
+# ============================
+# ENVIRONMENTS / SECRETS
+# ============================
+.env
+*.env
+*.env.*
+.env.local
+.env.production
+.env.development
+
+# ============================
+# BACKEND (Node + TypeORM)
+# ============================
+backend/node_modules/
+backend/dist/
+backend/*.log
+backend/logs/
+
+# Sensitive backend configs - DO NOT TRACK
+backend/src/config/configEnv.js
+backend/src/config/configDb.js
+
+# Uploads (avatars, documentos, fotos)
+backend/uploads/
+uploads/
+
+# PM2 logs / runtime data
+.pm2/
+*.pid
+
+# ============================
+# FLUTTER FRONTEND
+# ============================
+# Flutter-specific
+**/build/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.dart_tool/
+**/.packages
+**/pubspec.lock
+
+# Android
+frontend/android/.gradle/
+frontend/android/local.properties
+frontend/android/app/debug/
+frontend/android/app/profile/
+frontend/android/app/release/
+
+# iOS
+frontend/ios/Pods/
+frontend/ios/Flutter/Flutter.framework
+frontend/ios/Flutter/Flutter.podspec
+frontend/ios/Flutter/Generated.xcconfig
+
+# Web
+frontend/web/.dart_tool/
+frontend/web/build/
+
+# MacOS
+frontend/macos/Flutter/ephemeral/
+frontend/macos/Pods/
+
+# Linux
+frontend/linux/Flutter/ephemeral/
+
+# Windows
+frontend/windows/flutter/ephemeral/
+
+# ============================
+# PYTHON (por tmp_replace.py)
+# ============================
+__pycache__/
+*.pyc
+
+# ============================
+# MISC
+# ============================
+.idea/
+.vscode/
