@@ -6,6 +6,7 @@ import 'package:wesrugby/data/services/tokenManager.dart';
 import 'package:wesrugby/data/services/api_service.dart';
 import 'package:wesrugby/features/admin/presentation/screens/justificantes/gestion/gestion_justificantes_screen.dart';
 import 'package:wesrugby/features/admin/presentation/screens/usuarios/registro/registro_datos_screen.dart';
+import 'package:wesrugby/features/admin/presentation/screens/usuarios/registro_formularios/registro_formularios_screen.dart';
 import 'package:wesrugby/features/admin/presentation/screens/usuarios/gestion/gestion_usuarios_screen.dart';
 import 'package:wesrugby/features/admin/presentation/screens/usuarios/base_datos/base_datos_screen.dart';
 import 'package:wesrugby/features/admin/presentation/screens/eventos/gestion/gestion_eventos_screen.dart';
@@ -462,7 +463,7 @@ class _DirectivaDashboardState extends State<DirectivaDashboard> {
                 ),
                 const SizedBox(height: 20),
 
-                // Primera fila: Registro de Datos, Gestión de Usuarios
+                // Primera fila: Registro de Datos, Formularios de Registro
                 Row(
                   children: [
                     Expanded(
@@ -484,14 +485,14 @@ class _DirectivaDashboardState extends State<DirectivaDashboard> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: _buildActionCard(
-                        'Gestión de Usuarios',
-                        'Administrar miembros del club',
-                        Icons.people,
-                        WessexColors.secondaryAction,
+                        'Formularios de Registro',
+                        'Importar formularios de inscripción',
+                        Icons.assignment,
+                        WessexColors.leafGreen,
                         () => Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const GestionUsuariosScreen(),
+                            builder: (context) => const RegistroFormulariosScreen(),
                           ),
                         ),
                         isDesktop: isDesktop,
@@ -503,19 +504,19 @@ class _DirectivaDashboardState extends State<DirectivaDashboard> {
 
                 const SizedBox(height: 12),
 
-                // Segunda fila: Inventario y Ventas, Base de Datos
+                // Segunda fila: Gestión de Usuarios, Base de Datos
                 Row(
                   children: [
                     Expanded(
                       child: _buildActionCard(
-                        'Inventario y Ventas',
-                        'Gestionar productos, ventas y códigos',
-                        Icons.storefront,
-                        WessexColors.leafGreen,
+                        'Gestión de Usuarios',
+                        'Administrar miembros del club',
+                        Icons.people,
+                        WessexColors.secondaryAction,
                         () => Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const InventoryManagementScreen(),
+                            builder: (context) => const GestionUsuariosScreen(),
                           ),
                         ),
                         isDesktop: isDesktop,
@@ -544,7 +545,31 @@ class _DirectivaDashboardState extends State<DirectivaDashboard> {
 
                 const SizedBox(height: 12),
 
-                // Tercera fila: Gestión de Justificantes, Gestión de Eventos
+                // Tercera fila: Inventario y Ventas (span completo)
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildActionCard(
+                        'Inventario y Ventas',
+                        'Gestionar productos, ventas y códigos',
+                        Icons.storefront,
+                        WessexColors.leafGreen,
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const InventoryManagementScreen(),
+                          ),
+                        ),
+                        isDesktop: isDesktop,
+                        isTablet: isTablet,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 12),
+
+                // Cuarta fila: Gestión de Justificantes, Gestión de Eventos
                 Row(
                   children: [
                     Expanded(

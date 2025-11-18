@@ -28,23 +28,31 @@ const MESES = [
 ];
 
 const COLUMN_ALIASES = {
-  nombre: ["nombre", "nombrecompleto"],
+  nombre: ["nombre", "nombrecompleto", "nombrecompletodelalumno"],
   fechaNacimiento: ["fechanacimiento", "fechadenacimiento"],
   rut: ["rut", "run"],
   categoria: ["categoria"],
   ficha: ["ficha"],
-  curso: ["curso"],
+  curso: ["curso", "cursoyletra"],
   nombreMadre: ["nombremadre"],
   telefonoMadre: ["ntelefonomadre", "ntelefonmadre", "telefonomadre", "numerotelefonomadre"],
   emailMadre: ["correoelectronicomadre", "emailmadre"],
   nombrePadre: ["nombrepadre"],
   telefonoPadre: ["ntelefonopadre", "telefonompadre", "telefonopadre", "numerotelefonopadre"],
   emailPadre: ["correoelectronicopadre", "emailpadre"],
-  hermanos: ["hermanos"],
-  enfermedad: ["enfermedad"],
-  talla: ["talla"],
-  dorsalNombre: ["dorsalnombre", "dorsal"],
-  alumnoNuevo: ["alumnonuevo"],
+  hermanos: ["hermanos", "runhermano"],
+  enfermedad: [
+    "encasoquelarespuestaanteriorseasiindicarcualdebehacerllegarcertificadomedicoaramarugbyweesexgmailcom",
+    "indiquesipresentaalgunaenfermedad",
+    "enfermedad",
+  ],
+  talla: ["talla", "encasoquelarespuestaanteriorseaunsiindicartalla"],
+  dorsalNombre: [
+    "dorsalnombre",
+    "dorsal",
+    "nombredorsalnombreespaldapuedeserapellidonombreapodoetc",
+  ],
+  alumnoNuevo: ["alumnonuevo", "alumnonuevoenlaramaderugby"],
   asistencia: ["asistencia"],
   matricula: ["matricula"],
   marzo: ["marzo"],
@@ -61,7 +69,7 @@ const COLUMN_ALIASES = {
   poleron: ["poleron"],
   calcetas: ["calcetas"],
   protectorBucal: ["protectorbucal"],
-  uniforme: ["uniforme"],
+  uniforme: ["uniforme", "requiereconfecciondeuniforme"],
   anadido: ["anadido", "anadidoadicional"],
   responsable: ["responsable", "apoderado", "apoderadoresponsable"],
 };
@@ -104,6 +112,40 @@ function cleanString(value) {
   return value.toString().trim();
 }
 
+const BASE_PLACEHOLDER_TERMS = [
+  "sin informacion",
+  "sin información",
+  "sin dato",
+  "sin datos",
+  "sin registro",
+  "sin definir",
+  "por definir",
+  "pendiente",
+  "s/n",
+  "sn",
+  "-",
+  "--",
+  "n/a",
+  "na",
+  "ninguno",
+  "ninguna",
+  "ningun",
+];
+
+function isPlaceholderValue(rawValue, additional = []) {
+  const normalized = cleanString(rawValue).toLowerCase();
+  if (!normalized) {
+    return true;
+  }
+  if (BASE_PLACEHOLDER_TERMS.includes(normalized)) {
+    return true;
+  }
+  if (additional.some((term) => normalized === term)) {
+    return true;
+  }
+  return false;
+}
+
 function removeDiacritics(value) {
   return value
     .normalize("NFD")
@@ -123,6 +165,78 @@ function normalizeRut(raw) {
   const cuerpo = cleaned.slice(0, -1).padStart(8, "0");
   const dv = cleaned.slice(-1);
   return `${cuerpo}-${dv}`;
+}
+
+function safeNormalizeRut(raw) {
+  try {
+    return normalizeRut(raw);
+  } catch (error) {
+    return null;
+  }
+}
+
+function buildRutLookupKeys(raw) {
+  const variants = new Set();
+  const value = cleanString(raw);
+  if (!value) {
+    return variants;
+  }
+  variants.add(value);
+  const normalized = safeNormalizeRut(value);
+  if (normalized) {
+    variants.add(normalized);
+    variants.add(normalized.toUpperCase());
+  }
+  const digitsOnly = value.replace(/[^0-9kK]/g, "").toUpperCase();
+  if (digitsOnly) {
+    variants.add(digitsOnly);
+    if (digitsOnly.length >= 2) {
+      const cuerpo = digitsOnly.slice(0, -1).padStart(8, "0");
+      const dv = digitsOnly.slice(-1);
+      variants.add(`${cuerpo}-${dv}`);
+    }
+  }
+  const noSeparators = value.replace(/[.\-]/g, "").toUpperCase();
+  if (noSeparators) {
+    variants.add(noSeparators);
+  }
+  return variants;
+}
+
+function cacheStudentByRut(map, estudiante) {
+  if (!estudiante || !estudiante.rut) {
+    return;
+  }
+  const keys = buildRutLookupKeys(estudiante.rut);
+  keys.forEach((key) => {
+    if (key) {
+      map.set(key, estudiante);
+    }
+  });
+}
+
+function normalizeRutList(values) {
+  const normalized = [];
+  const seen = new Set();
+  if (!Array.isArray(values)) {
+    return normalized;
+  }
+  values.forEach((value) => {
+    const normalizedRut = safeNormalizeRut(value);
+    if (normalizedRut && !seen.has(normalizedRut)) {
+      seen.add(normalizedRut);
+      normalized.push(normalizedRut);
+    }
+  });
+  return normalized;
+}
+
+async function findStudentByRutVariants(estudianteRepository, rut) {
+  const variants = Array.from(buildRutLookupKeys(rut));
+  if (variants.length === 0) {
+    return null;
+  }
+  return estudianteRepository.findOne({ where: variants.map((variant) => ({ rut: variant })) });
 }
 
 function parseFecha(raw) {
@@ -175,6 +289,14 @@ function normalizeCurso(raw) {
   return value.slice(0, 2);
 }
 
+function normalizeFlexibleCurso(raw) {
+  const value = cleanString(raw);
+  if (!value) {
+    throw new Error("Curso es obligatorio");
+  }
+  return value.replace(/\s+/g, " ").trim().toUpperCase();
+}
+
 function normalizePhone(raw) {
   const value = cleanString(raw);
   if (!value) return null;
@@ -203,7 +325,10 @@ function normalizeEmail(raw) {
 function normalizeTalla(raw) {
   const value = cleanString(raw);
   if (!value) return null;
-  return value.toUpperCase();
+  if (isPlaceholderValue(value, ["sin talla", "ninguna", "ninguno", "no", "0"])) {
+    return null;
+  }
+  return value.toUpperCase().slice(0, 5);
 }
 
 function normalizeTexto(raw) {
@@ -256,6 +381,233 @@ function buildEquipamiento(rowMap) {
     uniforme: cleanString(pickValue(rowMap, COLUMN_ALIASES.uniforme) ?? ""),
     anadido: cleanString(pickValue(rowMap, COLUMN_ALIASES.anadido) ?? ""),
   };
+}
+
+function resolveSimpleResponsable(
+  responsableRaw,
+  { nombreMadre, nombrePadre, telefonoMadre, telefonoPadre, emailMadre, emailPadre },
+) {
+  const cleaned = cleanString(responsableRaw);
+  if (!cleaned) {
+    if (nombreMadre) {
+      return { etiqueta: "Madre", nombre: nombreMadre, preferencia: "madre" };
+    }
+    if (nombrePadre) {
+      return { etiqueta: "Padre", nombre: nombrePadre, preferencia: "padre" };
+    }
+    return { etiqueta: null, nombre: null, preferencia: null };
+  }
+
+  const normalized = removeDiacritics(cleaned.toLowerCase());
+  if (normalized.includes("madre")) {
+    return {
+      etiqueta: "Madre",
+      nombre: nombreMadre ?? null,
+      preferencia: "madre",
+      telefono: telefonoMadre ?? null,
+      email: emailMadre ?? null,
+      warning: nombreMadre ? null : "Responsable definido como Madre pero no se encontró nombre de la madre",
+    };
+  }
+  if (normalized.includes("padre")) {
+    return {
+      etiqueta: "Padre",
+      nombre: nombrePadre ?? null,
+      preferencia: "padre",
+      telefono: telefonoPadre ?? null,
+      email: emailPadre ?? null,
+      warning: nombrePadre ? null : "Responsable definido como Padre pero no se encontró nombre del padre",
+    };
+  }
+
+  return {
+    etiqueta: toTitleCase(cleaned),
+    nombre: nombreMadre ?? nombrePadre ?? null,
+    preferencia: nombreMadre ? "madre" : nombrePadre ? "padre" : null,
+    telefono: nombreMadre ? telefonoMadre : telefonoPadre,
+    email: nombreMadre ? emailMadre : emailPadre,
+  };
+}
+
+function normalizeBasicFormularioRow(row) {
+  const rowMap = Object.entries(row ?? {}).reduce((acc, [key, value]) => {
+    acc[normalizeKey(key)] = value;
+    return acc;
+  }, {});
+
+  const warnings = [];
+
+  const nombreRaw = pickValue(rowMap, COLUMN_ALIASES.nombre);
+  const nombre = toTitleCase(cleanString(nombreRaw));
+  if (!nombre) {
+    throw new Error("Nombre es obligatorio");
+  }
+
+  const rut = normalizeRut(pickValue(rowMap, COLUMN_ALIASES.rut));
+  if (["24777781-1"].includes(rut)) {
+    console.log("[DEBUG] Row map keys", Object.keys(rowMap));
+    console.log("[DEBUG] Row map sample", rowMap);
+  }
+  const curso = normalizeFlexibleCurso(pickValue(rowMap, COLUMN_ALIASES.curso));
+
+  let fechaNacimiento = null;
+  const fechaRaw = pickValue(rowMap, COLUMN_ALIASES.fechaNacimiento);
+  if (fechaRaw) {
+    try {
+      fechaNacimiento = parseFecha(fechaRaw);
+    } catch (error) {
+      warnings.push(`Fecha de nacimiento inválida: ${error.message}`);
+    }
+  }
+
+  let enfermedad = normalizeTexto(pickValue(rowMap, COLUMN_ALIASES.enfermedad));
+  if (isPlaceholderValue(enfermedad, ["no", "ok", "ninguno", "ninguna"])) {
+    enfermedad = null;
+  }
+  const hermanosRaw = pickValue(rowMap, COLUMN_ALIASES.hermanos);
+  const hermanos = hermanosRaw ? parseHermanos(hermanosRaw) : null;
+  const uniformeRaw = pickValue(rowMap, COLUMN_ALIASES.uniforme);
+  let uniforme = normalizeTexto(uniformeRaw);
+  if (isPlaceholderValue(uniforme, ["no", "ninguno", "ninguna"])) {
+    uniforme = null;
+  }
+  const talla = normalizeTalla(pickValue(rowMap, COLUMN_ALIASES.talla));
+  let dorsalNombre = normalizeTexto(pickValue(rowMap, COLUMN_ALIASES.dorsalNombre));
+  if (isPlaceholderValue(dorsalNombre, ["sin nombre", "sin apodo"])) {
+    dorsalNombre = null;
+  } else if (dorsalNombre) {
+    dorsalNombre = toTitleCase(dorsalNombre);
+  }
+  const alumnoNuevo = normalizeTexto(pickValue(rowMap, COLUMN_ALIASES.alumnoNuevo));
+
+  const nombreMadreRaw = normalizeTexto(pickValue(rowMap, COLUMN_ALIASES.nombreMadre));
+  const nombreMadre = nombreMadreRaw ? toTitleCase(nombreMadreRaw) : null;
+  let telefonoMadre = null;
+  const telefonoMadreRaw = pickValue(rowMap, COLUMN_ALIASES.telefonoMadre);
+  if (telefonoMadreRaw) {
+    try {
+      telefonoMadre = normalizePhone(telefonoMadreRaw);
+    } catch (error) {
+      warnings.push(`Teléfono madre inválido: ${error.message}`);
+    }
+  }
+  let emailMadre = null;
+  const emailMadreRaw = pickValue(rowMap, COLUMN_ALIASES.emailMadre);
+  if (emailMadreRaw) {
+    try {
+      emailMadre = normalizeEmail(emailMadreRaw);
+    } catch (error) {
+      warnings.push(`Correo madre inválido: ${error.message}`);
+    }
+  }
+
+  const nombrePadreRaw = normalizeTexto(pickValue(rowMap, COLUMN_ALIASES.nombrePadre));
+  const nombrePadre = nombrePadreRaw ? toTitleCase(nombrePadreRaw) : null;
+  let telefonoPadre = null;
+  const telefonoPadreRaw = pickValue(rowMap, COLUMN_ALIASES.telefonoPadre);
+  if (telefonoPadreRaw) {
+    try {
+      telefonoPadre = normalizePhone(telefonoPadreRaw);
+    } catch (error) {
+      warnings.push(`Teléfono padre inválido: ${error.message}`);
+    }
+  }
+  let emailPadre = null;
+  const emailPadreRaw = pickValue(rowMap, COLUMN_ALIASES.emailPadre);
+  if (emailPadreRaw) {
+    try {
+      emailPadre = normalizeEmail(emailPadreRaw);
+    } catch (error) {
+      warnings.push(`Correo padre inválido: ${error.message}`);
+    }
+  }
+
+  const responsableInfo = resolveSimpleResponsable(
+    pickValue(rowMap, COLUMN_ALIASES.responsable),
+    {
+      nombreMadre,
+      nombrePadre,
+      telefonoMadre,
+      telefonoPadre,
+      emailMadre,
+      emailPadre,
+    },
+  );
+  if (responsableInfo.warning) {
+    warnings.push(responsableInfo.warning);
+  }
+
+  let nombreResponsable = responsableInfo.nombre;
+  if (!nombreResponsable) {
+    if (responsableInfo.preferencia === "madre" && nombreMadre) {
+      nombreResponsable = nombreMadre;
+    } else if (responsableInfo.preferencia === "padre" && nombrePadre) {
+      nombreResponsable = nombrePadre;
+    } else {
+      nombreResponsable = nombreMadre ?? nombrePadre ?? null;
+    }
+  }
+  if (!nombreResponsable) {
+    nombreResponsable = nombre;
+  } else {
+    nombreResponsable = toTitleCase(cleanString(nombreResponsable));
+  }
+
+  const data = {
+    rut,
+    nombre,
+    curso,
+  };
+  if (fechaNacimiento) {
+    data.fechaNacimiento = fechaNacimiento;
+  }
+  if (enfermedad) {
+    data.enfermedad = enfermedad;
+  }
+  if (hermanos) {
+    data.hermanos = hermanos;
+  }
+  if (uniforme) {
+    data.uniforme = uniforme;
+  }
+  if (talla) {
+    data.talla = talla;
+  }
+  if (dorsalNombre) {
+    data.dorsalNombre = dorsalNombre;
+  }
+  if (alumnoNuevo) {
+    data.alumnoNuevo = alumnoNuevo;
+  }
+  if (nombreMadre) {
+    data.nombreMadre = nombreMadre;
+  }
+  if (telefonoMadre) {
+    data.telefonoMadre = telefonoMadre;
+  }
+  if (emailMadre) {
+    data.emailMadre = emailMadre;
+  }
+  if (nombrePadre) {
+    data.nombrePadre = nombrePadre;
+  }
+  if (telefonoPadre) {
+    data.telefonoPadre = telefonoPadre;
+  }
+  if (emailPadre) {
+    data.emailPadre = emailPadre;
+  }
+  if (nombreResponsable) {
+    data.nombreResponsable = nombreResponsable;
+  }
+  if (responsableInfo?.telefono) {
+    data.telefonoResponsable = responsableInfo.telefono;
+  }
+  if (responsableInfo?.email) {
+    data.emailResponsable = responsableInfo.email;
+  }
+
+  return { data, warnings };
 }
 
 function resolveResponsable(
@@ -423,6 +775,81 @@ function generateGuardianEmail({
   return null;
 }
 
+function findGuardianFromSiblings({ siblingRuts, estudiantesMap }) {
+  if (!Array.isArray(siblingRuts) || siblingRuts.length === 0) {
+    return null;
+  }
+
+  const normalizedSiblings = normalizeRutList(siblingRuts);
+  const candidates = normalizedSiblings.length > 0 ? normalizedSiblings : siblingRuts;
+
+  for (const rut of candidates) {
+    if (!rut) continue;
+    const lookupRut = safeNormalizeRut(rut) ?? rut;
+    const hermano = estudiantesMap.get(lookupRut) || estudiantesMap.get(rut);
+    if (!hermano) continue;
+    if (hermano.correoApoderadoGenerado || hermano.rutResponsable) {
+      return {
+        email: hermano.correoApoderadoGenerado || null,
+        rutResponsable: hermano.rutResponsable || null,
+        nombreResponsable: hermano.nombreResponsable || null,
+      };
+    }
+  }
+  return null;
+}
+
+async function syncSimpleSiblingLinks({
+  estudiante,
+  siblingRuts,
+  estudianteRepository,
+  estudiantesMap,
+}) {
+  const normalizedSiblings = normalizeRutList(siblingRuts);
+  if (normalizedSiblings.length === 0) {
+    return estudiante;
+  }
+
+  const estudianteRut = safeNormalizeRut(estudiante.rut) ?? estudiante.rut;
+  const propios = new Set(
+    normalizeRutList(Array.isArray(estudiante.hermanos) ? estudiante.hermanos : []),
+  );
+  let actualizado = false;
+  for (const rut of normalizedSiblings) {
+    if (!rut || rut === estudianteRut) continue;
+    if (!propios.has(rut)) {
+      propios.add(rut);
+      actualizado = true;
+    }
+    let hermano = estudiantesMap.get(rut);
+    if (!hermano) {
+      hermano = await findStudentByRutVariants(estudianteRepository, rut);
+      if (hermano) {
+        cacheStudentByRut(estudiantesMap, hermano);
+      }
+    }
+    if (!hermano) continue;
+    const hermanoRut = safeNormalizeRut(hermano.rut) ?? hermano.rut;
+    const hermanosDelHermano = new Set(
+      normalizeRutList(Array.isArray(hermano.hermanos) ? hermano.hermanos : []),
+    );
+    if (!hermanosDelHermano.has(estudianteRut)) {
+      hermanosDelHermano.add(estudianteRut);
+      hermano.hermanos = Array.from(hermanosDelHermano);
+      await estudianteRepository.save(hermano);
+      cacheStudentByRut(estudiantesMap, hermano);
+    }
+  }
+
+  if (actualizado) {
+    estudiante.hermanos = Array.from(propios);
+    estudiante = await estudianteRepository.save(estudiante);
+    cacheStudentByRut(estudiantesMap, estudiante);
+  }
+
+  return estudiante;
+}
+
 function determineGuardianNameForEmail(data) {
   const candidates = [
     data.nombreResponsable,
@@ -478,6 +905,7 @@ function generateGuardianRut(email, guardianRutsInUse) {
 async function ensureGuardianUser({
   userRepository,
   guardianUsersCache,
+  guardianUsersByRut,
   guardianRutsInUse,
   email,
   nombre,
@@ -496,6 +924,7 @@ async function ensureGuardianUser({
     guardianUsersCache.set(normalizedEmail, existingUser);
     if (existingUser.rut) {
       guardianRutsInUse.add(existingUser.rut);
+      guardianUsersByRut.set(existingUser.rut, existingUser);
     }
     return { user: existingUser, created: false };
   }
@@ -513,6 +942,7 @@ async function ensureGuardianUser({
   });
   const savedUser = await userRepository.save(newUser);
   guardianUsersCache.set(normalizedEmail, savedUser);
+  guardianUsersByRut.set(savedUser.rut, savedUser);
   return { user: savedUser, created: true };
 }
 
@@ -743,7 +1173,8 @@ export async function importEstudiantesFromExcel(req, res) {
     const userRepository = AppDataSource.getRepository(User);
 
     const existentes = await estudianteRepository.find();
-    const estudiantesMap = new Map(existentes.map((item) => [item.rut, item]));
+    const estudiantesMap = new Map();
+    existentes.forEach((item) => cacheStudentByRut(estudiantesMap, item));
     const guardianEmailsInUse = new Set(
       existentes
         .map((item) => item.correoApoderadoGenerado?.toLowerCase())
@@ -752,6 +1183,7 @@ export async function importEstudiantesFromExcel(req, res) {
     const guardianEmailsBatch = new Set();
     const guardianUsersCache = new Map();
     const guardianRutsInUse = new Set();
+    const guardianUsersByRut = new Map();
   const guardianAssignmentsByRut = new Map();
   const guardianSiblingUpdates = new Map();
   const processedStudentRuts = new Set();
@@ -766,6 +1198,7 @@ export async function importEstudiantesFromExcel(req, res) {
       }
       if (user.rut) {
         guardianRutsInUse.add(user.rut);
+        guardianUsersByRut.set(user.rut, user);
       }
     });
 
@@ -786,9 +1219,12 @@ export async function importEstudiantesFromExcel(req, res) {
       const row = estudiantes[i];
       try {
         const { data, warnings } = normalizeRow(row);
-        const siblingRuts = Array.isArray(data.hermanos)
-          ? data.hermanos.filter((rutHermano) => typeof rutHermano === "string" && rutHermano.trim())
-          : [];
+        const siblingRuts = normalizeRutList(
+          Array.isArray(data.hermanos)
+            ? data.hermanos.filter((rutHermano) => typeof rutHermano === "string" && rutHermano.trim())
+            : [],
+        );
+        data.hermanos = siblingRuts;
         const lookupRuts = [data.rut, ...siblingRuts];
 
         let cachedAssignment = null;
@@ -873,6 +1309,7 @@ export async function importEstudiantesFromExcel(req, res) {
           const ensured = await ensureGuardianUser({
             userRepository,
             guardianUsersCache,
+            guardianUsersByRut,
             guardianRutsInUse,
             email: resolvedGuardianEmail,
             nombre: guardianDisplayName,
@@ -960,14 +1397,14 @@ export async function importEstudiantesFromExcel(req, res) {
               results.errores.push({ estudiante: data.rut, error: updateError });
               continue;
             }
-            estudiantesMap.set(data.rut, actualizado);
+            cacheStudentByRut(estudiantesMap, actualizado);
             results.estudiantesActualizados.push(actualizado);
           } else {
             results.errores.push({ estudiante: data.rut, error: estudianteError });
             continue;
           }
         } else {
-          estudiantesMap.set(estudiante.rut, estudiante);
+          cacheStudentByRut(estudiantesMap, estudiante);
           results.estudiantesCreados.push(estudiante);
         }
 
@@ -1033,7 +1470,7 @@ export async function importEstudiantesFromExcel(req, res) {
           continue;
         }
 
-        estudiantesMap.set(hermanoRut, hermanoActualizado);
+        cacheStudentByRut(estudiantesMap, hermanoActualizado);
         processedStudentRuts.add(hermanoRut);
         results.estudiantesActualizados.push(hermanoActualizado);
         guardianSiblingLinksUpdatedCount += 1;
@@ -1066,6 +1503,215 @@ export async function importEstudiantesFromExcel(req, res) {
     handleSuccess(res, 201, message, results);
   } catch (error) {
     console.error("Error en importacion masiva:", error);
+    handleErrorServer(res, 500, error.message);
+  }
+}
+
+/**
+ * Importar formularios de registro desde Excel
+ * Columnas esperadas: Marca temporal, Nombre Completo, Alumno nuevo, Fecha nacimiento,
+ * Run, Curso, Enfermedad, Hermanos, Uniforme, Talla, Nombre dorsal,
+ * Nombre Madre, Teléfono Madre, Email Madre, Nombre Padre, Teléfono Padre, Email Padre,
+ * Responsable
+ */
+export async function importFormulariosRegistro(req, res) {
+  try {
+    const { formularios } = req.body;
+
+    if (!Array.isArray(formularios) || formularios.length === 0) {
+      return handleErrorClient(res, 400, "No se proporcionaron formularios para importar");
+    }
+
+    const estudianteRepository = AppDataSource.getRepository(Estudiante);
+    const userRepository = AppDataSource.getRepository(User);
+    const existentes = await estudianteRepository.find();
+    const estudiantesMap = new Map();
+    existentes.forEach((item) => cacheStudentByRut(estudiantesMap, item));
+
+    const guardianEmailsInUse = new Set();
+    const guardianEmailsBatch = new Set();
+    const guardianUsersCache = new Map();
+    const guardianRutsInUse = new Set();
+    const guardianUsersByRut = new Map();
+
+    existentes.forEach((estudiante) => {
+      if (estudiante.correoApoderadoGenerado) {
+        guardianEmailsInUse.add(estudiante.correoApoderadoGenerado.toLowerCase());
+      }
+      if (estudiante.rutResponsable) {
+        guardianRutsInUse.add(estudiante.rutResponsable);
+      }
+    });
+
+    const existingUsers = await userRepository.find();
+    existingUsers.forEach((user) => {
+      if (user.email) {
+        const normalizedEmail = user.email.toLowerCase();
+        guardianEmailsInUse.add(normalizedEmail);
+        guardianUsersCache.set(normalizedEmail, user);
+      }
+      if (user.rut) {
+        guardianRutsInUse.add(user.rut);
+        guardianUsersByRut.set(user.rut, user);
+      }
+    });
+
+    const results = {
+      estudiantesCreados: [],
+      estudiantesActualizados: [],
+      apoderadosCreados: 0,
+      correosApoderadoGenerados: 0,
+      advertencias: [],
+      errores: [],
+    };
+
+    for (let i = 0; i < formularios.length; i += 1) {
+      const filaNum = i + 2;
+      try {
+        const { data, warnings } = normalizeBasicFormularioRow(formularios[i]);
+        if (["24777781-1", "24510781-1"].includes(data.rut)) {
+          console.log("[DEBUG] Formulario bruto", formularios[i]);
+          console.log("[DEBUG] Datos normalizados", data);
+        }
+        const existingStudent = estudiantesMap.get(data.rut) ?? null;
+
+        const hermanosLista = normalizeRutList(Array.isArray(data.hermanos) ? data.hermanos : []);
+        data.hermanos = hermanosLista;
+        const siblingGuardian = findGuardianFromSiblings({
+          siblingRuts: hermanosLista,
+          estudiantesMap,
+        });
+
+        let existingEmail = existingStudent?.correoApoderadoGenerado ?? null;
+        if (siblingGuardian?.email) {
+          existingEmail = siblingGuardian.email;
+        }
+        if (!data.rutResponsable && siblingGuardian?.rutResponsable) {
+          data.rutResponsable = siblingGuardian.rutResponsable;
+        }
+        if (!data.nombreResponsable && siblingGuardian?.nombreResponsable) {
+          data.nombreResponsable = siblingGuardian.nombreResponsable;
+        }
+
+        if (!data.rutResponsable && existingStudent?.rutResponsable) {
+          data.rutResponsable = existingStudent.rutResponsable;
+        }
+        if (!data.nombreResponsable && existingStudent?.nombreResponsable) {
+          data.nombreResponsable = existingStudent.nombreResponsable;
+        }
+        if (!existingEmail && data.rutResponsable) {
+          const guardianUserByRut = guardianUsersByRut.get(data.rutResponsable);
+          if (guardianUserByRut?.email) {
+            existingEmail = guardianUserByRut.email.toLowerCase();
+          }
+        }
+
+        const guardianEmail = generateGuardianEmail({
+          guardianName: data.nombreResponsable,
+          fallbackName: data.nombre,
+          rut: data.rut,
+          guardianEmailsInUse,
+          guardianEmailsBatch,
+          existingEmail,
+        });
+
+        if (guardianEmail) {
+          data.correoApoderadoGenerado = guardianEmail;
+          if (!existingEmail || guardianEmail !== existingEmail) {
+            results.correosApoderadoGenerados += 1;
+          }
+        }
+
+        let guardianUser = null;
+        if (!guardianEmail && data.rutResponsable) {
+          guardianUser = guardianUsersByRut.get(data.rutResponsable) ?? null;
+        }
+        if (!guardianUser && guardianEmail) {
+          const ensured = await ensureGuardianUser({
+            userRepository,
+            guardianUsersCache,
+            guardianUsersByRut,
+            guardianRutsInUse,
+            email: guardianEmail,
+            nombre: data.nombreResponsable || data.nombre,
+          });
+          guardianUser = ensured.user;
+          if (ensured.created) {
+            results.apoderadosCreados += 1;
+          }
+        }
+
+        if (guardianUser) {
+          data.rutResponsable = guardianUser.rut;
+          data.nombreResponsable = guardianUser.nombreCompleto;
+        }
+
+        const contactoEmergencia =
+          data.nombreResponsable || data.nombreMadre || data.nombrePadre || null;
+        const telefonoEmergencia =
+          data.telefonoResponsable || data.telefonoMadre || data.telefonoPadre || null;
+        if (contactoEmergencia) {
+          data.contactoEmergencia = contactoEmergencia;
+        }
+        if (telefonoEmergencia) {
+          data.telefonoEmergencia = telefonoEmergencia;
+        }
+        delete data.telefonoResponsable;
+        delete data.emailResponsable;
+
+        if (!data.fechaNacimiento && existingStudent?.fechaNacimiento) {
+          delete data.fechaNacimiento;
+        }
+
+        if (hermanosLista.length === 0) {
+          delete data.hermanos;
+        }
+
+        const equipamiento = { ...(existingStudent?.equipamiento ?? {}) };
+        if (data.uniforme) {
+          equipamiento.uniforme = data.uniforme;
+        }
+        delete data.uniforme;
+        if (Object.keys(equipamiento).length > 0) {
+          data.equipamiento = equipamiento;
+        }
+
+        let saved;
+        if (existingStudent) {
+          Object.assign(existingStudent, data);
+          saved = await estudianteRepository.save(existingStudent);
+          cacheStudentByRut(estudiantesMap, saved);
+          results.estudiantesActualizados.push({ nombre: saved.nombre, rut: saved.rut });
+        } else {
+          saved = estudianteRepository.create(data);
+          saved = await estudianteRepository.save(saved);
+          cacheStudentByRut(estudiantesMap, saved);
+          results.estudiantesCreados.push({ nombre: saved.nombre, rut: saved.rut });
+        }
+
+        if (hermanosLista.length > 0) {
+          await syncSimpleSiblingLinks({
+            estudiante: saved,
+            siblingRuts: hermanosLista,
+            estudianteRepository,
+            estudiantesMap,
+          });
+        }
+
+        if (warnings.length > 0) {
+          results.advertencias.push({ fila: filaNum, detalles: warnings, estudiante: data.rut });
+        }
+      } catch (error) {
+        console.error(`Error procesando fila ${filaNum}:`, error);
+        results.errores.push({ fila: filaNum, razon: error.message });
+      }
+    }
+
+    const message = `Importación completada. Nuevos: ${results.estudiantesCreados.length}, Actualizados: ${results.estudiantesActualizados.length}, Apoderados creados: ${results.apoderadosCreados}, Correos generados: ${results.correosApoderadoGenerados}, Errores: ${results.errores.length}`;
+
+    handleSuccess(res, 201, message, results);
+  } catch (error) {
+    console.error("Error en importación de formularios:", error);
     handleErrorServer(res, 500, error.message);
   }
 }

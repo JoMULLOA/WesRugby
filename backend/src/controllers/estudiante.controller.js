@@ -1,4 +1,6 @@
 "use strict";
+import { AppDataSource } from "../config/configDb.js";
+import Estudiante from "../entity/estudiante.entity.js";
 import {
   createEstudianteService,
   getEstudiantesService,
@@ -141,14 +143,20 @@ export async function updateEstudiante(req, res) {
 
     // Si es apoderado, verificar que puede modificar este estudiante
     if (userRol === "apoderado") {
-      const [estudiante, errorEstudiante] = await getEstudianteService(rut);
+      const estudianteRepository = AppDataSource.getRepository(Estudiante);
+      const estudiante = await estudianteRepository.findOne({ where: { rut } });
       
-      if (errorEstudiante) {
-        return handleErrorClient(res, 404, errorEstudiante);
+      if (!estudiante) {
+        return handleErrorClient(res, 404, "Estudiante no encontrado");
       }
 
       // Verificar que el usuario es responsable del estudiante
-      if (estudiante.rutResponsable !== userRut && estudiante.rutResponsable2 !== userRut) {
+      // Puede ser por los campos rutResponsable registrados
+      const esResponsable = 
+        estudiante.rutResponsable === userRut ||
+        estudiante.rutResponsable2 === userRut;
+
+      if (!esResponsable) {
         return handleErrorClient(res, 403, "No tienes permisos para modificar este estudiante");
       }
     }

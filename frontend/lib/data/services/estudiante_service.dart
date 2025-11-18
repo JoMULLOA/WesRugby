@@ -188,6 +188,55 @@ class EstudianteService extends ChangeNotifier {
     }
   }
 
+  Future<Map<String, dynamic>> importRegistrationFormsFromExcel(
+    List<Map<String, dynamic>> excelData,
+  ) async {
+    try {
+      if (excelData.isEmpty) {
+        throw Exception('No hay datos para importar');
+      }
+
+      final response = await ApiService.importFormulariosRegistro(excelData);
+
+      if (response.statusCode == 201 && response.data != null) {
+        final results = Map<String, dynamic>.from(response.data['data'] ?? {});
+        await refreshStudentsFromAPI();
+
+        final creados =
+            (results['estudiantesCreados'] as List<dynamic>? ?? []).length;
+        final actualizados =
+            (results['estudiantesActualizados'] as List<dynamic>? ?? []).length;
+        final apoderadosGenerados = results['apoderadosCreados'] is num
+            ? (results['apoderadosCreados'] as num).toInt()
+            : 0;
+        final errores = List<Map<String, dynamic>>.from(
+          results['errores'] as List<dynamic>? ?? [],
+        );
+
+        return {
+          'success': true,
+          'estudiantesCreados': creados,
+          'estudiantesActualizados': actualizados,
+          'apoderadosCreados': apoderadosGenerados,
+          'errores': errores,
+          'message':
+              'Importación completada. Nuevos: $creados, actualizados: $actualizados, apoderados: $apoderadosGenerados.',
+        };
+      }
+
+      throw Exception(response.message ?? 'Error del servidor');
+    } catch (error) {
+      if (kDebugMode) {
+        print('❌ Error importando formularios: $error');
+      }
+      return {
+        'success': false,
+        'message': 'Error durante la importación: $error',
+        'error': error.toString(),
+      };
+    }
+  }
+
   Map<String, dynamic> _adaptEstudianteFromBackend(
     Map<String, dynamic> backendEstudiante,
   ) {
