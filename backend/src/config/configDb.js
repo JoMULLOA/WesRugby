@@ -11,7 +11,7 @@ export const AppDataSource = new DataSource({
   database: `${DATABASE}`,
   entities: ["src/entity/**/*.js"],
   synchronize: true, // Activado para crear las tablas automáticamente
-  dropSchema: true, // No eliminar el esquema para conservar los datos
+  dropSchema: false, // No eliminar el esquema para conservar los datos
   logging: false,
   extra: {
     charset: 'utf8mb4',

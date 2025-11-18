@@ -9,6 +9,7 @@ import 'package:wesrugby/features/admin/presentation/screens/pagos/historial/his
 import 'package:wesrugby/features/admin/presentation/screens/justificantes/detalle/justificante_screen.dart';
 import 'package:wesrugby/features/admin/presentation/screens/justificantes/historial/historial_justificantes_screen.dart';
 import 'package:wesrugby/features/admin/presentation/screens/actas/visualizar/visualizar_actas_reunion_screen.dart';
+import 'package:wesrugby/features/admin/presentation/screens/usuarios/editar_estudiante_apoderado/editar_estudiante_apoderado_screen.dart';
 import 'package:wesrugby/features/auth/presentation/screens/simple_login/simple_login.dart' as login;
 
 class ApoderadoDashboard extends StatefulWidget {
@@ -444,6 +445,31 @@ class _ApoderadoDashboardState extends State<ApoderadoDashboard> {
                     ],
                   ),
                 ),
+
+                // Sección: Información de Estudiantes
+                const WessexSectionTitle(
+                  title: 'Mis Estudiantes',
+                  subtitle: 'Visualizar y editar información de estudiantes',
+                  titleColor: WessexColors.white,
+                ),
+                const SizedBox(height: 20),
+
+                _buildActionCard(
+                  'Gestionar Estudiantes',
+                  'Ver y editar información de mis estudiantes',
+                  Icons.school,
+                  WessexColors.deepRoyalBlue,
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const EditarEstudianteApoderadoScreen(),
+                    ),
+                  ),
+                  isDesktop: isDesktop,
+                  isTablet: isTablet,
+                ),
+
+                const SizedBox(height: 32),
 
                 // Sección: Gestión de Pagos
                 const WessexSectionTitle(

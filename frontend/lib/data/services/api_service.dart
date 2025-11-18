@@ -393,6 +393,15 @@ class ApiService {
     return post('/importacion/estudiantes-excel', {'estudiantes': estudiantes});
   }
 
+  static Future<ApiResponse> importFormulariosRegistro(
+    List<Map<String, dynamic>> formularios,
+  ) async {
+    return post(
+      '/importacion/registro-formularios',
+      {'formularios': formularios},
+    );
+  }
+
   // ============================================================================
   // MÉTODOS PARA GESTIÓN DE TORNEOS
   // ============================================================================
