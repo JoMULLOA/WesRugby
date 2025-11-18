@@ -7,63 +7,36 @@ import { generateUniqueBarcode } from "../utils/inventoryBarcode.js";
 import { generateBarcodeSheet } from "../utils/inventoryPdf.js";
 
 const PRODUCT_SEED = [
-  {
-    name: "Bebida (lata)",
-    category: "bebida_latas",
-    sourceType: "compra",
-    pricingMode: "fixed",
-    defaultPriceCents: 1200,
-  },
-  {
-    name: "Pasteleria (pies, queques, kucken)",
-    category: "pasteleria",
-    sourceType: "compra",
-    pricingMode: "fixed",
-    defaultPriceCents: 1500,
-  },
-  {
-    name: "selladito",
-    category: "selladitos",
-    sourceType: "compra",
-    pricingMode: "fixed",
-    defaultPriceCents: 800,
-  },
-  {
-    name: "cafeteria (cafe, te, leche, chocolate)",
-    category: "cafeteria",
-    sourceType: "compra",
-    pricingMode: "fixed",
-    defaultPriceCents: 500,
-  },
-  {
-    name: "pastilla",
-    category: "pastillas",
-    sourceType: "compra",
-    pricingMode: "fixed",
-    defaultPriceCents: 300,
-  },
-  {
-    name: "papas fritas en cajita",
-    category: "papas_fritas_cajita",
-    sourceType: "compra",
-    pricingMode: "fixed",
-    defaultPriceCents: 900,
-  },
-  {
-    name: "Bebida energetica",
-    category: "bebidas_energeticas",
-    sourceType: "compra",
-    pricingMode: "fixed",
-    defaultPriceCents: 1800,
-  },
-  {
-    name: "Varios",
-    category: "varios",
-    sourceType: "compra",
-    pricingMode: "variable",
-    defaultPriceCents: null,
-  },
-];
+  { name: "Café / Milo", category: "comestibles", defaultPriceCents: 1000 },
+  { name: "Té", category: "comestibles", defaultPriceCents: 1000 },
+  { name: "Gatorade", category: "comestibles", defaultPriceCents: 2000 },
+  { name: "Queque", category: "comestibles", defaultPriceCents: 1000 },
+  { name: "Pie / Kuchen", category: "comestibles", defaultPriceCents: 2000 },
+  { name: "Bebidas 350cc", category: "comestibles", defaultPriceCents: 1500 },
+  { name: "Agua mineral", category: "comestibles", defaultPriceCents: 1500 },
+  { name: "Papas fritas", category: "comestibles", defaultPriceCents: 1500 },
+  { name: "Doritos", category: "comestibles", defaultPriceCents: 1500 },
+  { name: "Selladitos", category: "comestibles", defaultPriceCents: 1500 },
+  { name: "Hamburguesa", category: "comestibles", defaultPriceCents: 4000 },
+  { name: "Bucales", category: "otros_productos", defaultPriceCents: 20000 },
+  { name: "Tazones", category: "otros_productos", defaultPriceCents: 6000 },
+  { name: "Bolsos", category: "otros_productos", defaultPriceCents: 3000 },
+  { name: "Polerones", category: "otros_productos", defaultPriceCents: 27000 },
+  { name: "Calcetas (S y M)", category: "otros_productos", defaultPriceCents: 5000 },
+  { name: "Jockey Wessex", category: "otros_productos", defaultPriceCents: 5000 },
+  { name: "Jockey Cóndores", category: "otros_productos", defaultPriceCents: 5000 },
+  { name: "Canilleras XS", category: "otros_productos", defaultPriceCents: 6000 },
+  { name: "Canilleras S", category: "otros_productos", defaultPriceCents: 6000 },
+  { name: "Canilleras M", category: "otros_productos", defaultPriceCents: 6000 },
+  { name: "Coderas M", category: "otros_productos", defaultPriceCents: 5000 },
+  { name: "Llavero", category: "otros_productos", defaultPriceCents: 3000 },
+  { name: "Pin Rugby", category: "otros_productos", defaultPriceCents: 3000 },
+  { name: "Sticker", category: "otros_productos", defaultPriceCents: 2000 },
+].map((item) => ({
+  ...item,
+  sourceType: "compra",
+  pricingMode: "fixed",
+}));
 
 function productRepository() {
   return AppDataSource.getRepository("InventoryProduct");
@@ -148,15 +121,33 @@ export async function deleteProductPermanently(productId) {
   if (!productId) {
     throw new Error("PRODUCT_ID_REQUIRED");
   }
-  const repo = productRepository();
-  const existing = await repo.findOne({ where: { id: productId } });
-  if (!existing) {
-    throw new Error("PRODUCT_NOT_FOUND");
-  }
-  
-  // Eliminar permanentemente (CASCADE eliminara registros relacionados)
-  await repo.remove(existing);
-  return { deleted: true, productId };
+  return AppDataSource.transaction(async (manager) => {
+    const repo = manager.getRepository("InventoryProduct");
+    const saleRepo = manager.getRepository("InventorySale");
+    const ingestRepo = manager.getRepository("InventoryScanIngest");
+
+    const existing = await repo.findOne({ where: { id: productId } });
+    if (!existing) {
+      throw new Error("PRODUCT_NOT_FOUND");
+    }
+
+    const sales = await saleRepo.find({
+      where: { product: { id: productId } },
+      relations: { ingest: true },
+    });
+
+    if (sales.length) {
+      for (const sale of sales) {
+        if (sale.ingest) {
+          await ingestRepo.remove(sale.ingest);
+        }
+      }
+      await saleRepo.remove(sales);
+    }
+
+    await repo.remove(existing);
+    return { deleted: true, productId, removedSales: sales.length };
+  });
 }
 
 export async function upsertProduct(payload) {
@@ -484,6 +475,17 @@ export async function deleteSale(saleId) {
 
 export async function seedInventoryProducts() {
   const repo = productRepository();
+  const allowedNames = new Set(PRODUCT_SEED.map((item) => item.name));
+  const existing = await repo.find();
+
+  // Desactivar productos que ya no forman parte del catálogo (excepto el registro "varios")
+  for (const product of existing) {
+    if (!allowedNames.has(product.name) && product.category !== "varios" && product.active) {
+      product.active = false;
+      await repo.save(product);
+    }
+  }
+
   for (const item of PRODUCT_SEED) {
     let product = await repo.findOne({ where: { name: item.name } });
     if (!product) {
@@ -492,11 +494,13 @@ export async function seedInventoryProducts() {
       product.sourceType = item.sourceType;
       product.category = item.category;
       product.pricingMode = item.pricingMode;
-      product.defaultPriceCents = item.defaultPriceCents;
+      product.defaultPriceCents = item.defaultPriceCents ?? null;
       product.active = true;
     }
     await ensureBarcode(product, repo);
     await repo.save(product);
   }
+
+  await ensureVariosProduct();
 }
 

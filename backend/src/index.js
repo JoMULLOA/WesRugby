@@ -28,6 +28,7 @@ async function setupServer() {
     const app = express();
 
     app.disable("x-powered-by");
+    app.set("trust proxy", true);
 
     // Middleware de configuración
     app.use(cors({

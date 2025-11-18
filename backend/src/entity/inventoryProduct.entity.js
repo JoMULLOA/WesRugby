@@ -10,6 +10,8 @@ const PRODUCT_CATEGORIES = [
   "papas_fritas_cajita",
   "bebidas_energeticas",
   "varios",
+  "comestibles",
+  "otros_productos",
 ];
 
 const SOURCE_TYPES = ["compra", "donacion"];

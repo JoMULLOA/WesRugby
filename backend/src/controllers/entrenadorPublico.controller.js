@@ -1,6 +1,7 @@
 "use strict";
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
 import { AppDataSource } from "../config/configDb.js";
 import EntrenadorPublico from "../entity/entrenadorPublico.entity.js";
 import User from "../entity/user.entity.js";
@@ -9,7 +10,9 @@ import { optimizeUploadedImage } from "../utils/image.utils.js";
 
 const entrenadorPublicoRepository = AppDataSource.getRepository(EntrenadorPublico);
 const userRepository = AppDataSource.getRepository(User);
-const UPLOADS_BASE_PATH = path.resolve("uploads");
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const UPLOADS_BASE_PATH = path.resolve(__dirname, "..", "..", "uploads");
 
 function deleteIfExists(filePath) {
   try {
@@ -62,7 +65,14 @@ function buildPublicFileUrl(relativePath, version, req) {
 }
 
 function ensureRelativeUploadPath(filePath) {
-  return path.relative(UPLOADS_BASE_PATH, filePath).replace(/\\/g, "/");
+  if (!filePath) {
+    return "";
+  }
+  const relative = path.relative(UPLOADS_BASE_PATH, filePath).replace(/\\/g, "/");
+  if (!relative || relative.startsWith("..")) {
+    return path.basename(filePath).replace(/\\/g, "/");
+  }
+  return relative;
 }
 
 function validateTextField(value, field, { required = false, minLength = 0, maxLength = 255 } = {}, errors) {

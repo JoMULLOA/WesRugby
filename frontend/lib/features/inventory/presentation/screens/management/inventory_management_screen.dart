@@ -11,13 +11,15 @@ import 'package:wesrugby/data/services/api_service.dart';
 import 'package:wesrugby/shared/widgets/layout/wessex_widgets.dart';
 
 const Map<String, String> _categoryLabels = {
+  'comestibles': 'Comestibles',
+  'otros_productos': 'Otros productos',
   'bebida_latas': 'Bebidas (latas)',
-  'pasteleria': 'Pasteleria',
+  'pasteleria': 'Pastelería',
   'selladitos': 'Selladitos',
-  'cafeteria': 'Cafeteria',
+  'cafeteria': 'Cafetería',
   'pastillas': 'Pastillas',
   'papas_fritas_cajita': 'Papas fritas (caja)',
-  'bebidas_energeticas': 'Bebidas energeticas',
+  'bebidas_energeticas': 'Bebidas energéticas',
   'varios': 'Varios',
 };
 

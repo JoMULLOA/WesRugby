@@ -4,6 +4,7 @@ import TipoEvento from "../entity/tipoEvento.entity.js";
 import User from "../entity/user.entity.js";
 import { AppDataSource } from "../config/configDb.js";
 import { In } from "typeorm";
+import moment from "moment-timezone";
 import {
   handleErrorClient,
   handleErrorServer,
@@ -13,6 +14,53 @@ import {
 const eventoRepository = AppDataSource.getRepository(EventoDeportivo);
 const tipoEventoRepository = AppDataSource.getRepository(TipoEvento);
 const userRepository = AppDataSource.getRepository(User);
+const CHILE_TZ = "America/Santiago";
+
+function hasTimezoneInfo(value) {
+  if (typeof value !== "string") {
+    return false;
+  }
+  return /([zZ]|[+\-]\d\d:?\d\d)$/.test(value.trim());
+}
+
+function buildMoment(value) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  if (value instanceof Date || typeof value === "number") {
+    const candidate = moment(value);
+    return candidate.isValid() ? candidate : null;
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+    const candidate = hasTimezoneInfo(trimmed)
+      ? moment(trimmed)
+      : moment.tz(trimmed, moment.ISO_8601, CHILE_TZ);
+    return candidate.isValid() ? candidate : null;
+  }
+  return null;
+}
+
+function toUtcDate(value) {
+  const dateMoment = buildMoment(value);
+  return dateMoment ? dateMoment.toDate() : null;
+}
+
+function toChileDateOnly(value) {
+  const dateMoment = buildMoment(value);
+  return dateMoment ? dateMoment.tz(CHILE_TZ).startOf("day").toDate() : null;
+}
+
+function getEventStartDate(evento) {
+  if (!evento) {
+    return null;
+  }
+  const start = toUtcDate(evento.fechaInicio);
+  return start || null;
+}
 
 // Crear evento deportivo (Entrenador, Directiva)
 export async function crearEventoDeportivo(req, res) {
@@ -44,6 +92,16 @@ export async function crearEventoDeportivo(req, res) {
       estado = "programado"
     } = req.body;
 
+    const fechaInicioUtc = toUtcDate(fechaInicio);
+    const fechaFinUtc = fechaFin ? toUtcDate(fechaFin) : null;
+    const fechaLimiteUtc = fechaLimiteInscripcion
+      ? toChileDateOnly(fechaLimiteInscripcion)
+      : null;
+
+    if (!fechaInicioUtc) {
+      return handleErrorClient(res, 400, "Fecha inv\u00e1lida", "La fecha de inicio del evento es obligatoria.");
+    }
+
     // Validar que el tipo de evento existe
     if (tipoEventoId) {
       const tipoEvento = await tipoEventoRepository.findOne({
@@ -57,13 +115,13 @@ export async function crearEventoDeportivo(req, res) {
     }
 
     // Validaciones básicas
-    if (fechaFin && new Date(fechaInicio) > new Date(fechaFin)) {
+    if (fechaFinUtc && fechaInicioUtc > fechaFinUtc) {
       return handleErrorClient(res, 400, "Fecha inválida", 
         "La fecha de inicio no puede ser posterior a la fecha de fin");
     }
 
-    if (requiereInscripcion && fechaLimiteInscripcion) {
-      if (new Date(fechaLimiteInscripcion) > new Date(fechaInicio)) {
+    if (requiereInscripcion && fechaLimiteUtc) {
+      if (fechaLimiteUtc > fechaInicioUtc) {
         return handleErrorClient(res, 400, "Fecha límite inválida", 
           "La fecha límite de inscripción debe ser anterior al evento");
       }
@@ -73,7 +131,7 @@ export async function crearEventoDeportivo(req, res) {
     const eventoExistente = await eventoRepository.findOne({
       where: {
         titulo,
-        fechaInicio,
+        fechaInicio: fechaInicioUtc,
         lugar,
         tipoEventoId,
         estado: In(["programado", "confirmado", "en_curso"])
@@ -90,8 +148,8 @@ export async function crearEventoDeportivo(req, res) {
       descripcion,
       tipoEventoId,
       categoria,
-      fechaInicio,
-      fechaFin,
+      fechaInicio: fechaInicioUtc,
+      fechaFin: fechaFinUtc,
       horaInicio,
       horaFin,
       lugar,
@@ -99,7 +157,7 @@ export async function crearEventoDeportivo(req, res) {
       equipoVisitante,
       requiereInscripcion,
       cupoMaximo,
-      fechaLimiteInscripcion,
+      fechaLimiteInscripcion: fechaLimiteUtc,
       costo: costo || 0,
       observaciones,
       estado,
@@ -252,15 +310,41 @@ export async function actualizarEventoDeportivo(req, res) {
 
     const datosActualizacion = req.body;
 
-    // Validar fechas si se actualizan
-    const fechaInicioActualizada = datosActualizacion.fechaInicio || evento.fechaInicio;
-    const fechaFinActualizada = datosActualizacion.fechaFin || evento.fechaFin;
-    
-    if (fechaInicioActualizada && fechaFinActualizada) {
-      if (new Date(fechaInicioActualizada) > new Date(fechaFinActualizada)) {
-        return handleErrorClient(res, 400, "Fecha inválida", 
-          "La fecha de inicio no puede ser posterior a la fecha de fin");
+    // Normalizar fechas si se actualizan
+    const nuevaFechaInicio = datosActualizacion.fechaInicio
+      ? toUtcDate(datosActualizacion.fechaInicio)
+      : null;
+    if (datosActualizacion.fechaInicio && !nuevaFechaInicio) {
+      return handleErrorClient(res, 400, "Fecha inválida", "La nueva fecha de inicio no es válida.");
+    }
+
+    const nuevaFechaFin = datosActualizacion.fechaFin
+      ? toUtcDate(datosActualizacion.fechaFin)
+      : null;
+    if (datosActualizacion.fechaFin && !nuevaFechaFin) {
+      return handleErrorClient(res, 400, "Fecha inválida", "La nueva fecha de término no es válida.");
+    }
+
+    if (nuevaFechaInicio) {
+      datosActualizacion.fechaInicio = nuevaFechaInicio;
+    }
+    if (nuevaFechaFin) {
+      datosActualizacion.fechaFin = nuevaFechaFin;
+    }
+
+    if (datosActualizacion.fechaLimiteInscripcion) {
+      const limite = toChileDateOnly(datosActualizacion.fechaLimiteInscripcion);
+      if (!limite) {
+        return handleErrorClient(res, 400, "Fecha inválida", "La nueva fecha límite no es válida.");
       }
+      datosActualizacion.fechaLimiteInscripcion = limite;
+    }
+
+    const fechaInicioComparar = datosActualizacion.fechaInicio || evento.fechaInicio;
+    const fechaFinComparar = datosActualizacion.fechaFin || evento.fechaFin;
+    if (fechaInicioComparar && fechaFinComparar && fechaInicioComparar > fechaFinComparar) {
+      return handleErrorClient(res, 400, "Fecha inválida", 
+        "La fecha de inicio no puede ser posterior a la fecha de fin");
     }
 
     // Campos permitidos para actualización
@@ -499,9 +583,8 @@ export async function eliminarEventoDeportivo(req, res) {
 
     // Verificar si el evento ya comenzó
     const ahora = new Date();
-    const fechaInicioEvento = new Date(`${evento.fechaInicio}T${evento.horaInicio || '00:00'}`);
-    
-    if (fechaInicioEvento <= ahora) {
+    const fechaInicioEvento = getEventStartDate(evento);
+    if (fechaInicioEvento && fechaInicioEvento <= ahora) {
       return handleErrorClient(res, 400, "Evento iniciado", 
         "No se puede eliminar un evento que ya comenzó");
     }
