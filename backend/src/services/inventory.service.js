@@ -275,6 +275,7 @@ function resolvePrice(product, scan) {
 export async function processBulkScans(scans) {
   const repo = productRepository();
   const acceptedIds = [];
+  const accepted = [];
   const rejected = [];
 
   for (const scan of scans) {
@@ -296,7 +297,7 @@ export async function processBulkScans(scans) {
       const quantity = Number.isInteger(scan.quantity) && scan.quantity > 0 ? scan.quantity : 1;
       const scannedAt = scan.scannedAt instanceof Date ? scan.scannedAt : new Date(scan.scannedAt);
 
-      await AppDataSource.transaction(async (manager) => {
+      const { saleId } = await AppDataSource.transaction(async (manager) => {
         const ingestRepo = manager.getRepository("InventoryScanIngest");
         const saleRepo = manager.getRepository("InventorySale");
 
@@ -321,17 +322,25 @@ export async function processBulkScans(scans) {
             scannedAt,
             ingest,
           });
-          await saleRepo.save(sale);
+          const savedSale = await saleRepo.save(sale);
+          return { saleId: savedSale.id };
         }
+
+        return { saleId: existingSale.id };
       });
 
+      if (!saleId) {
+        throw new Error("SALE_ID_NOT_AVAILABLE");
+      }
+
       acceptedIds.push(scan.id);
+      accepted.push({ scanId: scan.id, saleId });
     } catch (error) {
       rejected.push({ id: scan.id, reason: error.message || "UNKNOWN_ERROR" });
     }
   }
 
-  return { acceptedIds, rejected };
+  return { acceptedIds, accepted, rejected };
 }
 
 

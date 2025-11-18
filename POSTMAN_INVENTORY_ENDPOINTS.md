@@ -269,6 +269,24 @@ curl -X POST http://localhost:3000/api/inventario/scans/bulk \
   }'
 ```
 
+**Respuesta 200 OK (productos fijos o mezclados):**
+```json
+{
+  "acceptedIds": [
+    "550e8400-e29b-41d4-a716-446655440001"
+  ],
+  "accepted": [
+    {
+      "scanId": "550e8400-e29b-41d4-a716-446655440001",
+      "saleId": "4c332d14-9f4f-4f1f-91df-93b28e7314c7"
+    }
+  ],
+  "rejected": []
+}
+```
+
+> `acceptedIds` se mantiene para compatibilidad, pero ahora `accepted[]` incluye el `saleId` generado en el backend para que puedas eliminar la venta con `DELETE /api/inventario/sales/{saleId}`.
+
 ### Prueba 2: Vender "Varios" con precio
 ```bash
 curl -X POST http://localhost:3000/api/inventario/sales/varios \
