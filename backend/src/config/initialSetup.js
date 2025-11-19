@@ -3,6 +3,7 @@ import { AppDataSource } from "./configDb.js";
 import { encryptPassword } from "../helpers/bcrypt.helper.js";
 import User from "../entity/user.entity.js";
 import TipoEvento from "../entity/tipoEvento.entity.js";
+import EventoDeportivo from "../entity/eventoDeportivo.entity.js";
 import { seedInventoryProducts } from "../services/inventory.service.js";
 
 
@@ -81,6 +82,7 @@ async function createInitialData() {
 
     await ensureSampleEntrenadores(userRepository);
     await ensureSampleRamaUsers(userRepository);
+    await removeLegacyDemoEvents();
 
 
     // Crear Tipos de Evento por defecto
@@ -232,6 +234,28 @@ async function ensureSampleRamaUsers(userRepository) {
     }
   } catch (error) {
     console.error("Error asegurando ramas deportivas demo:", error);
+  }
+}
+
+async function removeLegacyDemoEvents() {
+  try {
+    const eventoRepository = AppDataSource.getRepository(EventoDeportivo);
+    const demoTitles = [
+      "Clinica Deportiva Multicategoria",
+      "Clínica Deportiva Multicategoria",
+    ];
+
+    let removed = 0;
+    for (const titulo of demoTitles) {
+      const result = await eventoRepository.delete({ titulo });
+      removed += result.affected ?? 0;
+    }
+
+    if (removed > 0) {
+      console.log(`Eventos demo eliminados: ${removed}`);
+    }
+  } catch (error) {
+    console.error("Error eliminando eventos demo legacy:", error);
   }
 }
 

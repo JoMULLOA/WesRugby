@@ -1,22 +1,28 @@
 import 'package:flutter/material.dart';
 
 class confGlobal {
-  /// Cambiar a `false` si quieres apuntar a localhost durante desarrollo.
-  static const bool useProduction = true;
-
-  /// Backend local (solo desarrollo)
-  static const String _devHost  = "http://localhost:3000";
-
-  /// Backend en producción (HTTPS con dominio)
+  static const String _devHost = "http://localhost:3000";
   static const String _prodHost = "https://wesrugby.site";
-
-  /// Path común del backend
   static const String _basePath = "/api";
 
-  /// Selecciona automáticamente host según modo
-  static String get _baseHost => useProduction ? _prodHost : _devHost;
+  static bool get _runningOnLocalhost {
+    final host = Uri.base.host;
+    return host.isEmpty || host == "localhost" || host == "127.0.0.1";
+  }
 
-  /// URL final usada por toda la app
+  static String get _baseHost {
+    if (_runningOnLocalhost) {
+      return _devHost;
+    }
+    final scheme = Uri.base.scheme.isEmpty ? "https" : Uri.base.scheme;
+    final host = Uri.base.host;
+    final port =
+        Uri.base.hasPort && Uri.base.port != 80 && Uri.base.port != 443
+            ? ":${Uri.base.port}"
+            : "";
+    return "$scheme://$host$port";
+  }
+
   static String get baseUrl => "$_baseHost$_basePath";
 }
 // Colores del Wessex Rugby Club

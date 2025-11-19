@@ -75,7 +75,23 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
   // Función para convertir DateTime UTC a hora local de Chile (UTC-3)
   DateTime _convertirFechaUTCaChile(DateTime fechaUTC) {
     // Restar 3 horas para convertir de UTC a Chile (UTC-3)
-    return fechaUTC.subtract(Duration(hours: 3));
+    return fechaUTC.toLocal();
+  }
+
+
+  DateTime? _parseFechaLocal(dynamic rawDate) {
+    if (rawDate == null) return null;
+    try {
+      final parsedDate =
+          rawDate is DateTime ? rawDate : DateTime.parse(rawDate.toString());
+      return parsedDate.toLocal();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String _formatearFechaCorta(DateTime fecha) {
+    return '${fecha.day}/${fecha.month}/${fecha.year}';
   }
 
   String _generarNombreArchivoCsv(String titulo) {
@@ -736,14 +752,11 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
       text: evento['descripcion'] ?? '',
     );
     final _lugarController = TextEditingController(text: evento['lugar'] ?? '');
-    DateTime? _fechaSeleccionada;
-    TimeOfDay? _horaSeleccionada;
+    DateTime? _fechaSeleccionada = _parseFechaLocal(evento['fechaInicio']);
+    TimeOfDay? _horaSeleccionada =
+        _fechaSeleccionada != null ? TimeOfDay.fromDateTime(_fechaSeleccionada) : null;
 
-    // Parsear fecha inicial
-    try {
-      _fechaSeleccionada = DateTime.parse(evento['fechaInicio']);
-      _horaSeleccionada = TimeOfDay.fromDateTime(_fechaSeleccionada);
-    } catch (e) {
+    if (_fechaSeleccionada == null) {
       _fechaSeleccionada = DateTime.now();
       _horaSeleccionada = TimeOfDay.now();
     }
@@ -1118,6 +1131,7 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
     print(
       'DEBUG: Función _eliminarEvento llamada para evento: ${evento['titulo'] ?? evento['nombre']}',
     );
+    final fechaEventoLocal = _parseFechaLocal(evento['fechaInicio']);
     showDialog(
       context: context,
       builder:
@@ -1160,10 +1174,10 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
                           color: WessexColors.darkGrape,
                         ),
                       ),
-                      if (evento['fechaInicio'] != null) ...[
+                      if (fechaEventoLocal != null) ...[
                         SizedBox(height: 4),
                         Text(
-                          'Fecha: ${DateTime.parse(evento['fechaInicio']).day}/${DateTime.parse(evento['fechaInicio']).month}/${DateTime.parse(evento['fechaInicio']).year}',
+                          'Fecha: ${_formatearFechaCorta(fechaEventoLocal)}',
                           style: TextStyle(color: WessexColors.midnightNavy),
                         ),
                       ],
@@ -2396,7 +2410,8 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
   Widget _buildEventosActivos() {
     final eventosActivos =
         _eventos.where((evento) {
-          final fechaEvento = DateTime.parse(evento['fechaInicio']);
+          final fechaEvento = _parseFechaLocal(evento['fechaInicio']);
+          if (fechaEvento == null) return false;
           bool esActivo = fechaEvento.isAfter(DateTime.now());
 
           if (!esActivo) return false;
@@ -2425,9 +2440,12 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
           return true;
         }).toList()
           ..sort((a, b) {
-            final fechaA = DateTime.parse(a['fechaInicio']);
-            final fechaB = DateTime.parse(b['fechaInicio']);
-            return fechaA.compareTo(fechaB); // Eventos futuros: más próximos primero
+            final fechaA = _parseFechaLocal(a['fechaInicio']);
+            final fechaB = _parseFechaLocal(b['fechaInicio']);
+            if (fechaA == null && fechaB == null) return 0;
+            if (fechaA == null) return 1;
+            if (fechaB == null) return -1;
+            return fechaA.compareTo(fechaB); // Eventos futuros: mŽs prœximos primero
           });
 
     if (eventosActivos.isEmpty) {
@@ -2462,7 +2480,8 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
   Widget _buildEventosPasados() {
     final eventosPasados =
         _eventos.where((evento) {
-          final fechaEvento = DateTime.parse(evento['fechaInicio']);
+          final fechaEvento = _parseFechaLocal(evento['fechaInicio']);
+          if (fechaEvento == null) return false;
           bool esPasado = fechaEvento.isBefore(DateTime.now());
 
           if (!esPasado) return false;
@@ -2491,9 +2510,12 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
           return true;
         }).toList()
           ..sort((a, b) {
-            final fechaA = DateTime.parse(a['fechaInicio']);
-            final fechaB = DateTime.parse(b['fechaInicio']);
-            return fechaB.compareTo(fechaA); // Ordenar de más reciente a más antiguo
+            final fechaA = _parseFechaLocal(a['fechaInicio']);
+            final fechaB = _parseFechaLocal(b['fechaInicio']);
+            if (fechaA == null && fechaB == null) return 0;
+            if (fechaA == null) return 1;
+            if (fechaB == null) return -1;
+            return fechaB.compareTo(fechaA); // Ordenar de mŽs reciente a mŽs antiguo
           });
 
     if (eventosPasados.isEmpty) {
@@ -2526,8 +2548,9 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
   }
 
   Widget _buildEventoCard(Map<String, dynamic> evento) {
-    final fechaEvento = DateTime.parse(evento['fechaInicio']);
-    final esEventoPasado = fechaEvento.isBefore(DateTime.now());
+    final fechaEvento = _parseFechaLocal(evento['fechaInicio']);
+    final esEventoPasado =
+        fechaEvento?.isBefore(DateTime.now()) ?? false;
     final estado = evento['estado'] ?? 'programado';
     final tipoEventoObj = evento['tipoEvento'];
     final tipoEvento =
@@ -2661,7 +2684,9 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
                 ),
                 SizedBox(width: 4),
                 Text(
-                  '${fechaEvento.day}/${fechaEvento.month}/${fechaEvento.year}',
+                  fechaEvento != null
+                      ? _formatearFechaCorta(fechaEvento)
+                      : 'Fecha no disponible',
                   style: TextStyle(fontSize: 14, color: WessexColors.darkGrape),
                 ),
                 // Mostrar hora de inicio si está disponible
@@ -2680,8 +2705,8 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
                       color: WessexColors.darkGrape,
                     ),
                   ),
-                ] else if (fechaEvento.hour != 0 ||
-                    fechaEvento.minute != 0) ...[
+                ] else if (fechaEvento != null &&
+                    (fechaEvento.hour != 0 || fechaEvento.minute != 0)) ...[
                   // Fallback para fechas con hora integrada - convertir de UTC a Chile
                   SizedBox(width: 8),
                   Icon(
@@ -2692,7 +2717,7 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
                   SizedBox(width: 4),
                   Text(
                     () {
-                      final fechaChile = _convertirFechaUTCaChile(fechaEvento);
+                      final fechaChile = _convertirFechaUTCaChile(fechaEvento!);
                       return '${fechaChile.hour.toString().padLeft(2, '0')}:${fechaChile.minute.toString().padLeft(2, '0')}';
                     }(),
                     style: TextStyle(
