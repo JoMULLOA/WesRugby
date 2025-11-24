@@ -17,6 +17,10 @@ export const uploadVoucherComprobante = createS3Uploader("comprobantes", {
   fileSize: 10 * 1024 * 1024,
 });
 
+export const uploadJustificacionAsistencia = createS3Uploader("justificaciones", {
+  fileSize: 5 * 1024 * 1024,
+});
+
 export const uploadEntrenadorFoto = createS3Uploader("imagenes/entrenadores", {
   fileSize: 5 * 1024 * 1024,
 });

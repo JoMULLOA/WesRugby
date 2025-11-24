@@ -10,7 +10,9 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"**/*.{js,jsx,json,md}\"",
-    "print:sheet": "node src/scripts/printInventorySheet.js"
+    "print:sheet": "node src/scripts/printInventorySheet.js",
+    "migration:run": "node runMigrations.js",
+    "migration:show": "node showMigrations.js"
   },
   "author": "José Manríquez Ulloa",
   "license": "ISC",

@@ -89,6 +89,36 @@ const AsistenciaSchema = new EntitySchema({
       nullable: true,
       comment: "Justificación en caso de ausencia o tardanza",
     },
+    apoderadoEmailJustificacion: {
+      type: "varchar",
+      length: 255,
+      nullable: true,
+      comment: "Correo del apoderado que subió la justificación",
+    },
+    // Archivo de Justificación (opcional)
+    rutaJustificacion: {
+      type: "varchar",
+      length: 500,
+      nullable: true,
+      comment: "Ruta del archivo de justificante (S3 o relativo)",
+    },
+    nombreArchivoJustificacion: {
+      type: "varchar",
+      length: 255,
+      nullable: true,
+      comment: "Nombre original del archivo de justificante",
+    },
+    tipoArchivoJustificacion: {
+      type: "varchar",
+      length: 50,
+      nullable: true,
+      comment: "Tipo MIME del archivo de justificante",
+    },
+    tamanoArchivoJustificacion: {
+      type: "int",
+      nullable: true,
+      comment: "Tamaño del archivo de justificante en bytes",
+    },
     // Rendimiento (opcional)
     calificacion: {
       type: "enum",

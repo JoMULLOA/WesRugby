@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:wesrugby/shared/widgets/layout/wessex_widgets.dart';
 import 'package:wesrugby/core/config/colors.dart';
 import 'package:wesrugby/data/services/justificante_service.dart';
+import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 import 'dart:typed_data';
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html' as html;
@@ -25,8 +27,26 @@ class _HistorialJustificantesScreenState
   String _selectedMonth = 'Todos';
   String _selectedEstado = 'Todos';
 
-  // Usuario simulado
-  final String _nombreUsuario = "Carlos Rodríguez";
+  bool _cargando = true;
+  bool _errorCarga = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarDatos();
+  }
+
+  Future<void> _cargarDatos() async {
+    setState(() {
+      _cargando = true;
+      _errorCarga = false;
+    });
+    final exito = await _justificanteService.cargarJustificantesPersistentesApoderado();
+    setState(() {
+      _cargando = false;
+      _errorCarga = !exito;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,28 +62,62 @@ class _HistorialJustificantesScreenState
       ),
       body: WessexBackground(
         child: SafeArea(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.all(isDesktop ? 24 : (isTablet ? 20 : 16)),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header con información del usuario
-                _buildHeaderSection(isDesktop, isTablet),
-                const SizedBox(height: 24),
+          child: _cargando
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(color: WessexColors.deepRoyalBlue),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Cargando historial de justificantes...',
+                        style: TextStyle(color: WessexColors.darkGrape),
+                      ),
+                    ],
+                  ),
+                )
+              : _errorCarga
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.error_outline, size: 64, color: WessexColors.crimsonAlert),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Error al cargar el historial',
+                            style: TextStyle(color: WessexColors.darkGrape, fontSize: 18),
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton.icon(
+                            onPressed: _cargarDatos,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Reintentar'),
+                          ),
+                        ],
+                      ),
+                    )
+                  : SingleChildScrollView(
+                      padding: EdgeInsets.all(isDesktop ? 24 : (isTablet ? 20 : 16)),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Header con información del usuario
+                          _buildHeaderSection(isDesktop, isTablet),
+                          const SizedBox(height: 24),
 
-                // Estadísticas del usuario
-                _buildStatsSection(isDesktop, isTablet),
-                const SizedBox(height: 24),
+                          // Estadísticas del usuario
+                          _buildStatsSection(isDesktop, isTablet),
+                          const SizedBox(height: 24),
 
-                // Filtros
-                _buildFiltersSection(isDesktop, isTablet),
-                const SizedBox(height: 24),
+                          // Filtros
+                          _buildFiltersSection(isDesktop, isTablet),
+                          const SizedBox(height: 24),
 
-                // Lista de justificantes
-                _buildJustificantesList(isDesktop, isTablet),
-              ],
-            ),
-          ),
+                          // Lista de justificantes
+                          _buildJustificantesList(isDesktop, isTablet),
+                        ],
+                      ),
+                    ),
         ),
       ),
     );
@@ -101,7 +155,7 @@ class _HistorialJustificantesScreenState
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Justificantes enviados por: $_nombreUsuario',
+                  'Mis justificantes enviados',
                   style: TextStyle(
                     color: WessexColors.darkGrape.withOpacity(0.7),
                     fontSize: isDesktop ? 16 : (isTablet ? 14 : 12),
@@ -138,17 +192,12 @@ class _HistorialJustificantesScreenState
   }
 
   Widget _buildStatsSection(bool isDesktop, bool isTablet) {
-    final userJustificantes = _justificanteService.getJustificantesByUser(
-      _nombreUsuario,
-    );
+    final stats = _justificanteService.getDirectivaStatistics();
 
-    int total = userJustificantes.length;
-    int pendientes =
-        userJustificantes.where((j) => j['estado'] == 'Pendiente').length;
-    int aprobados =
-        userJustificantes.where((j) => j['estado'] == 'Aprobado').length;
-    int rechazados =
-        userJustificantes.where((j) => j['estado'] == 'Rechazado').length;
+    final total = stats['total'] ?? 0;
+    final pendientes = stats['pendientes'] ?? 0;
+    final aprobados = stats['aprobados'] ?? 0;
+    final rechazados = stats['rechazados'] ?? 0;
 
     return WessexCard(
       child: Column(
@@ -751,11 +800,9 @@ class _HistorialJustificantesScreenState
   }
 
   List<Map<String, dynamic>> _getFilteredJustificantes() {
-    final userJustificantes = _justificanteService.getJustificantesByUser(
-      _nombreUsuario,
-    );
+    final allJustificantes = _justificanteService.getAllJustificantes();
 
-    return userJustificantes.where((justificante) {
+    return allJustificantes.where((justificante) {
         // Filtro por año
         final fechaCreacion = justificante['fechaCreacion'] as DateTime;
         if (fechaCreacion.year.toString() != _selectedYear) {
@@ -832,11 +879,192 @@ class _HistorialJustificantesScreenState
   }
 
   Future<void> _viewJustificante(Map<String, dynamic> justificante) async {
-    if (justificante['archivoData'] != null && kIsWeb) {
+    // 1. Si ya tiene datos en cache, usarlos
+    if (justificante['archivoData'] != null) {
       _showFileDialog(justificante);
-    } else {
-      _showErrorSnackBar('No hay archivo disponible para mostrar');
+      return;
     }
+
+    // 2. Ver si hay URL para descargar
+    final archivoUrl = (justificante['archivoUrl'] ?? justificante['archivo'] ?? '').toString();
+    if (archivoUrl.isEmpty) {
+      _showErrorSnackBar('No hay archivo disponible');
+      return;
+    }
+
+    final isPdf = archivoUrl.toLowerCase().endsWith('.pdf');
+
+    // 3. En web: usar iframe directamente sin descargar bytes
+    if (kIsWeb) {
+      if (isPdf) {
+        _openPdfInDialog(archivoUrl, justificante);
+      } else {
+        _openImageInDialog(archivoUrl);
+      }
+      return;
+    }
+
+    // 4. En mobile/desktop: descargar bytes primero
+    try {
+      final resp = await http.get(Uri.parse(archivoUrl));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        justificante['archivoData'] = resp.bodyBytes;
+        _showFileDialog(justificante);
+      } else {
+        _showErrorSnackBar('No se pudo cargar archivo (status ${resp.statusCode})');
+      }
+    } catch (e) {
+      print('Error descargando archivo: $e');
+      _showErrorSnackBar('Error al cargar archivo');
+    }
+  }
+
+  void _openPdfInDialog(String url, Map<String, dynamic> justificante) {
+    if (!kIsWeb) return;
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        child: Container(
+          width: 800,
+          height: 700,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Justificante PDF - ${justificante['alumno'] ?? ''}',
+                          style: TextStyle(
+                            color: WessexColors.darkGrape,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Archivo: ${justificante['archivo'] ?? ''}',
+                          style: TextStyle(
+                            color: WessexColors.darkGrape.withOpacity(0.7),
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(Icons.close),
+                    tooltip: 'Cerrar',
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: WessexColors.mistyRoseGray.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: WessexColors.mistyRoseGray),
+                  ),
+                  child: _buildWebPdfViewer(url, justificante),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWebPdfViewer(String url, Map<String, dynamic> justificante) {
+    try {
+      final String viewId = 'pdf-viewer-${justificante['id']}-historial-${DateTime.now().millisecondsSinceEpoch}';
+      
+      // ignore: undefined_prefixed_name
+      ui_web.platformViewRegistry.registerViewFactory(viewId, (int viewId) {
+        final iframe = html.IFrameElement()
+          ..src = url
+          ..style.border = 'none'
+          ..style.width = '100%'
+          ..style.height = '100%';
+        return iframe;
+      });
+
+      return HtmlElementView(viewType: viewId);
+    } catch (e) {
+      print('Error creando visor PDF: $e');
+      return Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error, size: 64, color: WessexColors.crimsonAlert),
+          const SizedBox(height: 16),
+          Text(
+            'Error al cargar PDF',
+            style: TextStyle(
+              color: WessexColors.darkGrape,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      );
+    }
+  }
+
+  void _openImageInDialog(String url) {
+    if (!kIsWeb) return;
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        child: Container(
+          width: 800,
+          height: 700,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Vista de Imagen',
+                    style: TextStyle(
+                      color: WessexColors.darkGrape,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(Icons.close),
+                    tooltip: 'Cerrar',
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: WessexColors.mistyRoseGray.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: WessexColors.mistyRoseGray),
+                  ),
+                  child: Image.network(url, fit: BoxFit.contain),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _showFileDialog(Map<String, dynamic> justificante) {

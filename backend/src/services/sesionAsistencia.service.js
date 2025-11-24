@@ -164,3 +164,39 @@ export const getEstadisticasAsistenciaService = async (curso = null, fechaDesde 
     return [null, error];
   }
 };
+
+export const getAllSesionesService = async (limite = 50, curso = null) => {
+  try {
+    const sesionRepository = AppDataSource.getRepository(SesionAsistenciaSchema);
+    const registroRepository = AppDataSource.getRepository(RegistroAsistenciaSchema);
+    
+    const whereConditions = curso ? { curso } : {};
+    
+    const sesiones = await sesionRepository.find({
+      where: whereConditions,
+      order: { createdAt: 'DESC' },
+      take: limite,
+    });
+
+    // Obtener registros para cada sesión
+    const sesionesConRegistros = await Promise.all(
+      sesiones.map(async (sesion) => {
+        const registros = await registroRepository.find({
+          where: { sesionId: sesion.id },
+          order: { nombreEstudiante: 'ASC' },
+        });
+        
+        return {
+          ...sesion,
+          registros,
+        };
+      })
+    );
+
+    console.log(`✅ Total de sesiones encontradas:`, sesionesConRegistros.length);
+    return [sesionesConRegistros, null];
+  } catch (error) {
+    console.error('❌ Error al obtener todas las sesiones:', error);
+    return [null, error];
+  }
+};

@@ -4,6 +4,9 @@ import 'package:wesrugby/shared/widgets/layout/wessex_widgets.dart';
 import 'package:wesrugby/core/config/colors.dart';
 import 'package:wesrugby/data/services/estudiante_service.dart';
 import 'package:wesrugby/data/services/asistencia_service.dart';
+import 'package:wesrugby/data/services/justificante_service.dart';
+import 'package:wesrugby/features/admin/presentation/screens/asistencia/historial/historial_asistencia_screen_wessex.dart';
+import 'package:wesrugby/features/admin/presentation/screens/justificantes/entrenador/justificados_activos_screen.dart';
 
 class TomarAsistenciaScreen extends StatefulWidget {
   const TomarAsistenciaScreen({super.key});
@@ -15,6 +18,7 @@ class TomarAsistenciaScreen extends StatefulWidget {
 class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
   final EstudianteService _estudianteService = EstudianteService();
   final AsistenciaService _asistenciaService = AsistenciaService();
+  final JustificanteService _justificanteService = JustificanteService();
 
   // Estado de carga
   bool _isLoadingEstudiantes = false;
@@ -27,6 +31,7 @@ class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
 
   // Asistencia
   Map<String, String> _asistenciaEstudiantes = {}; // RUT -> estado
+  Map<String, bool> _estadoForzadoPorJustificante = {}; // RUT -> estado forzado por justificante aprobado
   Map<String, String> _observacionesEstudiantes = {}; // RUT -> observación
 
   // Formulario de sesión
@@ -37,7 +42,14 @@ class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
   @override
   void initState() {
     super.initState();
+    _setDefaultSessionName();
     _loadTodosEstudiantes();
+  }
+
+  void _setDefaultSessionName() {
+    final now = DateTime.now();
+    final formattedDate = '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
+    _nombreSesionController.text = 'Entrenamiento $formattedDate';
   }
 
   @override
@@ -64,9 +76,13 @@ class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
         }
       }
 
+      // Ordenar categorías numéricamente (M6, M8, M10, M12)
+      final categoriasLista = categoriasSet.toList();
+      _ordenarCategorias(categoriasLista);
+
       setState(() {
         _todosEstudiantes = estudiantes;
-        _categoriasDisponibles = categoriasSet.toList()..sort();
+        _categoriasDisponibles = categoriasLista;
         _isLoadingEstudiantes = false;
       });
 
@@ -97,11 +113,12 @@ class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
         .toList();
   }
 
-  void _onCategoriaSelected(String? categoria) {
+  void _onCategoriaSelected(String? categoria) async {
     setState(() {
       _categoriaSeleccionada = categoria;
       _asistenciaEstudiantes.clear();
       _observacionesEstudiantes.clear();
+      _estadoForzadoPorJustificante.clear();
 
       // Inicializar asistencia como "presente" para todos los estudiantes de la categoría
       final estudiantes = _getEstudiantesPorCategoria();
@@ -109,6 +126,42 @@ class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
         _asistenciaEstudiantes[estudiante['rut']] = 'presente';
       }
     });
+
+    // Consultar justificantes aprobados para la fecha de sesión actual
+    if (categoria != null) {
+      await _cargarJustificantesParaFecha();
+    }
+  }
+
+  Future<void> _cargarJustificantesParaFecha() async {
+    try {
+      final estudiantes = _getEstudiantesPorCategoria();
+      if (estudiantes.isEmpty) return;
+
+      final ruts = estudiantes.map((e) => e['rut'].toString()).toList();
+      final fechaISO = _fechaSesion.toIso8601String().split('T')[0]; // Solo YYYY-MM-DD
+
+      final justificadosMap = await _justificanteService.obtenerJustificadosPorFecha(fechaISO, ruts);
+
+      setState(() {
+        _estadoForzadoPorJustificante.clear();
+        justificadosMap.forEach((rut, justificantes) {
+          if (justificantes.isNotEmpty) {
+            // Alumno tiene justificante(s) aprobado(s) que cubre esta fecha
+            _estadoForzadoPorJustificante[rut] = true;
+            _asistenciaEstudiantes[rut] = 'justificado';
+          }
+        });
+      });
+
+      if (kDebugMode) {
+        print('🔒 Justificados forzados: ${_estadoForzadoPorJustificante.keys.toList()}');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error cargando justificantes para fecha: $e');
+      }
+    }
   }
 
   Future<void> _guardarAsistencia() async {
@@ -268,45 +321,52 @@ class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header informativo
+                // Botones de acceso rápido
                 WessexCard(
-                  margin: const EdgeInsets.only(bottom: 24),
+                  margin: const EdgeInsets.only(bottom: 20),
                   child: Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: WessexColors.deepRoyalBlue.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          Icons.how_to_reg,
-                          color: WessexColors.deepRoyalBlue,
-                          size: 24,
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const HistorialAsistenciaScreen(),
+                              ),
+                            );
+                          },
+                          icon: Icon(Icons.history, size: 18, color: WessexColors.deepRoyalBlue),
+                          label: Text(
+                            'Ver Historial',
+                            style: TextStyle(fontSize: 13, color: WessexColors.deepRoyalBlue),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: WessexColors.deepRoyalBlue),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: 12),
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Registro de Asistencia',
-                              style: TextStyle(
-                                color: WessexColors.darkGrape,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const JustificadosActivosScreen(),
                               ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Toma la asistencia de los estudiantes por curso',
-                              style: TextStyle(
-                                color: WessexColors.darkGrape.withOpacity(0.7),
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
+                            );
+                          },
+                          icon: Icon(Icons.check_circle, size: 18, color: WessexColors.leafGreen),
+                          label: Text(
+                            'Justificados',
+                            style: TextStyle(fontSize: 13, color: WessexColors.leafGreen),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: WessexColors.leafGreen),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
                         ),
                       ),
                     ],
@@ -363,16 +423,18 @@ class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
                                   context: context,
                                   initialDate: _fechaSesion,
                                   firstDate: DateTime.now().subtract(
-                                    const Duration(days: 30),
+                                    const Duration(days: 90),
                                   ),
-                                  lastDate: DateTime.now().add(
-                                    const Duration(days: 1),
-                                  ),
+                                  lastDate: DateTime.now(),
                                 );
                                 if (fecha != null) {
                                   setState(() {
                                     _fechaSesion = fecha;
                                   });
+                                  // Recargar justificantes cuando cambia la fecha
+                                  if (_categoriaSeleccionada != null) {
+                                    await _cargarJustificantesParaFecha();
+                                  }
                                 }
                               },
                               child: Container(
@@ -645,24 +707,55 @@ class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
+          // Header con botón de guardar
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Estudiantes - $_categoriaSeleccionada',
-                style: TextStyle(
-                  color: WessexColors.darkGrape,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Estudiantes - $_categoriaSeleccionada',
+                      style: TextStyle(
+                        color: WessexColors.darkGrape,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      '${estudiantes.length} estudiantes',
+                      style: TextStyle(
+                        color: WessexColors.darkGrape.withOpacity(0.7),
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              Text(
-                '${estudiantes.length} estudiantes',
-                style: TextStyle(
-                  color: WessexColors.darkGrape.withOpacity(0.7),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
+              ElevatedButton.icon(
+                onPressed: _isSavingAsistencia ? null : _guardarAsistencia,
+                icon: _isSavingAsistencia
+                    ? SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          color: WessexColors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : Icon(Icons.save, size: 18),
+                label: Text(
+                  _isSavingAsistencia ? 'Guardando...' : 'Guardar',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: WessexColors.leafGreen,
+                  foregroundColor: WessexColors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
               ),
             ],
@@ -887,24 +980,30 @@ class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
                             SizedBox(
                               width: 50,
                               child: IconButton(
-                                onPressed: () {
-                                  setState(() {
-                                    _asistenciaEstudiantes[rut] = 
-                                        estadoAsistencia == 'justificado' ? 'ausente' : 'justificado';
-                                  });
-                                },
+                                onPressed: _estadoForzadoPorJustificante[rut] == true
+                                    ? null // Deshabilitado si está forzado por justificante aprobado
+                                    : () {
+                                        setState(() {
+                                          _asistenciaEstudiantes[rut] = 
+                                              estadoAsistencia == 'justificado' ? 'ausente' : 'justificado';
+                                        });
+                                      },
                                 icon: Icon(
                                   estadoAsistencia == 'justificado' 
                                       ? Icons.check_circle 
                                       : Icons.radio_button_unchecked,
                                   color: estadoAsistencia == 'justificado'
-                                      ? WessexColors.deepRoyalBlue
+                                      ? (_estadoForzadoPorJustificante[rut] == true
+                                          ? WessexColors.leafGreen // Verde si es forzado (justificante aprobado)
+                                          : WessexColors.deepRoyalBlue)
                                       : Colors.grey.shade400,
                                   size: 20,
                                 ),
                                 padding: EdgeInsets.zero,
                                 constraints: const BoxConstraints(),
-                                tooltip: 'Justificado',
+                                tooltip: _estadoForzadoPorJustificante[rut] == true
+                                    ? 'Justificado (cert. médico aprobado)'
+                                    : 'Justificado',
                               ),
                             ),
                             // Switch Observaciones
@@ -1072,5 +1171,22 @@ class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
+  }
+
+  /// Ordena categorías tipo M6, M8, M10, M12 en orden ascendente
+  void _ordenarCategorias(List<String> categorias) {
+    final regex = RegExp(r'^[Mm](\d+)$');
+    categorias.sort((a, b) {
+      final ma = regex.firstMatch(a.trim());
+      final mb = regex.firstMatch(b.trim());
+      if (ma != null && mb != null) {
+        final na = int.parse(ma.group(1)!);
+        final nb = int.parse(mb.group(1)!);
+        return na.compareTo(nb);
+      }
+      if (ma != null) return -1; // Priorizar formateadas sobre otras
+      if (mb != null) return 1;
+      return a.compareTo(b);
+    });
   }
 }

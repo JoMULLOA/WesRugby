@@ -1,53 +1,257 @@
+import 'package:wesrugby/data/services/api_service.dart';
+import 'package:wesrugby/core/config/confGlobal.dart';
+
 class VoucherService {
   static final VoucherService _instance = VoucherService._internal();
   factory VoucherService() => _instance;
   VoucherService._internal();
 
-  // Lista global de vouchers para simular base de datos
-  static List<Map<String, dynamic>> _vouchers = [
-    // Iniciar vacía - solo se agregarán vouchers reales enviados por apoderados
-  ];
+  // Cache en memoria de los vouchers obtenidos del backend
+  static List<Map<String, dynamic>> _vouchers = [];
+  bool _cargando = false;
 
-  // Obtener todos los vouchers
-  List<Map<String, dynamic>> getAllVouchers() {
-    return List.from(_vouchers);
+  // Helper para construir URL completa del archivo
+  static String _construirUrlArchivo(String? rutaRelativa) {
+    if (rutaRelativa == null || rutaRelativa.isEmpty) return '';
+    
+    // Si ya es una URL completa (S3 o externa), devolverla tal cual
+    if (rutaRelativa.startsWith('http://') || rutaRelativa.startsWith('https://')) {
+      return rutaRelativa;
+    }
+    
+    // Construir URL completa usando la configuración global
+    // confGlobal.baseUrl ya incluye /api, necesitamos solo el host
+    final baseUrl = confGlobal.baseUrl.replaceAll('/api', '');
+    final rutaLimpia = rutaRelativa.startsWith('/') ? rutaRelativa : '/$rutaRelativa';
+    return '$baseUrl$rutaLimpia';
   }
 
-  // Obtener vouchers filtrados
+  // Cargar historial de vouchers del apoderado desde el backend
+  // Filtros aceptan "Todos" para omitirlos
+  Future<bool> cargarHistorialApoderado({
+    String estado = 'Todos',
+    String mes = 'Todos',
+    String metodoPago = 'Todos',
+    int pagina = 1,
+    int limite = 50,
+  }) async {
+    if (_cargando) return false; // evitar llamadas paralelas
+    _cargando = true;
+    try {
+      final params = <String, String>{
+        'pagina': pagina.toString(),
+        'limite': limite.toString(),
+      };
+      if (estado.isNotEmpty && estado.toLowerCase() != 'todos') {
+        params['estado'] = estado; // backend espera: pendiente|validado|rechazado|observado
+      }
+      if (mes.isNotEmpty && mes.toLowerCase() != 'todos') {
+        params['mesCorrespondiente'] = mes; // debe ir normalizado según backend
+      }
+      if (metodoPago.isNotEmpty && metodoPago.toLowerCase() != 'todos') {
+        params['metodoPago'] = metodoPago; // transferencia|deposito|... según ensureMetodoPago
+      }
+
+      final query = params.entries.map((e) => '${Uri.encodeQueryComponent(e.key)}=${Uri.encodeQueryComponent(e.value)}').join('&');
+      final endpoint = '/comprobantes-pago/apoderado/historial?$query';
+      final resp = await ApiService.get(endpoint);
+      if (!resp.success) {
+        print('❌ Error obteniendo historial vouchers (${resp.statusCode}): ${resp.message ?? resp.data}');
+        return false;
+      }
+
+      final data = resp.data;
+      if (data is Map<String, dynamic>) {
+        // La respuesta viene en data['data']['comprobantes']
+        final dataPayload = data['data'] is Map<String, dynamic> ? data['data'] : data;
+        final List<dynamic> comprobantes = dataPayload['comprobantes'] is List ? dataPayload['comprobantes'] : [];
+        print('✅ Comprobantes recibidos: ${comprobantes.length}');
+        _vouchers = comprobantes.map((raw) {
+          if (raw is! Map<String, dynamic>) return <String, dynamic>{};
+
+          // Mapear estados backend -> frontend (UI actual usa Pendiente/Aprobado/Rechazado)
+          final String estadoBackend = (raw['estado'] ?? '').toString();
+          String estadoFrontend;
+            switch (estadoBackend) {
+              case 'validado':
+                estadoFrontend = 'Aprobado';
+                break;
+              case 'rechazado':
+                estadoFrontend = 'Rechazado';
+                break;
+              case 'pendiente':
+                estadoFrontend = 'Pendiente';
+                break;
+              default:
+                // "observado" u otros
+                estadoFrontend = estadoBackend.isEmpty ? 'Pendiente' : estadoBackend;
+            }
+
+          // Extraer información del alumno
+          final alumno = raw['alumno'] is Map<String, dynamic> ? raw['alumno'] : null;
+          final nombreAlumno = alumno != null 
+            ? (alumno['nombreCompleto'] ?? '${alumno['nombre'] ?? ''} ${alumno['apellidos'] ?? ''}').toString().trim()
+            : 'Desconocido';
+
+          final rutaRelativa = raw['rutaComprobante']?.toString() ?? '';
+
+          return <String, dynamic>{
+            'id': raw['id']?.toString() ?? '',
+            'usuario': raw['apoderadoEmail']?.toString() ?? raw['apoderadoRut']?.toString() ?? 'desconocido',
+            'rol': 'Apoderado',
+            'mes': raw['mesCorrespondiente']?.toString() ?? '',
+            'monto': raw['montoTotal'] ?? 0,
+            'metodoPago': raw['metodoPago']?.toString() ?? '',
+            'fechaEnvio': raw['fechaSubida']?.toString() ?? raw['fechaPago']?.toString() ?? '',
+            'estado': estadoFrontend,
+            'archivo': rutaRelativa,
+            'archivoUrl': _construirUrlArchivo(rutaRelativa),
+            'descripcion': raw['observacionesApoderado']?.toString() ?? '',
+            'motivoRechazo': raw['motivoRechazo']?.toString() ?? '',
+            'tipoArchivo': raw['tipoArchivo']?.toString() ?? '',
+            // Campos adicionales útiles si luego se extiende UI
+            'numeroOperacion': raw['numeroOperacion']?.toString() ?? '',
+            'bancoOrigen': raw['bancoOrigen']?.toString() ?? '',
+            'tipoPago': raw['tipoPago']?.toString() ?? '',
+            'numeroComprobante': raw['numeroComprobante']?.toString() ?? '',
+            // Información del estudiante
+            'estudianteRut': raw['estudianteRut']?.toString() ?? '',
+            'alumno': nombreAlumno,
+            'alumnoInfo': alumno,
+          };
+        }).where((m) => m.isNotEmpty).toList();
+      }
+      return true;
+    } catch (e) {
+      print('❌ Excepción cargando historial vouchers: $e');
+      return false;
+    } finally {
+      _cargando = false;
+    }
+  }
+
+  // Cargar listado para Tesorería (todos los vouchers visibles según permisos)
+  Future<bool> cargarListadoTesorera({
+    String estado = 'Todos',
+    int pagina = 1,
+    int limite = 50,
+  }) async {
+    if (_cargando) return false;
+    _cargando = true;
+    try {
+      final params = <String, String>{
+        'pagina': pagina.toString(),
+        'limite': limite.toString(),
+      };
+      if (estado.isNotEmpty && estado.toLowerCase() != 'todos') {
+        params['estado'] = estado;
+      }
+      final query = params.entries.map((e) => '${Uri.encodeQueryComponent(e.key)}=${Uri.encodeQueryComponent(e.value)}').join('&');
+      final endpoint = '/comprobantes-pago${query.isNotEmpty ? '?$query' : ''}';
+      final resp = await ApiService.get(endpoint);
+      if (!resp.success) {
+        print('❌ Error obteniendo listado tesorería (${resp.statusCode}): ${resp.message ?? resp.data}');
+        return false;
+      }
+
+      final payload = resp.data;
+      List<dynamic> items = [];
+      if (payload is List) {
+        items = payload;
+      } else if (payload is Map<String, dynamic>) {
+        if (payload['data'] is List) {
+          items = payload['data'];
+        } else if (payload['comprobantes'] is List) {
+          items = payload['comprobantes'];
+        } else if (payload['data'] is Map<String, dynamic>) {
+          final inner = payload['data'] as Map<String, dynamic>;
+          items = (inner['comprobantes'] is List) ? inner['comprobantes'] : (inner['items'] as List? ?? []);
+        }
+      }
+
+      _vouchers = items.map((raw) {
+        if (raw is! Map<String, dynamic>) return <String, dynamic>{};
+
+        final String estadoBackend = (raw['estado'] ?? '').toString();
+        String estadoFrontend;
+        switch (estadoBackend) {
+          case 'validado':
+            estadoFrontend = 'Aprobado';
+            break;
+          case 'rechazado':
+            estadoFrontend = 'Rechazado';
+            break;
+          case 'pendiente':
+            estadoFrontend = 'Pendiente';
+            break;
+          default:
+            estadoFrontend = estadoBackend.isEmpty ? 'Pendiente' : estadoBackend;
+        }
+
+        final alumno = raw['alumno'] is Map<String, dynamic> ? raw['alumno'] : null;
+        final nombreAlumno = alumno != null
+            ? (alumno['nombreCompleto'] ?? '${alumno['nombre'] ?? ''} ${alumno['apellidos'] ?? ''}').toString().trim()
+            : '';
+
+        final rutaRelativa = raw['rutaComprobante']?.toString() ?? '';
+
+        return <String, dynamic>{
+          'id': raw['id']?.toString() ?? '',
+          'usuario': raw['apoderadoEmail']?.toString() ?? raw['apoderadoRut']?.toString() ?? '',
+          'rol': 'Apoderado',
+          'mes': raw['mesCorrespondiente']?.toString() ?? '',
+          'monto': raw['montoTotal'] ?? 0,
+          'metodoPago': raw['metodoPago']?.toString() ?? '',
+          'fechaEnvio': raw['fechaSubida']?.toString() ?? raw['fechaPago']?.toString() ?? '',
+          'estado': estadoFrontend,
+          'archivo': rutaRelativa,
+          'archivoUrl': _construirUrlArchivo(rutaRelativa),
+          'tipoArchivo': raw['tipoArchivo']?.toString() ?? '',
+          'descripcion': raw['observacionesApoderado']?.toString() ?? '',
+          'motivoRechazo': raw['motivoRechazo']?.toString() ?? '',
+          'estudianteRut': raw['estudianteRut']?.toString() ?? '',
+          'alumno': nombreAlumno,
+          'alumnoInfo': alumno,
+        };
+      }).where((m) => m.isNotEmpty).toList();
+
+      return true;
+    } catch (e) {
+      print('❌ Excepción cargando listado tesorería: $e');
+      return false;
+    } finally {
+      _cargando = false;
+    }
+  }
+
+  // Devuelve copia de la lista cargada
+  List<Map<String, dynamic>> getAllVouchers() => List<Map<String, dynamic>>.from(_vouchers);
+
+  // Filtrado local tras carga
   List<Map<String, dynamic>> getFilteredVouchers({
     String? usuario,
     String? estado,
     String? searchText,
   }) {
     return _vouchers.where((voucher) {
-      bool matchesUser =
-          usuario == null ||
-          usuario == 'Todos' ||
-          voucher['usuario'] == usuario;
-      bool matchesStatus =
-          estado == null || estado == 'Todos' || voucher['estado'] == estado;
-      bool matchesSearch =
-          searchText == null ||
-          searchText.isEmpty ||
-          voucher['usuario'].toLowerCase().contains(searchText.toLowerCase());
-
+      final matchesUser = usuario == null || usuario == 'Todos' || voucher['usuario'] == usuario;
+      final matchesStatus = estado == null || estado == 'Todos' || voucher['estado'] == estado;
+      final matchesSearch = searchText == null || searchText.isEmpty || voucher['usuario']?.toString().toLowerCase().contains(searchText.toLowerCase()) == true;
       return matchesUser && matchesStatus && matchesSearch;
     }).toList();
   }
 
-  // Obtener usuarios únicos
   List<String> getUniqueUsers() {
-    Set<String> users = _vouchers.map((v) => v['usuario'] as String).toSet();
-    return ['Todos', ...users.toList()..sort()];
+    final users = _vouchers.map((v) => v['usuario'] as String).where((e) => e.isNotEmpty).toSet();
+    final list = users.toList()..sort();
+    return ['Todos', ...list];
   }
 
-  // Obtener estadísticas
   Map<String, int> getStats() {
-    int total = _vouchers.length;
-    int pendientes = _vouchers.where((v) => v['estado'] == 'Pendiente').length;
-    int aprobados = _vouchers.where((v) => v['estado'] == 'Aprobado').length;
-    int rechazados = _vouchers.where((v) => v['estado'] == 'Rechazado').length;
-
+    final total = _vouchers.length;
+    final pendientes = _vouchers.where((v) => v['estado'] == 'Pendiente').length;
+    final aprobados = _vouchers.where((v) => v['estado'] == 'Aprobado').length;
+    final rechazados = _vouchers.where((v) => v['estado'] == 'Rechazado').length;
     return {
       'total': total,
       'pendientes': pendientes,
@@ -56,7 +260,19 @@ class VoucherService {
     };
   }
 
-  // Agregar nuevo voucher (desde el apoderado)
+  Map<String, dynamic>? getVoucherById(String voucherId) {
+    try {
+      return _vouchers.firstWhere((v) => v['id'].toString() == voucherId.toString());
+    } catch (_) {
+      return null;
+    }
+  }
+
+  List<Map<String, dynamic>> getVouchersByUser(String usuario) {
+    return _vouchers.where((v) => v['usuario'] == usuario).toList();
+  }
+
+  // Agregar nuevo voucher (mock local - la subida real se hace vía POST multipart desde la pantalla)
   String addVoucher({
     required String usuario,
     required String rol,
@@ -67,23 +283,14 @@ class VoucherService {
     required String archivo,
     required dynamic archivoData,
   }) {
-    String newId = 'V${(_vouchers.length + 1).toString().padLeft(3, '0')}';
-    DateTime now = DateTime.now();
-    String fechaEnvio =
-        '${now.day.toString().padLeft(2, '0')} ${_getMonthName(now.month)} ${now.year} - ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+    // Generar ID mock temporal
+    final newId = 'V${(_vouchers.length + 1).toString().padLeft(3, '0')}';
+    final now = DateTime.now();
+    final fechaEnvio = '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
 
-    // Debug: Verificar datos del archivo
-    print('🔍 GUARDANDO VOUCHER:');
-    print('   - ID: $newId');
-    print('   - Archivo: $archivo');
-    print(
-      '   - Datos del archivo: ${archivoData != null ? 'SÍ (${archivoData.runtimeType})' : 'NO'}',
-    );
-    if (archivoData != null) {
-      print('   - Tamaño de datos: ${archivoData.length} bytes');
-    }
+    print('📝 (Mock) Agregando voucher local: $newId');
 
-    Map<String, dynamic> newVoucher = {
+    final newVoucher = <String, dynamic>{
       'id': newId,
       'usuario': usuario,
       'rol': rol,
@@ -97,85 +304,77 @@ class VoucherService {
       'archivoData': archivoData,
     };
 
-    _vouchers.insert(0, newVoucher); // Agregar al inicio
-
-    print('✅ Voucher guardado exitosamente');
+    _vouchers.insert(0, newVoucher);
+    print('✅ (Mock) Voucher agregado localmente: $newId');
     return newId;
   }
 
-  // Aprobar voucher
-  bool approveVoucher(String voucherId) {
-    int index = _vouchers.indexWhere((v) => v['id'] == voucherId);
-    if (index != -1) {
-      _vouchers[index]['estado'] = 'Aprobado';
-      _vouchers[index]['fechaAprobacion'] = DateTime.now().toString();
-      return true;
-    }
-    return false;
-  }
-
-  // Rechazar voucher
-  bool rejectVoucher(String voucherId, String? motivo) {
-    int index = _vouchers.indexWhere((v) => v['id'] == voucherId);
-    if (index != -1) {
-      _vouchers[index]['estado'] = 'Rechazado';
-      _vouchers[index]['fechaRechazo'] = DateTime.now().toString();
-      if (motivo != null && motivo.isNotEmpty) {
-        _vouchers[index]['motivoRechazo'] = motivo;
-      }
-      return true;
-    }
-    return false;
-  }
-
-  // Obtener voucher por ID
-  Map<String, dynamic>? getVoucherById(String voucherId) {
+  // Aprobar voucher - llamada real al backend
+  Future<bool> approveVoucher(String voucherId) async {
     try {
-      return _vouchers.firstWhere((v) => v['id'] == voucherId);
+      final resp = await ApiService.patch(
+        '/comprobantes-pago/$voucherId/validar',
+        {
+          'estado': 'validado',
+        },
+      );
+      
+      if (resp.success) {
+        // Actualizar cache local
+        final index = _vouchers.indexWhere((v) => v['id'].toString() == voucherId.toString());
+        if (index != -1) {
+          _vouchers[index]['estado'] = 'Aprobado';
+          _vouchers[index]['fechaAprobacion'] = DateTime.now().toString();
+        }
+        print('✅ Voucher $voucherId aprobado en backend');
+        return true;
+      }
+      print('❌ Error aprobando voucher: ${resp.message}');
+      return false;
     } catch (e) {
-      return null;
+      print('❌ Excepción aprobando voucher: $e');
+      return false;
     }
   }
 
-  // Obtener vouchers por usuario (para historial del apoderado)
-  List<Map<String, dynamic>> getVouchersByUser(String usuario) {
-    return _vouchers.where((v) => v['usuario'] == usuario).toList();
+  // Rechazar voucher - llamada real al backend
+  Future<bool> rejectVoucher(String voucherId, String? motivo) async {
+    try {
+      final resp = await ApiService.patch(
+        '/comprobantes-pago/$voucherId/validar',
+        {
+          'estado': 'rechazado',
+          'motivoRechazo': motivo ?? '',
+        },
+      );
+      
+      if (resp.success) {
+        // Actualizar cache local
+        final index = _vouchers.indexWhere((v) => v['id'].toString() == voucherId.toString());
+        if (index != -1) {
+          _vouchers[index]['estado'] = 'Rechazado';
+          _vouchers[index]['fechaRechazo'] = DateTime.now().toString();
+          if (motivo != null && motivo.isNotEmpty) {
+            _vouchers[index]['motivoRechazo'] = motivo;
+          }
+        }
+        print('✅ Voucher $voucherId rechazado en backend');
+        return true;
+      }
+      print('❌ Error rechazando voucher: ${resp.message}');
+      return false;
+    } catch (e) {
+      print('❌ Excepción rechazando voucher: $e');
+      return false;
+    }
   }
 
-  String _getMonthName(int month) {
-    const months = [
-      '',
-      'Ene',
-      'Feb',
-      'Mar',
-      'Abr',
-      'May',
-      'Jun',
-      'Jul',
-      'Ago',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dic',
-    ];
-    return months[month];
-  }
-
-  // Simular notificación a tesorería
+  // Métodos de simulación previos conservados como no-op o utilidades
   void notifyTesoreria(String voucherId) {
-    print('📧 NOTIFICACIÓN A TESORERÍA: Nuevo voucher recibido');
-    print('   - ID del voucher: $voucherId');
-    print('   - Estado: Pendiente de revisión');
-    print('   - La tesorería puede ver este voucher en "Gestión de Vouchers"');
-    // TODO: Implementar notificación real (email, push notification, etc.)
+    print('📧 (Simulación) Notificación Tesorería por voucher $voucherId');
   }
 
-  // Simular envío de comprobante electrónico
   void sendElectronicReceipt(String voucherId, String userEmail) {
-    print('📧 COMPROBANTE ELECTRÓNICO ENVIADO');
-    print('   - Destinatario: $userEmail');
-    print('   - Voucher ID: $voucherId');
-    print('   - Estado: Aprobado y procesado');
-    // TODO: Implementar envío real de comprobante
+    print('📧 (Simulación) Envío comprobante electrónico voucher $voucherId a $userEmail');
   }
 }

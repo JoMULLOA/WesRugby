@@ -3,12 +3,21 @@ import {
   createSesionAsistencia,
   getMisSesiones,
   getSesionDetalle,
-  getEstadisticasAsistencia
+  getEstadisticasAsistencia,
+  getCategorias,
+  getAllSesiones
 } from "../controllers/sesionAsistencia.controller.js";
 import { authenticateJwt } from "../middlewares/authentication.middleware.js";
 import { isEntrenador, isDirectiva } from "../middlewares/authorization.middleware.js";
 
 const router = Router();
+
+// Obtener categorías disponibles
+router.get(
+  "/categorias",
+  authenticateJwt,
+  getCategorias
+);
 
 // Crear nueva sesión de asistencia (solo entrenadores)
 router.post(
@@ -16,6 +25,24 @@ router.post(
   authenticateJwt,
   isEntrenador,
   createSesionAsistencia
+);
+
+// Obtener TODAS las sesiones (para directiva, entrenador y apoderado)
+router.get(
+  "/todas",
+  authenticateJwt,
+  (req, res, next) => {
+    // Permitir entrenadores, directiva y apoderados
+    if (req.user.rol === 'entrenador' || req.user.rol === 'directiva' || req.user.rol === 'apoderado') {
+      next();
+    } else {
+      res.status(403).json({
+        success: false,
+        message: 'No tienes permisos para acceder a este recurso'
+      });
+    }
+  },
+  getAllSesiones
 );
 
 // Obtener sesiones del entrenador autenticado

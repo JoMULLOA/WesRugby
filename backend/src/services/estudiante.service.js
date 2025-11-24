@@ -1,6 +1,84 @@
 "use strict";
+import { In } from "typeorm";
 import Estudiante from "../entity/estudiante.entity.js";
+import Justificante from "../entity/justificante.entity.js";
 import { AppDataSource } from "../config/configDb.js";
+
+/**
+ * Aplica meses de exención de justificantes aprobados a la estructura de pagos de estudiantes.
+ * @param {Array} estudiantes - Lista de estudiantes con estructura pagos.
+ * @returns {Promise<Array>} - Estudiantes con pagos.meses actualizados (meses exentos marcados como "justificado").
+ */
+async function aplicarMesesExentos(estudiantes) {
+  if (!estudiantes || estudiantes.length === 0) return estudiantes;
+
+  const justificanteRepository = AppDataSource.getRepository(Justificante);
+  const rutsDependientes = estudiantes.map((e) => e.rut);
+
+  // Consultar justificantes aprobados con mesesExencion para todos los estudiantes en un solo query
+  const justificantesAprobados = await justificanteRepository.find({
+    where: {
+      estado: "aprobado",
+      estudianteRut: In(rutsDependientes),
+    },
+  });
+
+  // Mapear meses de exención por estudiante
+  const mesesExencionPorRut = new Map();
+  justificantesAprobados.forEach((j) => {
+    if (Array.isArray(j.mesesExencion) && j.mesesExencion.length > 0) {
+      const actuales = mesesExencionPorRut.get(j.estudianteRut) || new Set();
+      j.mesesExencion.forEach((mesYYYYMM) => {
+        // Solo considerar formato YYYY-MM válido del año 2025
+        if (typeof mesYYYYMM === "string" && /^2025-(0[1-9]|1[0-2])$/u.test(mesYYYYMM)) {
+          actuales.add(mesYYYYMM);
+        }
+      });
+      mesesExencionPorRut.set(j.estudianteRut, actuales);
+    }
+  });
+
+  // Aplicar exenciones a cada estudiante
+  return estudiantes.map((estudiante) => {
+    const mesesExentosSet = mesesExencionPorRut.get(estudiante.rut);
+    if (!mesesExentosSet || mesesExentosSet.size === 0) {
+      return estudiante; // Sin cambios
+    }
+
+    // Clonar estructura pagos para evitar mutación directa
+    const pagos = estudiante.pagos ? { ...estudiante.pagos } : null;
+    if (!pagos || !pagos.meses) return estudiante;
+
+    const mesesActualizados = { ...pagos.meses };
+
+    // Mapear YYYY-MM a nombre de mes en español (marzo, abril, etc.)
+    const mapaMesNumeroANombre = {
+      "01": "enero", "02": "febrero", "03": "marzo", "04": "abril",
+      "05": "mayo", "06": "junio", "07": "julio", "08": "agosto",
+      "09": "septiembre", "10": "octubre", "11": "noviembre", "12": "diciembre",
+    };
+
+    mesesExentosSet.forEach((mesYYYYMM) => {
+      const mesNumero = mesYYYYMM.split("-")[1]; // Extrae "03" de "2025-03"
+      const mesNombre = mapaMesNumeroANombre[mesNumero];
+      if (mesNombre && mesesActualizados.hasOwnProperty(mesNombre)) {
+        const estadoActual = mesesActualizados[mesNombre];
+        // Solo marcar como justificado si está no pagado o vacío
+        if (!estadoActual || estadoActual.toString().trim().toLowerCase() === "no pagado") {
+          mesesActualizados[mesNombre] = "justificado";
+        }
+      }
+    });
+
+    return {
+      ...estudiante,
+      pagos: {
+        ...pagos,
+        meses: mesesActualizados,
+      },
+    };
+  });
+}
 
 export async function createEstudianteService(estudianteData) {
   try {
@@ -58,7 +136,10 @@ export async function getEstudiantesService() {
       };
     });
 
-    return [estudiantesProcessed, null];
+    // Aplicar meses exentos basados en justificantes aprobados
+    const estudiantesConExenciones = await aplicarMesesExentos(estudiantesProcessed);
+
+    return [estudiantesConExenciones, null];
   } catch (error) {
     console.error("Error obtener estudiantes:", error);
     return [null, "Error interno del servidor"];
@@ -106,7 +187,10 @@ export async function getEstudiantesByApoderadoService(rutApoderado) {
       };
     });
 
-    return [estudiantesProcessed, null];
+    // Aplicar meses exentos basados en justificantes aprobados
+    const estudiantesConExenciones = await aplicarMesesExentos(estudiantesProcessed);
+
+    return [estudiantesConExenciones, null];
   } catch (error) {
     console.error("Error obtener estudiantes por apoderado:", error);
     return [null, "Error interno del servidor"];
@@ -145,7 +229,10 @@ export async function getEstudianteService(rut) {
       apellidos: apellidos,
     };
 
-    return [estudianteProcessed, null];
+    // Aplicar meses exentos basados en justificantes aprobados
+    const [estudianteConExenciones] = await aplicarMesesExentos([estudianteProcessed]);
+
+    return [estudianteConExenciones, null];
   } catch (error) {
     console.error("Error obtener estudiante:", error);
     return [null, "Error interno del servidor"];

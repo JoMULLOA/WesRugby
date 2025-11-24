@@ -8,6 +8,7 @@ import notificacionRoutes from "./notificacion.routes.js";
 import planPagoRoutes from "./planPago.routes.js";
 import asistenciaRoutes from "./asistencia.routes.js";
 import comprobantePagoRoutes from "./comprobantePago.routes.js";
+import justificanteRoutes from "./justificante.routes.js";
 import eventoDeportivoRoutes from "./eventoDeportivo.routes.js";
 import directivaRoutes from "./directiva.routes.js";
 import estudianteRoutes from "./estudiante.routes.js";
@@ -27,6 +28,7 @@ import uploadRoutes from "./upload.routes.js";
 import inventoryRoutes from "./inventory.routes.js";
 import configuracionPrecioRoutes from "./configuracionPrecio.routes.js";
 import entrenadorPublicoRoutes from "./entrenadorPublico.routes.js";
+import terminosCondicionesRoutes from "./terminosCondiciones.routes.js";
 
 const router = Router();
 
@@ -38,6 +40,7 @@ router
     .use("/planes-pago", planPagoRoutes)
     .use("/asistencia", asistenciaRoutes)
     .use("/comprobantes-pago", comprobantePagoRoutes)
+    .use("/justificantes", justificanteRoutes)
     .use("/eventos-deportivos", eventoDeportivoRoutes)
     .use("/directiva", directivaRoutes)
     .use("/estudiantes", estudianteRoutes)
@@ -55,6 +58,7 @@ router
     .use("/inventario", inventoryRoutes)
     .use("/configuracion-precios", configuracionPrecioRoutes)
     .use("/entrenadores", entrenadorPublicoRoutes)
+    .use("/terminos", terminosCondicionesRoutes)
     .use("/upload", uploadRoutes);
 
 export default router;

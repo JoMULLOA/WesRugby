@@ -5,9 +5,9 @@ import 'package:wesrugby/shared/widgets/layout/wessex_widgets.dart';
 import 'package:wesrugby/core/config/colors.dart';
 import 'package:wesrugby/data/services/tokenManager.dart';
 import 'package:wesrugby/data/services/api_service.dart';
-import 'package:wesrugby/features/admin/presentation/screens/justificantes/entrenador/entrenador_justificantes_screen.dart';
+import 'package:wesrugby/features/admin/presentation/screens/justificantes/entrenador/justificados_activos_screen.dart';
 import 'package:wesrugby/features/admin/presentation/screens/asistencia/tomar/tomar_asistencia_screen.dart';
-import 'package:wesrugby/features/admin/presentation/screens/asistencia/sesiones/historial_sesiones_screen.dart';
+import 'package:wesrugby/features/admin/presentation/screens/asistencia/historial/historial_asistencia_screen_wessex.dart';
 import 'package:wesrugby/features/auth/presentation/screens/simple_login/simple_login.dart' as login;
 
 class EntrenadorDashboard extends StatefulWidget {
@@ -32,9 +32,10 @@ class _EntrenadorDashboardState extends State<EntrenadorDashboard> {
     final tokenData = await TokenManager.getUserInfo();
     if (mounted && tokenData != null) {
       setState(() {
-        _userName = tokenData['nombreCompleto']?.toString() ??
-            tokenData['nombre']?.toString() ??
-            'Usuario';
+        final nombreCompleto = tokenData['nombreCompleto']?.toString() ?? tokenData['nombre']?.toString() ?? 'Usuario';
+        // Extraer primer nombre
+        final primerNombre = nombreCompleto.split(' ').first;
+        _userName = primerNombre;
         _avatarUrl = _resolveAvatarUrl(tokenData) ?? _avatarUrl;
       });
     }
@@ -434,10 +435,10 @@ class _EntrenadorDashboardState extends State<EntrenadorDashboard> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Bienvenido, Entrenador',
+                              'Bienvenido, ${_userName ?? "Entrenador"}',
                               style: TextStyle(
                                 color: WessexColors.darkGrape,
-                                fontSize: isDesktop ? 22 : 18,
+                                fontSize: isDesktop ? 18 : 16,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
@@ -446,7 +447,7 @@ class _EntrenadorDashboardState extends State<EntrenadorDashboard> {
                               'Panel deportivo Wessex Rugby',
                               style: TextStyle(
                                 color: WessexColors.darkGrape.withOpacity(0.7),
-                                fontSize: isDesktop ? 15 : 13,
+                                fontSize: isDesktop ? 14 : 12,
                               ),
                             ),
                           ],
@@ -464,22 +465,10 @@ class _EntrenadorDashboardState extends State<EntrenadorDashboard> {
                 ),
                 const SizedBox(height: 20),
 
-                // Botones principales de asistencia
+                // Botones de gestión de asistencia
                 if (isTablet) ...[
                   Row(
                     children: [
-                      Expanded(
-                        child: _buildActionCard(
-                          'Tomar Asistencia',
-                          'Iniciar nueva sesión de entrenamiento',
-                          Icons.how_to_reg,
-                          WessexColors.leafGreen,
-                          () => _navigateToGestionAsistencia(context),
-                          isDesktop: isDesktop,
-                          isTablet: isTablet,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
                       Expanded(
                         child: _buildActionCard(
                           'Ver Historial',
@@ -491,9 +480,46 @@ class _EntrenadorDashboardState extends State<EntrenadorDashboard> {
                           isTablet: isTablet,
                         ),
                       ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _buildActionCard(
+                          'Tomar Asistencia',
+                          'Iniciar nueva sesión de entrenamiento',
+                          Icons.how_to_reg,
+                          WessexColors.leafGreen,
+                          () => _navigateToGestionAsistencia(context),
+                          isDesktop: isDesktop,
+                          isTablet: isTablet,
+                        ),
+                      ),
                     ],
                   ),
+                  const SizedBox(height: 16),
+                  _buildActionCard(
+                    'Alumnos Justificados',
+                    'Ver alumnos con justificantes activos',
+                    Icons.verified_user,
+                    WessexColors.deepRoyalBlue,
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const JustificadosActivosScreen(),
+                      ),
+                    ),
+                    isDesktop: isDesktop,
+                    isTablet: isTablet,
+                  ),
                 ] else ...[
+                  _buildActionCard(
+                    'Ver Historial',
+                    'Consultar registros anteriores',
+                    Icons.history,
+                    WessexColors.deepRoyalBlue,
+                    () => _navigateToHistorialAsistencia(context),
+                    isDesktop: isDesktop,
+                    isTablet: isTablet,
+                  ),
+                  const SizedBox(height: 12),
                   _buildActionCard(
                     'Tomar Asistencia',
                     'Iniciar nueva sesión de entrenamiento',
@@ -505,56 +531,20 @@ class _EntrenadorDashboardState extends State<EntrenadorDashboard> {
                   ),
                   const SizedBox(height: 12),
                   _buildActionCard(
-                    'Ver Historial',
-                    'Consultar registros anteriores',
-                    Icons.history,
+                    'Alumnos Justificados',
+                    'Ver alumnos con justificantes activos',
+                    Icons.verified_user,
                     WessexColors.deepRoyalBlue,
-                    () => _navigateToHistorialAsistencia(context),
-                    isDesktop: isDesktop,
-                    isTablet: isTablet,
-                  ),
-                ],
-                const SizedBox(height: 16),
-
-                // Acceso a justificantes
-                if (isTablet)
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildActionCard(
-                          'Ver Justificantes',
-                          'Consultar justificantes de jugadores',
-                          Icons.assignment_outlined,
-                          WessexColors.leafGreen,
-                          () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  const EntrenadorJustificantesScreen(),
-                            ),
-                          ),
-                          isDesktop: isDesktop,
-                          isTablet: isTablet,
-                        ),
-                      ),
-                    ],
-                  )
-                else
-                  _buildActionCard(
-                    'Ver Justificantes',
-                    'Consultar justificantes de jugadores',
-                    Icons.assignment_outlined,
-                    WessexColors.leafGreen,
                     () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) =>
-                            const EntrenadorJustificantesScreen(),
+                        builder: (context) => const JustificadosActivosScreen(),
                       ),
                     ),
                     isDesktop: isDesktop,
                     isTablet: isTablet,
                   ),
+                ],
                 const SizedBox(height: 16),
               ],
             ),
@@ -646,7 +636,7 @@ class _EntrenadorDashboardState extends State<EntrenadorDashboard> {
   void _navigateToHistorialAsistencia(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const HistorialSesionesScreen()),
+      MaterialPageRoute(builder: (context) => const HistorialAsistenciaScreen()),
     );
   }
 }

@@ -11,6 +11,8 @@ import 'package:wesrugby/features/admin/presentation/screens/justificantes/histo
 import 'package:wesrugby/features/admin/presentation/screens/actas/visualizar/visualizar_actas_reunion_screen.dart';
 import 'package:wesrugby/features/admin/presentation/screens/usuarios/editar_estudiante_apoderado/editar_estudiante_apoderado_screen.dart';
 import 'package:wesrugby/features/auth/presentation/screens/simple_login/simple_login.dart' as login;
+import 'package:wesrugby/shared/widgets/terminos_condiciones_dialog.dart';
+import 'package:wesrugby/features/admin/presentation/screens/asistencia/apoderado/asistencia_apoderado_screen.dart';
 
 class ApoderadoDashboard extends StatefulWidget {
   const ApoderadoDashboard({super.key});
@@ -28,6 +30,10 @@ class _ApoderadoDashboardState extends State<ApoderadoDashboard> {
   void initState() {
     super.initState();
     _loadUserInfo();
+    // Verificar términos y condiciones después de que el widget esté construido
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      verificarYMostrarTerminos(context);
+    });
   }
 
   Future<void> _loadUserInfo({bool refreshRemote = true}) async {
@@ -566,6 +572,30 @@ class _ApoderadoDashboardState extends State<ApoderadoDashboard> {
                       ),
                     ),
                   ],
+                ),
+
+                const SizedBox(height: 32),
+
+                const WessexSectionTitle(
+                  title: 'Asistencia',
+                  subtitle: 'Seguimiento de asistencia de mi hijo/a',
+                  titleColor: WessexColors.white,
+                ),
+                const SizedBox(height: 20),
+
+                _buildActionCard(
+                  'Ver Asistencia',
+                  'Historial de asistencia a entrenamientos',
+                  Icons.fact_check,
+                  WessexColors.leafGreen,
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AsistenciaApoderadoScreen(),
+                    ),
+                  ),
+                  isDesktop: isDesktop,
+                  isTablet: isTablet,
                 ),
 
                 const SizedBox(height: 32),

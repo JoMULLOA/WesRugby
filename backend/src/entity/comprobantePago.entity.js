@@ -16,6 +16,12 @@ const ComprobantePagoSchema = new EntitySchema({
       nullable: false,
       comment: "RUT del apoderado responsable del pago",
     },
+    apoderadoEmail: {
+      type: "varchar",
+      length: 255,
+      nullable: true,
+      comment: "Correo del apoderado que subió el comprobante",
+    },
     estudianteRut: {
       type: "varchar",
       length: 12,
@@ -61,9 +67,9 @@ const ComprobantePagoSchema = new EntitySchema({
     },
     mesCorrespondiente: {
       type: "varchar",
-      length: 7,
+      length: 50,
       nullable: false,
-      comment: "Mes facturado en formato YYYY-MM",
+      comment: "Mes facturado en formato YYYY-MM o label (ej: 'Agosto 2025', 'Multiple')",
     },
     bancoOrigen: {
       type: "varchar",
@@ -97,9 +103,14 @@ const ComprobantePagoSchema = new EntitySchema({
     },
     tipoArchivo: {
       type: "varchar",
-      length: 20,
+      length: 50,
       nullable: true,
       comment: "Tipo MIME del archivo",
+    },
+    anioMatricula: {
+      type: "int",
+      nullable: true,
+      comment: "Año de la matrícula (solo cuando tipoPago = matricula)",
     },
     tamanoArchivo: {
       type: "int",
@@ -150,6 +161,21 @@ const ComprobantePagoSchema = new EntitySchema({
       length: 12,
       nullable: false,
       comment: "RUT del usuario que registró el comprobante",
+    },
+    estudiantesRuts: {
+      type: "jsonb",
+      nullable: true,
+      comment: "Array de RUTs de estudiantes incluidos en el pago (para pagos agrupados)",
+    },
+    mesesCorrespondientes: {
+      type: "jsonb",
+      nullable: true,
+      comment: "Array de meses incluidos en el pago (formato YYYY-MM o label)",
+    },
+    detallesPago: {
+      type: "jsonb",
+      nullable: true,
+      comment: "Detalles del pago: { estudianteRut: { meses: [...], monto: ... }, ... }",
     },
     notificacionEnviada: {
       type: "boolean",
@@ -214,6 +240,10 @@ const ComprobantePagoSchema = new EntitySchema({
       columns: ["apoderadoRut"],
     },
     {
+      name: "IDX_COMPROBANTE_APODERADO_EMAIL",
+      columns: ["apoderadoEmail"],
+    },
+    {
       name: "IDX_COMPROBANTE_ESTUDIANTE",
       columns: ["estudianteRut"],
     },
@@ -228,6 +258,10 @@ const ComprobantePagoSchema = new EntitySchema({
     {
       name: "IDX_COMPROBANTE_FECHA",
       columns: ["fechaPago"],
+    },
+    {
+      name: "IDX_COMPROBANTE_ANIO_MATRICULA",
+      columns: ["anioMatricula"],
     },
   ],
 });

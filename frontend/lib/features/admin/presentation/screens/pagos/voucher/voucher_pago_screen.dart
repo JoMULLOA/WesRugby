@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'dart:html' as html;
 import 'package:wesrugby/shared/widgets/layout/wessex_widgets.dart';
 import 'package:wesrugby/core/config/colors.dart';
-import 'package:wesrugby/data/services/voucher_service.dart';
 import 'package:wesrugby/data/services/estudiante_service.dart';
 import 'package:wesrugby/data/services/api_service.dart';
 import 'package:wesrugby/data/services/pagos_service.dart';
@@ -32,7 +31,6 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
   bool _isLoadingPrecios = true;
   bool _aplicarATodos = true;
   Map<String, dynamic>? _userData;
-  final VoucherService _voucherService = VoucherService();
   final EstudianteService _estudianteService = EstudianteService();
   List<Map<String, dynamic>> _misEstudiantes = [];
   final Set<String> _estudiantesSeleccionados = <String>{};
@@ -40,6 +38,10 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
   // Lista de meses disponibles (cargados dinámicamente)
   List<Map<String, dynamic>> _mesesDisponibles = [];
   String? _errorMeses;
+  
+  // Pago de todos los meses restantes
+  bool _pagarTodosLosMeses = false;
+  List<Map<String, dynamic>> _estudiantesConMeses = []; // Info detallada por estudiante
   
   // Precios configurados
   double? _precioMensualidad;
@@ -107,10 +109,193 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
   void _onTipoPagoChanged(String? tipoPago) {
     setState(() {
       _selectedTipoPago = tipoPago;
+      
+      // Si cambia a matrícula, limpiar mes seleccionado y reset switch (no aplica para matrícula)
+      if (tipoPago == 'Matrícula') {
+        _selectedMonth = null;
+        _pagarTodosLosMeses = false;
+      }
+      
       _actualizarMontoConDescuento();
     });
+    
+    // Verificar si la matrícula ya está pagada
+    if (tipoPago == 'Matrícula') {
+      _verificarMatriculaPagada();
+    }
+  }
+  
+  void _verificarMatriculaPagada() {
+    // Verificar en los estudiantes seleccionados si alguno ya tiene matrícula pagada
+    bool algunaMatriculaPagada = false;
+    
+    for (final rut in _estudiantesSeleccionados) {
+      final estudiante = _misEstudiantes.firstWhere(
+        (e) => e['rut'] == rut,
+        orElse: () => {},
+      );
+      
+      if (estudiante.isNotEmpty) {
+        final pagos = estudiante['pagos'] as Map<String, dynamic>?;
+        final matricula = pagos?['matricula']?.toString().toLowerCase() ?? '';
+        
+        // Considerar pagada si no es "no pagado" o vacío
+        if (matricula.isNotEmpty && 
+            !matricula.contains('no') && 
+            !matricula.contains('pend')) {
+          algunaMatriculaPagada = true;
+          break;
+        }
+      }
+    }
+    
+    if (algunaMatriculaPagada && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.info_outline, color: Colors.white),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Uno o más estudiantes ya tienen la matrícula pagada',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: WessexColors.deepRoyalBlue,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
   }
 
+  /// Muestra diálogo con desglose de meses a pagar por estudiante
+  void _mostrarDesgloseMeses() {
+    // Mapear valor (YYYY-MM) a label (Mes Año)
+    final mapMeses = Map.fromEntries(
+      _mesesDisponibles.map((m) => MapEntry(m['value'] as String, m['label'] as String)),
+    );
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Row(
+          children: [
+            Icon(
+              Icons.calendar_month,
+              color: WessexColors.deepRoyalBlue,
+            ),
+            const SizedBox(width: 12),
+            const Text('Desglose de Meses a Pagar'),
+          ],
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: _estudiantesConMeses.length,
+            itemBuilder: (context, index) {
+              final estudiante = _estudiantesConMeses[index];
+              final rut = estudiante['rut']?.toString() ?? '';
+              
+              // Solo mostrar estudiantes seleccionados
+              if (!_estudiantesSeleccionados.contains(rut)) {
+                return const SizedBox.shrink();
+              }
+              
+              final nombre = estudiante['nombre']?.toString() ?? 'Estudiante';
+              final mesesNoPagados = (estudiante['mesesNoPagados'] as List? ?? [])
+                  .map((m) => mapMeses[m] ?? m.toString())
+                  .toList();
+              
+              return Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: WessexColors.leafGreen.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: WessexColors.leafGreen.withOpacity(0.3),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      nombre,
+                      style: TextStyle(
+                        color: WessexColors.darkGrape,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      mesesNoPagados.join(', '),
+                      style: TextStyle(
+                        color: WessexColors.darkGrape.withOpacity(0.8),
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${mesesNoPagados.length} mes${mesesNoPagados.length != 1 ? 'es' : ''}',
+                      style: TextStyle(
+                        color: WessexColors.deepRoyalBlue,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Calcula el monto total cuando se paga todos los meses
+  double _calcularMontoTodosMeses() {
+    if (_precioMensualidad == null) return 0;
+    
+    double total = 0;
+    final cantidadEstudiantes = _estudiantesSeleccionados.length;
+    
+    // Contar total de meses a pagar por todos los estudiantes
+    for (final estudiante in _estudiantesConMeses) {
+      final rut = estudiante['rut']?.toString() ?? '';
+      if (_estudiantesSeleccionados.contains(rut)) {
+        final mesesNoPagados = estudiante['mesesNoPagados'] as List? ?? [];
+        final cantidadMeses = mesesNoPagados.length;
+        
+        // Aplicar precio con descuento por estudiante
+        final precioConDescuento = _calcularMontoConDescuento(
+          _precioMensualidad!,
+          cantidadEstudiantes,
+          _descuentoMensualidad2,
+          _descuentoMensualidad3Plus,
+        );
+        
+        total += precioConDescuento * cantidadMeses;
+      }
+    }
+    
+    return total;
+  }
+  
   /// Calcula el monto total con descuento según cantidad de estudiantes
   double _calcularMontoConDescuento(double precioBase, int cantidadEstudiantes, int descuento2, int descuento3Plus) {
     if (cantidadEstudiantes <= 1) {
@@ -132,12 +317,21 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
     final cantidadEstudiantes = _estudiantesSeleccionados.length;
     
     if (_selectedTipoPago == 'Mensualidad' && _precioMensualidad != null) {
-      final montoTotal = _calcularMontoConDescuento(
-        _precioMensualidad!,
-        cantidadEstudiantes,
-        _descuentoMensualidad2,
-        _descuentoMensualidad3Plus,
-      );
+      double montoTotal;
+      
+      if (_pagarTodosLosMeses) {
+        // Calcular suma de todos los meses pendientes
+        montoTotal = _calcularMontoTodosMeses();
+      } else {
+        // Calcular solo un mes
+        montoTotal = _calcularMontoConDescuento(
+          _precioMensualidad!,
+          cantidadEstudiantes,
+          _descuentoMensualidad2,
+          _descuentoMensualidad3Plus,
+        );
+      }
+      
       _montoController.text = montoTotal.toStringAsFixed(0);
     } else if (_selectedTipoPago == 'Matrícula' && _precioMatricula != null) {
       final montoTotal = _calcularMontoConDescuento(
@@ -158,7 +352,11 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
     });
 
     try {
-      final response = await PagosService.obtenerMesesNoPagados2025();
+      // Pasar los RUTs de estudiantes seleccionados
+      final rutSeleccionados = _estudiantesSeleccionados.toList();
+      final response = await PagosService.obtenerMesesNoPagados2025(
+        rutEstudiantes: rutSeleccionados.isNotEmpty ? rutSeleccionados : null,
+      );
       print('📡 [VOUCHER] Respuesta completa: $response');
       print('📡 [VOUCHER] StatusCode: ${response.statusCode}');
       print('� [VOUCHER] Data type: ${response.data?.runtimeType}');
@@ -178,8 +376,10 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
           
           if (backendData != null) {
             final mesesComunes = backendData['mesesComunes'];
+            final estudiantes = backendData['estudiantes'];
             print('📅 [VOUCHER] mesesComunes type: ${mesesComunes?.runtimeType}');
             print('📅 [VOUCHER] mesesComunes value: $mesesComunes');
+            print('👥 [VOUCHER] estudiantes: $estudiantes');
             
             if (mesesComunes is List && mesesComunes.isNotEmpty) {
               print('✅ [VOUCHER] mesesComunes es una Lista con ${mesesComunes.length} elementos');
@@ -187,6 +387,12 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
                 _mesesDisponibles = List<Map<String, dynamic>>.from(
                   mesesComunes.map((m) => m as Map<String, dynamic>)
                 );
+                // Guardar info de estudiantes con sus meses
+                if (estudiantes is List) {
+                  _estudiantesConMeses = List<Map<String, dynamic>>.from(
+                    estudiantes.map((e) => e as Map<String, dynamic>)
+                  );
+                }
                 print('✅ [VOUCHER] ${_mesesDisponibles.length} meses cargados: $_mesesDisponibles');
                 _isLoadingMeses = false;
               });
@@ -342,6 +548,18 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
     'Pago Móvil',
     'Efectivo',
   ];
+
+  // Mapear métodos de pago del frontend al backend
+  String _mapMetodoPago(String metodoPagoUI) {
+    const Map<String, String> metodoPagoMap = {
+      'Transferencia Bancaria': 'transferencia',
+      'Depósito Bancario': 'deposito',
+      'Pago Móvil': 'tarjeta',
+      'Efectivo': 'efectivo',
+      'Cheque': 'cheque',
+    };
+    return metodoPagoMap[metodoPagoUI] ?? 'transferencia';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -758,6 +976,13 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
                                       
                                       // Recalcular el monto con descuento
                                       _actualizarMontoConDescuento();
+                                      
+                                      // Recargar meses disponibles si está en modo Mensualidad
+                                      if (_selectedTipoPago == 'Mensualidad') {
+                                        // Limpiar mes seleccionado antes de recargar
+                                        _selectedMonth = null;
+                                        _cargarMesesNoPagados();
+                                      }
                                     });
                                   },
                                 );
@@ -836,7 +1061,57 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
 
                         const SizedBox(height: 16),
 
-                        // Mes de pago
+                        // Mes de pago (solo visible para Mensualidad)
+                        if (_selectedTipoPago == 'Mensualidad') ...[
+                        
+                        // Switch para pagar todos los meses restantes
+                        if (!_isLoadingMeses && _mesesDisponibles.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: WessexColors.leafGreen.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: WessexColors.leafGreen.withOpacity(0.3),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.calendar_today,
+                                  color: WessexColors.leafGreen,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    'Pagar todos los meses restantes del año',
+                                    style: TextStyle(
+                                      color: WessexColors.darkGrape,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                Switch(
+                                  value: _pagarTodosLosMeses,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _pagarTodosLosMeses = value;
+                                      if (value) {
+                                        _selectedMonth = null; // Limpiar selección individual
+                                      }
+                                      _actualizarMontoConDescuento();
+                                    });
+                                  },
+                                  activeColor: WessexColors.leafGreen,
+                                ),
+                              ],
+                            ),
+                          ),
+                        
+                        if (!_isLoadingMeses && _mesesDisponibles.isNotEmpty)
+                          const SizedBox(height: 16),
+                        
                         if (_isLoadingMeses)
                           Container(
                             padding: const EdgeInsets.all(16),
@@ -901,7 +1176,7 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
                               ],
                             ),
                           )
-                        else
+                        else if (!_pagarTodosLosMeses) // Solo mostrar dropdown si no paga todos los meses
                           DropdownButtonFormField<String>(
                             value: _selectedMonth,
                             decoration: InputDecoration(
@@ -926,6 +1201,7 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
                             validator: (value) =>
                                 value == null ? 'Selecciona el mes de pago' : null,
                           ),
+                        ], // Fin del condicional de Mensualidad
 
                         const SizedBox(height: 16),
 
@@ -1009,6 +1285,17 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
                               Icons.attach_money,
                               color: WessexColors.leafGreen,
                             ),
+                            // Botón de información cuando se paga todos los meses
+                            suffixIcon: _pagarTodosLosMeses
+                                ? IconButton(
+                                    icon: Icon(
+                                      Icons.info_outline,
+                                      color: WessexColors.deepRoyalBlue,
+                                    ),
+                                    onPressed: _mostrarDesgloseMeses,
+                                    tooltip: 'Ver desglose de meses por estudiante',
+                                  )
+                                : null,
                           ),
                           validator: (value) {
                             if (value == null || value.isEmpty) {
@@ -1356,6 +1643,18 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
       return;
     }
 
+    // Validar mes solo si es Mensualidad y NO se está pagando todos los meses
+    if (_selectedTipoPago == 'Mensualidad' && !_pagarTodosLosMeses && _selectedMonth == null) {
+      _showErrorSnackBar('Debes seleccionar el mes de pago');
+      return;
+    }
+    
+    // Validar que si paga todos los meses, tenga meses disponibles
+    if (_selectedTipoPago == 'Mensualidad' && _pagarTodosLosMeses && _mesesDisponibles.isEmpty) {
+      _showErrorSnackBar('No hay meses pendientes de pago');
+      return;
+    }
+
     if (_webFile == null || _archivoNombre == null) {
       _showErrorSnackBar('Debes adjuntar un voucher de pago (imagen o PDF)');
       return;
@@ -1371,6 +1670,7 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
     });
 
     try {
+      // Obtener datos de estudiantes seleccionados
       final seleccionados = _misEstudiantes
           .where((estudiante) => _estudiantesSeleccionados.contains(
                 estudiante['rut']?.toString() ?? '',
@@ -1381,67 +1681,148 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
         throw Exception('No se encontraron datos de los estudiantes seleccionados');
       }
 
-      final nombresCompletos = seleccionados
-          .map((item) => '${item['nombres']} ${item['apellidos']}')
+      // Preparar lista de RUTs seleccionados
+      final estudiantesRuts = seleccionados
+          .map((e) => e['rut']?.toString() ?? '')
+          .where((rut) => rut.isNotEmpty)
           .toList();
-      final resumenEstudiantes = seleccionados
-          .map(
-            (item) =>
-                '- ${item['nombres']} ${item['apellidos']} (RUT: ${item['rut']}, Curso: ${item['curso'] ?? 'Sin curso'})',
-          )
-          .join('\n');
 
-      String descripcionCompleta =
-          'Estudiantes cubiertos por este voucher:\n$resumenEstudiantes';
-      if (_descripcionController.text.isNotEmpty) {
-        descripcionCompleta +=
-            '\n\nDescripción adicional: ${_descripcionController.text}';
+      // Usar el primer estudiante disponible como inscripcionId
+      final inscripcionId = _misEstudiantes.isNotEmpty 
+          ? _misEstudiantes.first['rut']?.toString() ?? ''
+          : '';
+      
+      if (inscripcionId.isEmpty) {
+        throw Exception('No se encontró información del estudiante');
       }
 
-      final etiquetaUsuario = nombresCompletos.length == 1
-          ? nombresCompletos.first
-          : '${nombresCompletos.first} +${nombresCompletos.length - 1}';
+      // Si paga todos los meses, enviar UN SOLO comprobante agrupado
+      if (_selectedTipoPago == 'Mensualidad' && _pagarTodosLosMeses) {
+        // Construir detallesPago: { rutEstudiante: { meses: [...], monto: X }, ... }
+        final Map<String, dynamic> detallesPago = {};
+        double montoTotalComprobante = 0.0;
+        
+        for (final estudiante in _estudiantesConMeses) {
+          final rut = estudiante['rut']?.toString() ?? '';
+          if (!_estudiantesSeleccionados.contains(rut)) continue;
+          
+          final mesesNoPagados = estudiante['mesesNoPagados'] as List? ?? [];
+          if (mesesNoPagados.isEmpty) continue;
+          
+          // Calcular precio con descuento para este estudiante
+          final precioMes = _calcularMontoConDescuento(
+            _precioMensualidad!,
+            _estudiantesSeleccionados.length,
+            _descuentoMensualidad2,
+            _descuentoMensualidad3Plus,
+          );
+          
+          // Convertir todos los meses no pagados a labels
+          final List<String> mesesLabels = mesesNoPagados.map((mesValue) {
+            final mesData = _mesesDisponibles.firstWhere(
+              (m) => m['value'] == mesValue,
+              orElse: () => {'label': mesValue.toString()},
+            );
+            return mesData['label'] as String;
+          }).toList();
+          
+          // Calcular monto para este estudiante (precio por mes * cantidad de meses)
+          final montoEstudiante = precioMes * mesesNoPagados.length;
+          montoTotalComprobante += montoEstudiante;
+          
+          detallesPago[rut] = {
+            'meses': mesesLabels,
+            'monto': montoEstudiante,
+          };
+        }
+        
+        if (detallesPago.isEmpty) {
+          throw Exception('No hay información de pago para procesar');
+        }
+        
+        print('📦 Enviando comprobante agrupado:');
+        print('   Estudiantes: ${detallesPago.keys.length}');
+        print('   Monto total: \$${montoTotalComprobante.toStringAsFixed(0)}');
+        detallesPago.forEach((rut, datos) {
+          print('   - $rut: ${datos['meses'].length} meses, \$${datos['monto']}');
+        });
+        
+        // Enviar UN SOLO comprobante con detallesPago
+        final response = await PagosService.subirVoucherMensualidadWeb(
+          inscripcionId: inscripcionId,
+          metodoPago: _mapMetodoPago(_selectedMetodoPago!),
+          montoTotal: montoTotalComprobante,
+          fechaPago: DateTime.now(),
+          mesCorrespondiente: 'Multiple', // Indicador de múltiples meses
+          estudiantesSeleccionados: estudiantesRuts,
+          aplicarATodos: false,
+          bancoOrigen: null,
+          numeroOperacion: null,
+          observacionesApoderado: _descripcionController.text.isNotEmpty 
+              ? '${_descripcionController.text} (Pago agrupado: ${detallesPago.keys.length} estudiantes)' 
+              : 'Pago agrupado de múltiples meses para ${detallesPago.keys.length} estudiante(s)',
+          archivoBytes: _webFile,
+          nombreArchivo: _archivoNombre,
+          detallesPago: detallesPago, // Nuevo parámetro con la estructura agrupada
+        );
+        
+        setState(() {
+          _isUploading = false;
+        });
+        
+        if (response.success) {
+          final totalMeses = detallesPago.values
+              .map((d) => (d['meses'] as List).length)
+              .reduce((a, b) => a + b);
+          print('✅ Comprobante agrupado enviado: ${detallesPago.keys.length} estudiantes, $totalMeses meses');
+          _showSuccessDialog(
+            mensajeExtra: 'Se creó 1 comprobante agrupado con ${detallesPago.keys.length} estudiante(s) y $totalMeses mes(es) de pago por un total de \$${montoTotalComprobante.toStringAsFixed(0)}.',
+          );
+        } else {
+          throw Exception(response.message ?? 'Error al enviar comprobante agrupado');
+        }
+      } else {
+        // Pago de un solo mes (lógica original)
+        final response = await PagosService.subirVoucherMensualidadWeb(
+          inscripcionId: inscripcionId,
+          // Convertir etiqueta UI al código esperado por backend
+          metodoPago: _mapMetodoPago(_selectedMetodoPago!),
+          montoTotal: double.parse(_montoController.text),
+          fechaPago: DateTime.now(),
+          // Solo enviar mes si es Mensualidad
+          mesCorrespondiente: _selectedTipoPago == 'Mensualidad' ? _selectedMonth! : null,
+          estudiantesSeleccionados: estudiantesRuts,
+          aplicarATodos: _aplicarATodos,
+          bancoOrigen: null,
+          numeroOperacion: null,
+          observacionesApoderado: _descripcionController.text.isNotEmpty 
+              ? _descripcionController.text 
+              : null,
+          archivoBytes: _webFile,
+          nombreArchivo: _archivoNombre,
+        );
 
-      final etiquetaRol = nombresCompletos.length == 1
-          ? 'Estudiante - ${seleccionados.first['curso'] ?? 'Sin curso'}'
-          : 'Estudiantes (${nombresCompletos.length})';
+        setState(() {
+          _isUploading = false;
+        });
 
-      String voucherId = _voucherService.addVoucher(
-        usuario: etiquetaUsuario,
-        rol: etiquetaRol,
-        mes: _selectedMonth!,
-        monto: double.parse(_montoController.text),
-        metodoPago: _selectedMetodoPago!,
-        descripcion: descripcionCompleta,
-        archivo: _archivoNombre!,
-        archivoData: _webFile,
-      );
-
-      // Notificar a tesorería
-      _voucherService.notifyTesoreria(voucherId);
-
-      print('Apoderado: ${_userData?['nombreCompleto'] ?? 'Usuario'}');
-      print('Estudiantes vinculados: ${nombresCompletos.join(', ')}');
-      print('Aplicar a todos: $_aplicarATodos');
-      print('Voucher ID: $voucherId');
-      print('Archivo seleccionado: $_archivoNombre');
-      print('Tamaño del archivo: ${_webFile!.length} bytes');
-
-      setState(() {
-        _isUploading = false;
-      });
-
-      // Mostrar diálogo de éxito
-      _showSuccessDialog();
+        if (response.success) {
+          print('✅ Voucher enviado al backend exitosamente');
+          _showSuccessDialog();
+        } else {
+          throw Exception(response.message ?? 'Error al enviar voucher');
+        }
+      }
     } catch (e) {
       setState(() {
         _isUploading = false;
       });
+      print('❌ Error enviando voucher: $e');
       _showErrorSnackBar('Error al enviar voucher: ${e.toString()}');
     }
   }
 
-  void _showSuccessDialog() {
+  void _showSuccessDialog({String? mensajeExtra}) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -1477,7 +1858,7 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Tu voucher ha sido enviado correctamente a la Tesorería del club. El voucher será revisado y procesado. Puedes verificar el estado en tu historial de vouchers.',
+                  mensajeExtra ?? 'Tu voucher ha sido enviado correctamente a la Tesorería del club. El voucher será revisado y procesado. Puedes verificar el estado en tu historial de vouchers.',
                   style: TextStyle(
                     color: WessexColors.darkGrape.withOpacity(0.7),
                     fontSize: 14,

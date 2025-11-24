@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:wesrugby/data/services/api_service.dart';
 import 'package:wesrugby/data/services/tokenManager.dart';
@@ -149,13 +150,14 @@ class PagosService {
     required String metodoPago,
     required double montoTotal,
     required DateTime fechaPago,
-    required String mesCorrespondiente,
+    String? mesCorrespondiente, // Opcional: null para matrículas
     required List<String> estudiantesSeleccionados,
     required bool aplicarATodos,
     String? bancoOrigen,
     String? numeroOperacion,
     String? observacionesApoderado,
     File? archivoVoucher,
+    Map<String, dynamic>? detallesPago, // Nuevo: para pagos agrupados
   }) async {
     try {
       const endpoint = '/comprobantes-pago/apoderado/voucher-mensualidad';
@@ -178,7 +180,10 @@ class PagosService {
         request.fields['metodoPago'] = metodoPago;
         request.fields['montoTotal'] = montoTotal.toString();
         request.fields['fechaPago'] = fechaPago.toIso8601String().split('T')[0];
-        request.fields['mesCorrespondiente'] = mesCorrespondiente;
+        // Solo agregar mes si está presente (no es matrícula)
+        if (mesCorrespondiente != null) {
+          request.fields['mesCorrespondiente'] = mesCorrespondiente;
+        }
         request.fields['aplicarATodos'] = aplicarATodos ? 'true' : 'false';
         request.fields['estudiantesSeleccionados'] =
             jsonEncode(estudiantesSeleccionados);
@@ -188,6 +193,11 @@ class PagosService {
           request.fields['numeroOperacion'] = numeroOperacion;
         if (observacionesApoderado != null) {
           request.fields['observacionesApoderado'] = observacionesApoderado;
+        }
+        
+        // Agregar detallesPago si está presente (pago agrupado)
+        if (detallesPago != null) {
+          request.fields['detallesPago'] = jsonEncode(detallesPago);
         }
 
         // Agregar archivo
@@ -238,6 +248,114 @@ class PagosService {
     }
   }
 
+  /// Subir voucher de mensualidad (Web - acepta Uint8List)
+  static Future<ApiResponse> subirVoucherMensualidadWeb({
+    required String inscripcionId,
+    required String metodoPago,
+    required double montoTotal,
+    required DateTime fechaPago,
+    String? mesCorrespondiente, // Opcional: null para matrículas
+    required List<String> estudiantesSeleccionados,
+    required bool aplicarATodos,
+    String? bancoOrigen,
+    String? numeroOperacion,
+    String? observacionesApoderado,
+    Uint8List? archivoBytes,
+    String? nombreArchivo,
+    Map<String, dynamic>? detallesPago, // Nuevo: para pagos agrupados con múltiples meses
+  }) async {
+    try {
+      const endpoint = '/comprobantes-pago/apoderado/voucher-mensualidad';
+
+      print('🔍 DEBUG subirVoucherMensualidadWeb:');
+      print('  - inscripcionId: $inscripcionId');
+      print('  - metodoPago: $metodoPago');
+      print('  - montoTotal: $montoTotal');
+      print('  - fechaPago: ${fechaPago.toIso8601String()}');
+      print('  - mesCorrespondiente: $mesCorrespondiente');
+      print('  - estudiantesSeleccionados: $estudiantesSeleccionados');
+      print('  - aplicarATodos: $aplicarATodos');
+      print('  - nombreArchivo: $nombreArchivo');
+      print('  - archivoBytes length: ${archivoBytes?.length}');
+
+      if (archivoBytes != null && nombreArchivo != null) {
+        // Usar multipart para subir archivo desde bytes (web)
+        var request = http.MultipartRequest(
+          'POST',
+          Uri.parse('${ApiService.baseUrl}$endpoint'),
+        );
+
+        // Agregar headers de autenticación
+        final token = await TokenManager.getToken();
+        if (token != null) {
+          request.headers['Authorization'] = 'Bearer $token';
+        }
+
+        // Agregar campos del formulario
+        request.fields['inscripcionId'] = inscripcionId;
+        request.fields['metodoPago'] = metodoPago;
+        request.fields['montoTotal'] = montoTotal.toString();
+        request.fields['fechaPago'] = fechaPago.toIso8601String().split('T')[0];
+        // Solo agregar mes si está presente (no es matrícula)
+        if (mesCorrespondiente != null) {
+          request.fields['mesCorrespondiente'] = mesCorrespondiente;
+        }
+        request.fields['aplicarATodos'] = aplicarATodos ? 'true' : 'false';
+        request.fields['estudiantesSeleccionados'] =
+            jsonEncode(estudiantesSeleccionados);
+
+        if (bancoOrigen != null) request.fields['bancoOrigen'] = bancoOrigen;
+        if (numeroOperacion != null)
+          request.fields['numeroOperacion'] = numeroOperacion;
+        if (observacionesApoderado != null) {
+          request.fields['observacionesApoderado'] = observacionesApoderado;
+        }
+        
+        // Agregar detallesPago si está presente (pago agrupado)
+        if (detallesPago != null) {
+          request.fields['detallesPago'] = jsonEncode(detallesPago);
+        }
+
+        // Agregar archivo desde bytes (compatible con web)
+        var multipartFile = http.MultipartFile.fromBytes(
+          'voucher',
+          archivoBytes,
+          filename: nombreArchivo,
+        );
+        request.files.add(multipartFile);
+
+        // Enviar request
+        var streamedResponse = await request.send();
+        var response = await http.Response.fromStream(streamedResponse);
+
+        print('🔍 DEBUG Response:');
+        print('  - statusCode: ${response.statusCode}');
+        print('  - body: ${response.body}');
+
+        // Manejar respuesta
+        final data = response.body.isNotEmpty ? response.body : null;
+        return ApiResponse(
+          statusCode: response.statusCode,
+          data: data,
+          message:
+              response.statusCode == 200 || response.statusCode == 201
+                  ? 'Voucher subido exitosamente'
+                  : 'Error subiendo voucher',
+        );
+      } else {
+        return ApiResponse(
+          statusCode: 400,
+          message: 'Se requiere archivo y nombre de archivo',
+        );
+      }
+    } catch (e) {
+      return ApiResponse(
+        statusCode: 500,
+        message: 'Error subiendo voucher: $e',
+      );
+    }
+  }
+
   /// Obtener historial de pagos del apoderado
   static Future<ApiResponse> obtenerHistorialApoderado({
     int limite = 20,
@@ -272,8 +390,16 @@ class PagosService {
   }
 
   /// Obtener meses no pagados de 2025 para los estudiantes del apoderado
-  static Future<ApiResponse> obtenerMesesNoPagados2025() async {
-    return ApiService.get('/comprobantes-pago/apoderado/meses-no-pagados-2025');
+  static Future<ApiResponse> obtenerMesesNoPagados2025({List<String>? rutEstudiantes}) async {
+    String endpoint = '/comprobantes-pago/apoderado/meses-no-pagados-2025';
+    
+    // Si se especifican RUTs, agregarlos como query param
+    if (rutEstudiantes != null && rutEstudiantes.isNotEmpty) {
+      final rutsParam = rutEstudiantes.join(',');
+      endpoint += '?rutEstudiantes=$rutsParam';
+    }
+    
+    return ApiService.get(endpoint);
   }
 
   /// Reenviar comprobante electrónico

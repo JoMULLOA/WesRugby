@@ -2,10 +2,12 @@ import {
   createSesionAsistenciaService, 
   getSesionesByEntrenadorService,
   getSesionConRegistrosService,
-  getEstadisticasAsistenciaService
+  getEstadisticasAsistenciaService,
+  getAllSesionesService
 } from "../services/sesionAsistencia.service.js";
 import { obtenerUserByRut } from "../services/user.service.js";
 import { getEstudiantesByRutListService } from "../services/estudiante.service.js";
+import { AppDataSource } from "../config/configDb.js";
 
 export const createSesionAsistencia = async (req, res) => {
   try {
@@ -139,6 +141,38 @@ export const getMisSesiones = async (req, res) => {
   }
 };
 
+export const getCategorias = async (req, res) => {
+  try {
+    const estudianteRepo = AppDataSource.getRepository('Estudiante');
+    
+    // Obtener categorías únicas de estudiantes activos
+    const result = await estudianteRepo
+      .createQueryBuilder('estudiante')
+      .select('DISTINCT estudiante.categoria', 'categoria')
+      .where('estudiante.estado = :estado', { estado: 'activo' })
+      .andWhere('estudiante.categoria IS NOT NULL')
+      .andWhere("estudiante.categoria != ''")
+      .orderBy('estudiante.categoria', 'ASC')
+      .getRawMany();
+
+    const categorias = result.map(r => r.categoria);
+
+    console.log('✅ Categorías obtenidas:', categorias);
+
+    res.json({
+      success: true,
+      categorias: categorias
+    });
+
+  } catch (error) {
+    console.error('❌ Error en getCategorias:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener categorías'
+    });
+  }
+};
+
 export const getSesionDetalle = async (req, res) => {
   try {
     const { sesionId } = req.params;
@@ -210,6 +244,57 @@ export const getEstadisticasAsistencia = async (req, res) => {
 
   } catch (error) {
     console.error('❌ Error en getEstadisticasAsistencia:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor'
+    });
+  }
+};
+
+export const getAllSesiones = async (req, res) => {
+  try {
+    const userAuth = req.user;
+    const limite = parseInt(req.query.limite) || 50;
+    const curso = req.query.curso || req.query.categoria || null;
+
+    console.log('📋 Obteniendo sesiones');
+    console.log('👤 Usuario:', userAuth.rut, 'Rol:', userAuth.rol);
+    console.log('🔍 Filtros:', { limite, curso });
+
+    let sesiones, error;
+
+    // Si es directiva o apoderado, obtener TODAS las sesiones
+    if (userAuth.rol === 'directiva' || userAuth.rol === 'apoderado') {
+      [sesiones, error] = await getAllSesionesService(limite, curso);
+    } else if (userAuth.rol === 'entrenador') {
+      // Si es entrenador, solo sus sesiones
+      [sesiones, error] = await getSesionesByEntrenadorService(userAuth.rut, limite);
+    } else {
+      // Rol no válido
+      return res.status(403).json({
+        success: false,
+        message: 'Rol no autorizado para acceder a este recurso'
+      });
+    }
+
+    if (error) {
+      console.error('❌ Error al obtener sesiones:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Error al obtener las sesiones'
+      });
+    }
+
+    console.log('✅ Total de sesiones encontradas:', sesiones.length);
+
+    res.json({
+      success: true,
+      data: sesiones,
+      total: sesiones.length
+    });
+
+  } catch (error) {
+    console.error('❌ Error en getAllSesiones:', error);
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor'

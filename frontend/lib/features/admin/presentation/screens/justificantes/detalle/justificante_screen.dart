@@ -28,10 +28,12 @@ class _JustificanteScreenState extends State<JustificanteScreen> {
   // Variables de estado
   String? _selectedTipoJustificante;
   String? _selectedEstudiante;
-  DateTime? _selectedFechaInasistencia;
+  DateTime? _fechaInicio;
+  DateTime? _fechaFin;
   bool _isUploading = false;
   bool _isLoadingEstudiantes = true;
   bool _isLoadingUserData = true;
+  bool _isLoadingAsistencias = true;
 
   // Archivo
   Uint8List? _webFile;
@@ -42,6 +44,10 @@ class _JustificanteScreenState extends State<JustificanteScreen> {
 
   // Lista de estudiantes asignados
   List<Map<String, dynamic>> _misEstudiantes = [];
+  
+  // Lista de asistencias pendientes de justificación
+  List<Map<String, dynamic>> _asistenciasPendientes = [];
+  Map<String, dynamic>? _selectedAsistencia;
 
   @override
   void initState() {
@@ -50,6 +56,7 @@ class _JustificanteScreenState extends State<JustificanteScreen> {
       if (mounted) {
         _loadUserData();
         _loadMisEstudiantes();
+        _loadAsistenciasPendientes();
       }
     });
   }
@@ -113,6 +120,36 @@ class _JustificanteScreenState extends State<JustificanteScreen> {
           _isLoadingEstudiantes = false;
         });
         _showErrorSnackBar('Error al cargar estudiantes asignados');
+      }
+    }
+  }
+
+  Future<void> _loadAsistenciasPendientes() async {
+    if (!mounted) return;
+
+    try {
+      setState(() {
+        _isLoadingAsistencias = true;
+      });
+
+      print('🔍 Cargando asistencias pendientes de justificación...');
+      final asistencias = await _justificanteService.obtenerAsistenciasPendientes();
+      print('📋 Asistencias pendientes recibidas: ${asistencias.length}');
+
+      if (mounted) {
+        setState(() {
+          _asistenciasPendientes = asistencias;
+          _isLoadingAsistencias = false;
+        });
+        print('✅ Asistencias pendientes cargadas: ${_asistenciasPendientes.length}');
+      }
+    } catch (e) {
+      print('❌ Error al cargar asistencias pendientes: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingAsistencias = false;
+        });
+        _showErrorSnackBar('Error al cargar asistencias pendientes');
       }
     }
   }
@@ -182,7 +219,7 @@ class _JustificanteScreenState extends State<JustificanteScreen> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'Envía un justificante por ausencia a entrenamientos o eventos',
+                                'Envía un justificante por ausencias pasadas o futuras (lesiones, viajes, etc.)',
                                 style: TextStyle(
                                   color: WessexColors.darkGrape.withOpacity(
                                     0.7,
@@ -301,6 +338,146 @@ class _JustificanteScreenState extends State<JustificanteScreen> {
                       ],
                     ),
                   ),
+
+                  // Asistencias Pendientes de Justificación
+                  if (_isLoadingAsistencias)
+                    const WessexCard(
+                      margin: EdgeInsets.only(bottom: 24),
+                      child: Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(20.0),
+                          child: CircularProgressIndicator(),
+                        ),
+                      ),
+                    )
+                  else if (_asistenciasPendientes.isNotEmpty)
+                    WessexCard(
+                      margin: const EdgeInsets.only(bottom: 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: WessexColors.crimsonAlert.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(
+                                  Icons.warning,
+                                  color: WessexColors.crimsonAlert,
+                                  size: 24,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Asistencias Registradas (Informativo)',
+                                      style: TextStyle(
+                                        color: WessexColors.darkGrape,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${_asistenciasPendientes.length} ausencia(s) sin justificar. Puedes enviar justificante aunque no haya registros.',
+                                      style: TextStyle(
+                                        color: WessexColors.darkGrape.withOpacity(0.7),
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          const Divider(height: 1),
+                          const SizedBox(height: 12),
+                          ..._asistenciasPendientes.map((asistencia) {
+                            final fecha = asistencia['fecha']?.toString().split('T')[0] ?? '';
+                            final alumno = asistencia['alumno']?.toString() ?? 'Sin nombre';
+                            final estado = asistencia['estado']?.toString() ?? '';
+                            final tipoActividad = asistencia['tipoActividad']?.toString() ?? '';
+                            final categoria = asistencia['categoria']?.toString() ?? '';
+                            
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: WessexColors.darkGrape.withOpacity(0.05),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: WessexColors.darkGrape.withOpacity(0.1),
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        estado == 'ausente' ? Icons.cancel : Icons.access_time,
+                                        color: WessexColors.crimsonAlert,
+                                        size: 16,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          alumno,
+                                          style: TextStyle(
+                                            color: WessexColors.darkGrape,
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                      Text(
+                                        estado.toUpperCase(),
+                                        style: TextStyle(
+                                          color: WessexColors.crimsonAlert,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'Fecha: $fecha',
+                                    style: TextStyle(
+                                      color: WessexColors.darkGrape.withOpacity(0.7),
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  if (tipoActividad.isNotEmpty)
+                                    Text(
+                                      'Actividad: $tipoActividad',
+                                      style: TextStyle(
+                                        color: WessexColors.darkGrape.withOpacity(0.7),
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  if (categoria.isNotEmpty)
+                                    Text(
+                                      'Categoría: $categoria',
+                                      style: TextStyle(
+                                        color: WessexColors.darkGrape.withOpacity(0.7),
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        ],
+                      ),
+                    ),
 
                   // Selección de Estudiante
                   WessexCard(
@@ -512,33 +689,120 @@ class _JustificanteScreenState extends State<JustificanteScreen> {
 
                         const SizedBox(height: 20),
 
-                        // Fecha de inasistencia
-                        TextFormField(
-                          readOnly: true,
-                          decoration: InputDecoration(
-                            labelText: 'Fecha de Inasistencia',
-                            prefixIcon: Icon(
-                              Icons.calendar_today,
-                              color: WessexColors.deepRoyalBlue,
+                        // Rango de Fechas (Inicio y Fin)
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Fecha Inicio *',
+                                    style: TextStyle(
+                                      color: WessexColors.darkGrape,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  InkWell(
+                                    onTap: _selectFechaInicio,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 16,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        border: Border.all(
+                                          color: WessexColors.darkGrape.withOpacity(0.3),
+                                        ),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            Icons.calendar_today,
+                                            color: WessexColors.deepRoyalBlue,
+                                            size: 20,
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Text(
+                                            _fechaInicio != null
+                                                ? '${_fechaInicio!.day.toString().padLeft(2, '0')}/${_fechaInicio!.month.toString().padLeft(2, '0')}/${_fechaInicio!.year}'
+                                                : 'Seleccionar',
+                                            style: TextStyle(
+                                              color: _fechaInicio != null
+                                                  ? WessexColors.darkGrape
+                                                  : WessexColors.darkGrape.withOpacity(0.5),
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                            suffixIcon: Icon(Icons.arrow_drop_down),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Fecha Fin (opcional)',
+                                    style: TextStyle(
+                                      color: WessexColors.darkGrape,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  InkWell(
+                                    onTap: _fechaInicio != null ? _selectFechaFin : null,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 16,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        border: Border.all(
+                                          color: WessexColors.darkGrape.withOpacity(0.3),
+                                        ),
+                                        borderRadius: BorderRadius.circular(8),
+                                        color: _fechaInicio == null
+                                            ? WessexColors.darkGrape.withOpacity(0.05)
+                                            : null,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            Icons.calendar_today,
+                                            color: _fechaInicio != null
+                                                ? WessexColors.deepRoyalBlue
+                                                : WessexColors.darkGrape.withOpacity(0.3),
+                                            size: 20,
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Text(
+                                            _fechaFin != null
+                                                ? '${_fechaFin!.day.toString().padLeft(2, '0')}/${_fechaFin!.month.toString().padLeft(2, '0')}/${_fechaFin!.year}'
+                                                : 'Seleccionar',
+                                            style: TextStyle(
+                                              color: _fechaFin != null
+                                                  ? WessexColors.darkGrape
+                                                  : WessexColors.darkGrape.withOpacity(0.5),
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                          controller: TextEditingController(
-                            text:
-                                _selectedFechaInasistencia != null
-                                    ? '${_selectedFechaInasistencia!.day.toString().padLeft(2, '0')}/${_selectedFechaInasistencia!.month.toString().padLeft(2, '0')}/${_selectedFechaInasistencia!.year}'
-                                    : '',
-                          ),
-                          onTap: () => _selectDate(),
-                          validator: (value) {
-                            if (_selectedFechaInasistencia == null) {
-                              return 'Selecciona la fecha de inasistencia';
-                            }
-                            return null;
-                          },
+                          ],
                         ),
 
                         const SizedBox(height: 20),
@@ -769,12 +1033,12 @@ class _JustificanteScreenState extends State<JustificanteScreen> {
     );
   }
 
-  Future<void> _selectDate() async {
+  Future<void> _selectFechaInicio() async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now().subtract(const Duration(days: 30)),
-      lastDate: DateTime.now().add(const Duration(days: 7)),
+      initialDate: _fechaInicio ?? DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -790,9 +1054,41 @@ class _JustificanteScreenState extends State<JustificanteScreen> {
       },
     );
 
-    if (picked != null && picked != _selectedFechaInasistencia) {
+    if (picked != null && mounted) {
       setState(() {
-        _selectedFechaInasistencia = picked;
+        _fechaInicio = picked;
+        // Si la fecha fin es anterior a la fecha inicio, resetearla
+        if (_fechaFin != null && _fechaFin!.isBefore(picked)) {
+          _fechaFin = null;
+        }
+      });
+    }
+  }
+
+  Future<void> _selectFechaFin() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _fechaFin ?? _fechaInicio ?? DateTime.now(),
+      firstDate: _fechaInicio ?? DateTime(2020),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: WessexColors.deepRoyalBlue,
+              onPrimary: WessexColors.white,
+              surface: WessexColors.white,
+              onSurface: WessexColors.darkGrape,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null && mounted) {
+      setState(() {
+        _fechaFin = picked;
       });
     }
   }
@@ -849,67 +1145,98 @@ class _JustificanteScreenState extends State<JustificanteScreen> {
       return;
     }
 
+    if (_fechaInicio == null) {
+      _showErrorSnackBar('Debes seleccionar una fecha de inicio');
+      return;
+    }
+
     setState(() {
       _isUploading = true;
     });
 
     try {
-      // Buscar el estudiante seleccionado para obtener su información completa
-      final estudianteSeleccionado = _misEstudiantes.firstWhere(
-        (e) => e['rut'] == _selectedEstudiante,
-      );
-
-      // Crear descripción que incluya la información del estudiante
-      String descripcionCompleta =
-          'Estudiante: ${estudianteSeleccionado['nombres']} ${estudianteSeleccionado['apellidos']} (RUT: ${_selectedEstudiante})';
-      if (_descripcionController.text.trim().isNotEmpty) {
-        descripcionCompleta +=
-            '\nDescripción adicional: ${_descripcionController.text.trim()}';
-      }
-
-      // Enviar justificante usando el servicio
-      String justificanteId = _justificanteService.addJustificante(
-        usuario:
-            '${estudianteSeleccionado['nombres']} ${estudianteSeleccionado['apellidos']}',
-        rol: 'Estudiante - ${estudianteSeleccionado['curso'] ?? 'Sin curso'}',
-        tipoJustificante: _selectedTipoJustificante!,
-        fechaInasistencia: _selectedFechaInasistencia!,
+      final resultado = await _justificanteService.crearJustificantePersistente(
+        estudianteRut: _selectedEstudiante!,
+        fechaInicio: _fechaInicio!,
+        fechaFin: _fechaFin,
+        tipo: _selectedTipoJustificante ?? 'otro',
         motivo: _motivoController.text.trim(),
-        descripcion: descripcionCompleta,
-        archivo: _archivoNombre,
-        archivoData: _webFile,
+        descripcion: _descripcionController.text.trim(),
+        archivoBytes: _webFile,
+        archivoNombre: _archivoNombre,
       );
 
-      // Notificar a directiva y entrenador
-      _justificanteService.notifyDirectiva(justificanteId);
-      _justificanteService.notifyEntrenador(justificanteId);
+      setState(() { _isUploading = false; });
 
-      print('Apoderado: ${_userData?['nombreCompleto'] ?? 'Usuario'}');
-      print(
-        'Estudiante: ${estudianteSeleccionado['nombres']} ${estudianteSeleccionado['apellidos']}',
-      );
-      print('RUT Estudiante: $_selectedEstudiante');
-      print('Justificante ID: $justificanteId');
-      print('Archivo seleccionado: ${_archivoNombre ?? 'Ninguno'}');
-      if (_webFile != null) {
-        print('Tamaño del archivo: ${_webFile!.length} bytes');
+      if (resultado['success'] == true) {
+        _showSuccessDialog(1, 0);
+      } else {
+        _showErrorSnackBar('Error al enviar justificante: ${resultado['error']}');
       }
-
-      setState(() {
-        _isUploading = false;
-      });
-
-      // Mostrar diálogo de éxito
-      _showSuccessDialog();
     } catch (e) {
-      setState(() {
-        _isUploading = false;
-      });
+      setState(() { _isUploading = false; });
       _showErrorSnackBar('Error al enviar justificante: ${e.toString()}');
     }
   }
 
-  void _showSuccessDialog() {
+  void _showInfoDialog(String titulo, String mensaje) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: WessexColors.deepRoyalBlue.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.info,
+                color: WessexColors.deepRoyalBlue,
+                size: 48,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              titulo,
+              style: TextStyle(
+                color: WessexColors.darkGrape,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              mensaje,
+              style: TextStyle(
+                color: WessexColors.darkGrape.withOpacity(0.7),
+                fontSize: 14,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            WessexButton(
+              text: 'Entendido',
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).pop(); // Volver a la pantalla anterior
+              },
+              icon: Icons.check,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showSuccessDialog(int exitosos, int fallidos) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -935,7 +1262,7 @@ class _JustificanteScreenState extends State<JustificanteScreen> {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  '¡Justificante Enviado!',
+                  '¡Justificante${exitosos > 1 ? 's' : ''} Enviado${exitosos > 1 ? 's' : ''}!',
                   style: TextStyle(
                     color: WessexColors.darkGrape,
                     fontSize: 20,
@@ -945,7 +1272,9 @@ class _JustificanteScreenState extends State<JustificanteScreen> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Tu justificante ha sido enviado correctamente a la Directiva y Entrenador del club. Será revisado y procesado. Puedes verificar el estado en tu historial.',
+                  exitosos > 1
+                      ? 'Se han justificado $exitosos asistencias exitosamente${fallidos > 0 ? ' ($fallidos fallaron)' : ''}. Serán revisadas y procesadas. Puedes verificar el estado en tu historial.'
+                      : 'Tu justificante ha sido enviado correctamente. Será revisado y procesado. Puedes verificar el estado en tu historial.',
                   style: TextStyle(
                     color: WessexColors.darkGrape.withOpacity(0.7),
                     fontSize: 14,

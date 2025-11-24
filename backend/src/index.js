@@ -40,9 +40,15 @@ async function setupServer() {
       }),
     );
 
+    // Servir archivos estáticos subidos cuando no hay S3
+    app.use("/uploads", express.static("uploads"));
+
     // Configurar charset UTF-8 para evitar problemas con acentos
     app.use((req, res, next) => {
-      res.set("Content-Type", "application/json; charset=utf-8");
+      // Solo forzar JSON para rutas de la API si no se estableció previamente
+      if (req.path.startsWith("/api") && !res.get("Content-Type")) {
+        res.set("Content-Type", "application/json; charset=utf-8");
+      }
       next();
     });
 

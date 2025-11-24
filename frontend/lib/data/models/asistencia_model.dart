@@ -187,29 +187,26 @@ class SesionEntrenamiento {
   });
 
   factory SesionEntrenamiento.fromJson(Map<String, dynamic> json) {
+    // El backend puede devolver la lista de registros con la clave 'registros' o 'asistencias'.
+    final listaRegistrosRaw = (json['registros'] as List<dynamic>?) ?? (json['asistencias'] as List<dynamic>?);
+    final registrosParseados = listaRegistrosRaw
+        ?.map((r) => RegistroAsistencia.fromJson(r as Map<String, dynamic>))
+        .toList() ?? [];
+
     return SesionEntrenamiento(
-      id: json['id']?.toString() ?? '',
+      id: json['id']?.toString() ?? json['sesionId']?.toString() ?? '',
       nombre: json['nombre']?.toString() ?? '',
       categoria: json['categoria']?.toString() ?? json['curso']?.toString() ?? '',
       fechaInicio:
           DateTime.tryParse(json['fechaInicio']?.toString() ?? '') ??
           DateTime.tryParse(json['fecha']?.toString() ?? '') ??
           DateTime.now(),
-      fechaFin:
-          json['fechaFin'] != null
-              ? DateTime.tryParse(json['fechaFin'].toString())
-              : null,
+      fechaFin: json['fechaFin'] != null ? DateTime.tryParse(json['fechaFin'].toString()) : null,
       entrenadorRut: json['entrenadorRut']?.toString() ?? json['rutEntrenador']?.toString() ?? '',
       entrenadorNombre: json['entrenadorNombre']?.toString() ?? json['nombreEntrenador']?.toString() ?? '',
-      registros:
-          (json['registros'] as List<dynamic>?)
-              ?.map(
-                (r) => RegistroAsistencia.fromJson(r as Map<String, dynamic>),
-              )
-              .toList() ??
-          [],
+      registros: registrosParseados,
       descripcion: json['descripcion']?.toString(),
-      finalizada: json['finalizada'] ?? false,
+      finalizada: json['finalizada'] ?? json['estado'] == 'finalizada' || false,
     );
   }
 

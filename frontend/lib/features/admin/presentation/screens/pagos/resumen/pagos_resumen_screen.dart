@@ -54,6 +54,10 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
   String _categoriaSeleccionada = 'Todas';
   bool _soloPendientes = false;
   bool _isLoading = true;
+  
+  // Filtro de búsqueda por nombre
+  String _textoBusqueda = '';
+  final TextEditingController _searchController = TextEditingController();
 
   // Paginación
   int _currentPage = 0;
@@ -73,6 +77,7 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
   @override
   void dispose() {
     _estudianteService.removeListener(_recargarDesdeServicio);
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -129,6 +134,14 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
     List<Map<String, dynamic>> origen,
   ) {
     return origen.where((estudiante) {
+      // Filtro de búsqueda por nombre
+      if (_textoBusqueda.isNotEmpty) {
+        final nombre = estudiante['nombre']?.toString().toLowerCase() ?? '';
+        if (!nombre.contains(_textoBusqueda.toLowerCase())) {
+          return false;
+        }
+      }
+
       if (_cursoSeleccionado != 'Todos') {
         final curso = estudiante['curso']?.toString().toLowerCase() ?? '';
         if (curso != _cursoSeleccionado.toLowerCase()) {
@@ -493,6 +506,43 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
             ),
           ),
           const SizedBox(height: 16),
+          
+          // Campo de búsqueda por nombre
+          TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              labelText: 'Buscar por nombre',
+              hintText: 'Escribe el nombre del estudiante...',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _textoBusqueda.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        setState(() {
+                          _searchController.clear();
+                          _textoBusqueda = '';
+                          _estudiantesFiltrados = _aplicarFiltros(_todosEstudiantes);
+                          _currentPage = 0;
+                        });
+                      },
+                    )
+                  : null,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
+              ),
+            ),
+            onChanged: (valor) {
+              setState(() {
+                _textoBusqueda = valor;
+                _estudiantesFiltrados = _aplicarFiltros(_todosEstudiantes);
+                _currentPage = 0;
+              });
+            },
+          ),
+          const SizedBox(height: 16),
+          
           LayoutBuilder(
             builder: (context, constraints) {
               final isWide = constraints.maxWidth > 720;

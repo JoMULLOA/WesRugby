@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'dart:typed_data';
 import 'package:wesrugby/shared/widgets/layout/wessex_widgets.dart';
 import 'package:wesrugby/core/config/colors.dart';
 import 'package:wesrugby/data/services/voucher_service.dart'; // ignore: avoid_web_libraries_in_flutter
@@ -17,12 +19,31 @@ class HistorialVouchersScreen extends StatefulWidget {
 
 class _HistorialVouchersScreenState extends State<HistorialVouchersScreen> {
   final VoucherService _voucherService = VoucherService();
-  final String _usuarioActual = "Carlos Rodríguez"; // Simular usuario logueado
 
   String _filtroMes = 'Todos';
   String _filtroEstado = 'Todos';
   String _searchText = '';
   final TextEditingController _searchController = TextEditingController();
+  bool _cargando = true;
+  bool _errorCarga = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarDatos();
+  }
+
+  Future<void> _cargarDatos() async {
+    setState(() {
+      _cargando = true;
+      _errorCarga = false;
+    });
+    final exito = await _voucherService.cargarHistorialApoderado();
+    setState(() {
+      _cargando = false;
+      _errorCarga = !exito;
+    });
+  }
 
   @override
   void dispose() {
@@ -41,34 +62,67 @@ class _HistorialVouchersScreenState extends State<HistorialVouchersScreen> {
       appBar: const WessexAppBar(title: 'Historial de Vouchers', elevation: 2),
       body: WessexBackground(
         child: SafeArea(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.all(isDesktop ? 24 : (isTablet ? 20 : 16)),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header informativo
-                _buildStatsHeader(isDesktop, isTablet),
+          child: _cargando
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(color: WessexColors.deepRoyalBlue),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Cargando historial de vouchers...',
+                        style: TextStyle(color: WessexColors.darkGrape),
+                      ),
+                    ],
+                  ),
+                )
+              : _errorCarga
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.error_outline, size: 64, color: WessexColors.crimsonAlert),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Error al cargar el historial',
+                            style: TextStyle(color: WessexColors.darkGrape, fontSize: 18),
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton.icon(
+                            onPressed: _cargarDatos,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Reintentar'),
+                          ),
+                        ],
+                      ),
+                    )
+                  : SingleChildScrollView(
+                      padding: EdgeInsets.all(isDesktop ? 24 : (isTablet ? 20 : 16)),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Header informativo
+                          _buildStatsHeader(isDesktop, isTablet),
 
-                const SizedBox(height: 24),
+                          const SizedBox(height: 24),
 
-                // Filtros
-                _buildFiltersSection(isDesktop, isTablet),
+                          // Filtros
+                          _buildFiltersSection(isDesktop, isTablet),
 
-                const SizedBox(height: 24),
+                          const SizedBox(height: 24),
 
-                // Lista de vouchers
-                _buildVouchersList(isDesktop, isTablet),
-              ],
-            ),
-          ),
+                          // Lista de vouchers
+                          _buildVouchersList(isDesktop, isTablet),
+                        ],
+                      ),
+                    ),
         ),
       ),
     );
   }
 
   Widget _buildStatsHeader(bool isDesktop, bool isTablet) {
-    final vouchers = _voucherService.getVouchersByUser(_usuarioActual);
-    final stats = _getStatsForUser(vouchers);
+    final stats = _voucherService.getStats();
 
     return WessexCard(
       child: Column(
@@ -209,7 +263,7 @@ class _HistorialVouchersScreenState extends State<HistorialVouchersScreen> {
   }
 
   Widget _buildFiltersSection(bool isDesktop, bool isTablet) {
-    final vouchers = _voucherService.getVouchersByUser(_usuarioActual);
+    final vouchers = _voucherService.getAllVouchers();
     final mesesDisponibles = _getMesesDisponibles(vouchers);
 
     return WessexCard(
@@ -419,6 +473,7 @@ class _HistorialVouchersScreenState extends State<HistorialVouchersScreen> {
   ) {
     final estado = voucher['estado'] as String;
 
+      // Prioridad: si tenemos datos en memoria (mock/local)
     Color estadoColor;
     IconData estadoIcon;
 
@@ -462,6 +517,30 @@ class _HistorialVouchersScreenState extends State<HistorialVouchersScreen> {
                       ),
                     ),
                     const SizedBox(height: 4),
+                    if (voucher['alumno'] != null && voucher['alumno'].toString().isNotEmpty) ...[
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.person,
+                            size: 14,
+                            color: WessexColors.deepRoyalBlue.withOpacity(0.7),
+                          ),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              'Alumno: ${voucher['alumno']}',
+                              style: TextStyle(
+                                color: WessexColors.darkGrape.withOpacity(0.7),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                    ],
                     Text(
                       'Mes: ${voucher['mes']}',
                       style: TextStyle(
@@ -685,20 +764,6 @@ class _HistorialVouchersScreenState extends State<HistorialVouchersScreen> {
   }
 
   // Métodos auxiliares
-  Map<String, int> _getStatsForUser(List<Map<String, dynamic>> vouchers) {
-    int total = vouchers.length;
-    int pendientes = vouchers.where((v) => v['estado'] == 'Pendiente').length;
-    int aprobados = vouchers.where((v) => v['estado'] == 'Aprobado').length;
-    int rechazados = vouchers.where((v) => v['estado'] == 'Rechazado').length;
-
-    return {
-      'total': total,
-      'pendientes': pendientes,
-      'aprobados': aprobados,
-      'rechazados': rechazados,
-    };
-  }
-
   List<String> _getMesesDisponibles(List<Map<String, dynamic>> vouchers) {
     Set<String> meses = vouchers.map((v) => v['mes'] as String).toSet();
     List<String> mesesOrdenados = ['Todos', ...meses.toList()];
@@ -732,9 +797,7 @@ class _HistorialVouchersScreenState extends State<HistorialVouchersScreen> {
   }
 
   List<Map<String, dynamic>> _getFilteredVouchers() {
-    List<Map<String, dynamic>> vouchers = _voucherService.getVouchersByUser(
-      _usuarioActual,
-    );
+    List<Map<String, dynamic>> vouchers = _voucherService.getAllVouchers();
 
     return vouchers.where((voucher) {
       bool matchesMes = _filtroMes == 'Todos' || voucher['mes'] == _filtroMes;
@@ -742,7 +805,7 @@ class _HistorialVouchersScreenState extends State<HistorialVouchersScreen> {
           _filtroEstado == 'Todos' || voucher['estado'] == _filtroEstado;
       bool matchesSearch =
           _searchText.isEmpty ||
-          voucher['id'].toLowerCase().contains(_searchText.toLowerCase()) ||
+          voucher['id'].toString().toLowerCase().contains(_searchText.toLowerCase()) ||
           (voucher['descripcion'] ?? '').toLowerCase().contains(
             _searchText.toLowerCase(),
           );
@@ -752,21 +815,194 @@ class _HistorialVouchersScreenState extends State<HistorialVouchersScreen> {
   }
 
   bool _hasAnyVouchers() {
-    return _voucherService.getVouchersByUser(_usuarioActual).isNotEmpty;
+    return _voucherService.getAllVouchers().isNotEmpty;
   }
 
   // Funciones de acción
-  void _viewVoucher(Map<String, dynamic> voucher) {
+  Future<void> _viewVoucher(Map<String, dynamic> voucher) async {
+    // 1. Si ya tenemos bytes en memoria (mock o descarga previa)
     if (voucher['archivoData'] != null) {
-      String fileName = voucher['archivo'] as String;
+      final fileName = (voucher['archivo'] ?? '').toString();
       if (fileName.toLowerCase().endsWith('.pdf')) {
         _showPdfDialog(voucher);
       } else {
         _showImageDialog(voucher);
       }
-    } else {
-      _showFileInfoDialog(voucher);
+      return;
     }
+
+    // 2. Ver si hay URL remota (rutaComprobante)
+    final archivoUrl = (voucher['archivoUrl'] ?? voucher['archivo'] ?? '').toString();
+    if (archivoUrl.isEmpty) {
+      // No hay archivo: mostrar info básica
+      _showFileInfoDialog(voucher);
+      return;
+    }
+
+    final isPdf = archivoUrl.toLowerCase().endsWith('.pdf');
+
+    // 3. En web: abrir directamente sin descargar bytes (optimiza)
+    if (kIsWeb) {
+      if (isPdf) {
+        _openPdfInDialog(archivoUrl, voucher);
+      } else {
+        _openUrlInDialog(archivoUrl);
+      }
+      return;
+    }
+
+    // 4. En mobile/desktop: descargar bytes y mostrar
+    try {
+      final resp = await http.get(Uri.parse(archivoUrl));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        voucher['archivoData'] = resp.bodyBytes; // cache
+        if (isPdf) {
+          _showPdfDialog(voucher);
+        } else {
+          _showImageDialog(voucher);
+        }
+      } else {
+        _showSnackBar('No se pudo cargar archivo (status ${resp.statusCode})', WessexColors.crimsonAlert);
+      }
+    } catch (e) {
+      _showSnackBar('Error cargando archivo: $e', WessexColors.crimsonAlert);
+    }
+  }
+
+  void _openPdfInDialog(String url, Map<String, dynamic> voucher) {
+    if (!kIsWeb) return;
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        child: Container(
+          width: 800,
+          height: 700,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Mi Voucher PDF - ${voucher['mes'] ?? ''}',
+                          style: TextStyle(
+                            color: WessexColors.darkGrape,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Archivo: ${voucher['archivo'] ?? ''}',
+                          style: TextStyle(
+                            color: WessexColors.darkGrape.withOpacity(0.7),
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => _downloadVoucher(voucher),
+                        icon: Icon(Icons.download),
+                        tooltip: 'Descargar PDF',
+                        style: IconButton.styleFrom(
+                          backgroundColor: WessexColors.deepRoyalBlue.withOpacity(0.1),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: Icon(Icons.close),
+                        tooltip: 'Cerrar',
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: WessexColors.mistyRoseGray.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: WessexColors.mistyRoseGray),
+                  ),
+                  child: _buildWebPdfViewer(url, voucher),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWebPdfViewer(String url, Map<String, dynamic> voucher) {
+    try {
+      final String viewId = 'pdf-viewer-${voucher['id']}-historial-${DateTime.now().millisecondsSinceEpoch}';
+      
+      // ignore: undefined_prefixed_name
+      ui_web.platformViewRegistry.registerViewFactory(viewId, (int viewId) {
+        final iframe = html.IFrameElement()
+          ..src = url
+          ..style.border = 'none'
+          ..style.width = '100%'
+          ..style.height = '100%';
+        return iframe;
+      });
+
+      return HtmlElementView(viewType: viewId);
+    } catch (e) {
+      print('Error creando visor PDF: $e');
+      return Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error, size: 64, color: WessexColors.crimsonAlert),
+          const SizedBox(height: 16),
+          Text(
+            'Error al cargar PDF',
+            style: TextStyle(
+              color: WessexColors.darkGrape,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: () => _downloadVoucher(voucher),
+            icon: Icon(Icons.download),
+            label: Text('Descargar PDF'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: WessexColors.deepRoyalBlue,
+              foregroundColor: WessexColors.white,
+            ),
+          ),
+        ],
+      );
+    }
+  }
+
+  void _openUrlInDialog(String url) {
+    if (!kIsWeb) return;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        content: SizedBox(
+          width: 600,
+          height: 600,
+          child: Image.network(url, fit: BoxFit.contain),
+        ),
+      ),
+    );
   }
 
   void _downloadVoucher(Map<String, dynamic> voucher) {

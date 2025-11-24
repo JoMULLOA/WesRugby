@@ -9,6 +9,7 @@ import {
   eliminarComprobante,
   obtenerInscripcionesApoderado,
   subirVoucherMensualidadApoderado,
+  subirVoucherMatriculaApoderado,
   obtenerHistorialApoderado,
   reenviarComprobanteApoderado,
   obtenerMesesNoPagados2025,
@@ -56,12 +57,27 @@ router.get(
   obtenerHistorialApoderado,
 );
 
+router.get(
+  "/apoderado/mis-vouchers",
+  authenticateJwt,
+  isApoderado,
+  obtenerHistorialApoderado,
+);
+
 router.post(
   "/apoderado/voucher-mensualidad",
   authenticateJwt,
   isApoderado,
   uploadVoucherComprobante.single("voucher"),
   subirVoucherMensualidadApoderado,
+);
+
+router.post(
+  "/apoderado/voucher-matricula",
+  authenticateJwt,
+  isApoderado,
+  uploadVoucherComprobante.single("voucher"),
+  subirVoucherMatriculaApoderado,
 );
 
 router.post(

@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:wesrugby/core/config/confGlobal.dart';
 import 'package:wesrugby/data/models/asistencia_model.dart';
 import 'package:wesrugby/data/services/tokenManager.dart';
+import 'dart:html' as html show Blob, Url, AnchorElement;
 
 class AsistenciaService {
   static String get baseUrl => confGlobal.baseUrl;
@@ -52,7 +53,7 @@ class AsistenciaService {
       }
 
       final response = await http.get(
-        Uri.parse('$baseUrl/categorias'),
+        Uri.parse('$baseUrl/sesiones-asistencia/categorias'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -61,14 +62,35 @@ class AsistenciaService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        return List<String>.from(data['categorias'] ?? []);
+        final cats = List<String>.from(data['categorias'] ?? []);
+        return _ordenarCategorias(cats);
       } else {
         throw Exception('Error al obtener categorías: ${response.statusCode}');
       }
     } catch (e) {
       print('Error en obtenerCategorias: $e');
-      return ['Sub-18', 'Sub-16', 'Sub-14', 'Senior', 'Veteranos'];
+      // Mock previo: ajustamos orden si contiene formato M#
+      final mock = ['M6', 'M8', 'M10', 'M12'];
+      return _ordenarCategorias(mock);
     }
+  }
+
+  /// Ordena categorías tipo M6, M8, M10, M12 en orden ascendente.
+  static List<String> _ordenarCategorias(List<String> categorias) {
+    final regex = RegExp(r'^[Mm](\d+)$');
+    categorias.sort((a, b) {
+      final ma = regex.firstMatch(a.trim());
+      final mb = regex.firstMatch(b.trim());
+      if (ma != null && mb != null) {
+        final na = int.parse(ma.group(1)!);
+        final nb = int.parse(mb.group(1)!);
+        return na.compareTo(nb);
+      }
+      if (ma != null) return -1; // Priorizar formateadas sobre otras
+      if (mb != null) return 1;
+      return a.compareTo(b);
+    });
+    return categorias;
   }
 
   /// Inicia una nueva sesión de entrenamiento
@@ -246,6 +268,7 @@ class AsistenciaService {
     String? categoria,
     DateTime? fechaInicio,
     DateTime? fechaFin,
+    bool todasLasSesiones = false, // Para directiva
   }) async {
     try {
       final token = await TokenManager.getToken();
@@ -253,11 +276,16 @@ class AsistenciaService {
         throw Exception('No hay token de autenticación');
       }
 
-      String url = '$baseUrl/asistencia/sesiones';
+      // Si es directiva, usar endpoint diferente
+      String url = todasLasSesiones 
+          ? '$baseUrl/sesiones-asistencia/todas'
+          : '$baseUrl/sesiones-asistencia/mis-sesiones';
+      
       List<String> params = [];
 
       if (categoria != null && categoria.isNotEmpty) {
-        params.add('categoria=$categoria');
+        // El backend espera 'curso' pero puede aceptar ambos
+        params.add('curso=$categoria');
       }
       if (fechaInicio != null) {
         params.add('fechaInicio=${fechaInicio.toIso8601String()}');
@@ -269,6 +297,9 @@ class AsistenciaService {
       if (params.isNotEmpty) {
         url += '?${params.join('&')}';
       }
+      
+      print('🔍 DEBUG - URL final: $url');
+      print('🔍 DEBUG - todasLasSesiones: $todasLasSesiones');
 
       final response = await http.get(
         Uri.parse(url),
@@ -280,13 +311,20 @@ class AsistenciaService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        print('📊 Respuesta del servidor: ${data.toString().substring(0, 200)}...');
+        print('📊 Respuesta del servidor: ${data.toString().substring(0, data.toString().length > 200 ? 200 : data.toString().length)}...');
         
         final List<dynamic> sesionesJson = data['data'] ?? data['sesiones'] ?? [];
         print('✅ Sesiones recibidas: ${sesionesJson.length}');
         
         if (sesionesJson.isNotEmpty) {
-          print('📋 Primera sesión: ${sesionesJson[0]}');
+          print('📋 Primera sesión completa: ${sesionesJson[0]}');
+          if (sesionesJson[0]['registros'] != null) {
+            print('✅ Registros en primera sesión: ${sesionesJson[0]['registros'].length}');
+          } else if (sesionesJson[0]['asistencias'] != null) {
+            print('✅ Asistencias en primera sesión: ${sesionesJson[0]['asistencias'].length}');
+          } else {
+            print('⚠️ No hay registros ni asistencias en la primera sesión');
+          }
         }
 
         return sesionesJson
@@ -391,16 +429,22 @@ class AsistenciaService {
         throw Exception('No hay token de autenticación');
       }
 
+      // Alinear claves: el backend podría esperar 'registros' en lugar de 'asistencias'.
+      final payload = Map<String, dynamic>.from(sesionData);
+      if (payload.containsKey('asistencias') && !payload.containsKey('registros')) {
+        payload['registros'] = payload['asistencias'];
+      }
+
       final response = await http.post(
         Uri.parse('$baseUrl/sesiones-asistencia'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: jsonEncode(sesionData),
+        body: jsonEncode(payload),
       );
 
-      if (response.statusCode == 201) {
+      if (response.statusCode == 201 || response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return data;
       } else {
@@ -471,6 +515,46 @@ class AsistenciaService {
     } catch (e) {
       print('Error al obtener detalle de sesión: $e');
       throw Exception('Error al obtener los detalles de la sesión');
+    }
+  }
+
+  /// Exportar historial de asistencia a Excel
+  static Future<void> exportarHistorialExcel(
+    List<SesionEntrenamiento> sesiones, {
+    String? categoria,
+  }) async {
+    try {
+      // Crear CSV manualmente (simulación de Excel)
+      final buffer = StringBuffer();
+      
+      // Encabezados
+      buffer.writeln('Fecha,Nombre Sesión,Categoría,Estudiante,RUT,Estado,Observaciones');
+      
+      // Datos
+      for (var sesion in sesiones) {
+        final fecha = '${sesion.fechaInicio.day}/${sesion.fechaInicio.month}/${sesion.fechaInicio.year}';
+        for (var registro in sesion.registros) {
+          buffer.writeln(
+            '$fecha,"${sesion.nombre}",${sesion.categoria},"${registro.nombreAlumno}",${registro.rutAlumno},${registro.estado.name},"${registro.observaciones ?? ''}"',
+          );
+        }
+      }
+      
+      final csvContent = buffer.toString();
+      final bytes = utf8.encode(csvContent);
+      
+      // Descargar usando HTML
+      final blob = html.Blob([bytes], 'text/csv');
+      final url = html.Url.createObjectUrlFromBlob(blob);
+      html.AnchorElement(href: url)
+        ..setAttribute('download', 'historial_asistencia_${DateTime.now().millisecondsSinceEpoch}.csv')
+        ..click();
+      html.Url.revokeObjectUrl(url);
+      
+      print('✅ Historial exportado correctamente');
+    } catch (e) {
+      print('❌ Error exportando historial: $e');
+      throw Exception('Error al exportar historial: $e');
     }
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:wesrugby/shared/widgets/layout/wessex_widgets.dart';
 import 'package:wesrugby/core/config/colors.dart';
 import 'package:wesrugby/data/services/justificante_service.dart';
+import 'package:http/http.dart' as http;
 import 'dart:typed_data';
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html' as html;
@@ -29,6 +30,30 @@ class _GestionJustificantesScreenState
 
   // Estado UI
   bool _mostrarFiltros = false;
+  bool _cargando = true;
+  bool _error = false;
+
+  // Estado local para selección de meses de exención por justificante
+  final Map<String, Set<String>> _exencionMesesSeleccionados = {};
+  final Map<String, bool> _exencionGuardando = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarDatos();
+  }
+
+  Future<void> _cargarDatos() async {
+    setState(() {
+      _cargando = true;
+      _error = false;
+    });
+    final exito = await _justificanteService.cargarJustificantesPersistentesDirectiva();
+    setState(() {
+      _cargando = false;
+      _error = !exito;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -646,6 +671,12 @@ class _GestionJustificantesScreenState
                       ],
                     ),
                   ),
+
+                  // Sección meses de exención (solo aprobados)
+                  if (justificante['estado'] == 'Aprobado') ...[
+                    const SizedBox(height: 16),
+                    _buildMesesExencionSection(justificante),
+                  ],
                 ],
               ),
             );
@@ -690,11 +721,192 @@ class _GestionJustificantesScreenState
   }
 
   Future<void> _viewJustificante(Map<String, dynamic> justificante) async {
-    if (justificante['archivoData'] != null && kIsWeb) {
+    // 1. Si ya tiene datos en cache, usarlos
+    if (justificante['archivoData'] != null) {
       _showFileDialog(justificante);
-    } else {
-      _showErrorSnackBar('No hay archivo disponible para mostrar');
+      return;
     }
+
+    // 2. Ver si hay URL para descargar
+    final archivoUrl = (justificante['archivoUrl'] ?? justificante['archivo'] ?? '').toString();
+    if (archivoUrl.isEmpty) {
+      _showErrorSnackBar('No hay archivo disponible');
+      return;
+    }
+
+    final isPdf = archivoUrl.toLowerCase().endsWith('.pdf');
+
+    // 3. En web: usar iframe directamente sin descargar bytes
+    if (kIsWeb) {
+      if (isPdf) {
+        _openPdfInDialog(archivoUrl, justificante);
+      } else {
+        _openImageInDialog(archivoUrl);
+      }
+      return;
+    }
+
+    // 4. En mobile/desktop: descargar bytes primero
+    try {
+      final resp = await http.get(Uri.parse(archivoUrl));
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        justificante['archivoData'] = resp.bodyBytes;
+        _showFileDialog(justificante);
+      } else {
+        _showErrorSnackBar('No se pudo cargar archivo (status ${resp.statusCode})');
+      }
+    } catch (e) {
+      print('Error descargando archivo: $e');
+      _showErrorSnackBar('Error al cargar archivo');
+    }
+  }
+
+  void _openPdfInDialog(String url, Map<String, dynamic> justificante) {
+    if (!kIsWeb) return;
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        child: Container(
+          width: 800,
+          height: 700,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Justificante PDF - ${justificante['alumno'] ?? ''}',
+                          style: TextStyle(
+                            color: WessexColors.darkGrape,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Archivo: ${justificante['archivo'] ?? ''}',
+                          style: TextStyle(
+                            color: WessexColors.darkGrape.withOpacity(0.7),
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(Icons.close),
+                    tooltip: 'Cerrar',
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: WessexColors.mistyRoseGray.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: WessexColors.mistyRoseGray),
+                  ),
+                  child: _buildWebPdfViewer(url, justificante),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWebPdfViewer(String url, Map<String, dynamic> justificante) {
+    try {
+      final String viewId = 'pdf-viewer-${justificante['id']}-gestion-${DateTime.now().millisecondsSinceEpoch}';
+      
+      // ignore: undefined_prefixed_name
+      ui_web.platformViewRegistry.registerViewFactory(viewId, (int viewId) {
+        final iframe = html.IFrameElement()
+          ..src = url
+          ..style.border = 'none'
+          ..style.width = '100%'
+          ..style.height = '100%';
+        return iframe;
+      });
+
+      return HtmlElementView(viewType: viewId);
+    } catch (e) {
+      print('Error creando visor PDF: $e');
+      return Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error, size: 64, color: WessexColors.crimsonAlert),
+          const SizedBox(height: 16),
+          Text(
+            'Error al cargar PDF',
+            style: TextStyle(
+              color: WessexColors.darkGrape,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      );
+    }
+  }
+
+  void _openImageInDialog(String url) {
+    if (!kIsWeb) return;
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        child: Container(
+          width: 800,
+          height: 700,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Vista de Imagen',
+                    style: TextStyle(
+                      color: WessexColors.darkGrape,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(Icons.close),
+                    tooltip: 'Cerrar',
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: WessexColors.mistyRoseGray.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: WessexColors.mistyRoseGray),
+                  ),
+                  child: Image.network(url, fit: BoxFit.contain),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _showFileDialog(Map<String, dynamic> justificante) {
@@ -860,9 +1072,10 @@ class _GestionJustificantesScreenState
 
   Future<void> _approveJustificante(String id) async {
     try {
-      bool success = _justificanteService.approveJustificante(id);
+      bool success = await _justificanteService.actualizarEstadoJustificantePersistente(id, 'aprobado');
       if (success) {
-        setState(() {});
+        // Optimistic update: recargar datos inmediatamente tras éxito
+        await _cargarDatos();
         _showSuccessSnackBar('Justificante aprobado correctamente');
       } else {
         _showErrorSnackBar('Error al aprobar el justificante');
@@ -877,9 +1090,10 @@ class _GestionJustificantesScreenState
     String? motivo = await _showRejectDialog();
     if (motivo != null && motivo.isNotEmpty) {
       try {
-        bool success = _justificanteService.rejectJustificante(id, motivo);
+        bool success = await _justificanteService.actualizarEstadoJustificantePersistente(id, 'rechazado', motivoRechazo: motivo);
         if (success) {
-          setState(() {});
+          // Recargar datos inmediatamente tras éxito
+          await _cargarDatos();
           _showSuccessSnackBar('Justificante rechazado');
         } else {
           _showErrorSnackBar('Error al rechazar el justificante');
@@ -888,6 +1102,132 @@ class _GestionJustificantesScreenState
         _showErrorSnackBar('Error: ${e.toString()}');
       }
     }
+  }
+
+  Widget _buildMesesExencionSection(Map<String, dynamic> justificante) {
+    final id = justificante['id'].toString();
+    final fechaInicioStr = justificante['fechaInicio']?.toString();
+    final fechaFinStr = justificante['fechaFin']?.toString();
+    if (fechaInicioStr == null || fechaInicioStr.isEmpty) {
+      return const SizedBox();
+    }
+    final inicio = DateTime.tryParse(fechaInicioStr);
+    final finTmp = DateTime.tryParse(fechaFinStr ?? fechaInicioStr);
+    if (inicio == null) return const SizedBox();
+    final fin = finTmp ?? inicio;
+    final mesesRango = <String>[];
+    var cursor = DateTime(inicio.year, inicio.month);
+    final limite = DateTime(fin.year, fin.month);
+    while (cursor.isBefore(limite.add(const Duration(days: 1)))) {
+      final m = '${cursor.year}-${cursor.month.toString().padLeft(2, '0')}';
+      mesesRango.add(m);
+      cursor = DateTime(cursor.year, cursor.month + 1);
+    }
+    final actuales = (justificante['mesesExencion'] as List?)?.map((e) => e.toString()).toSet() ?? <String>{};
+    _exencionMesesSeleccionados.putIfAbsent(id, () => {...actuales});
+    final seleccion = _exencionMesesSeleccionados[id]!;
+    final hayCambios = seleccion.length != actuales.length || !seleccion.containsAll(actuales);
+    final guardando = _exencionGuardando[id] == true;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: WessexColors.leafGreen.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: WessexColors.leafGreen.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.medical_information, color: WessexColors.leafGreen, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Exención de Pago (Cert. Médico): Selecciona meses del rango para eximir',
+                  style: TextStyle(
+                    color: WessexColors.darkGrape,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: mesesRango.map((mes) {
+              final seleccionado = seleccion.contains(mes);
+              return FilterChip(
+                label: Text(mes),
+                selected: seleccionado,
+                onSelected: guardando ? null : (v) {
+                  setState(() {
+                    if (v) {
+                      seleccion.add(mes);
+                    } else {
+                      seleccion.remove(mes);
+                    }
+                  });
+                },
+                selectedColor: WessexColors.leafGreen,
+                checkmarkColor: WessexColors.white,
+                labelStyle: TextStyle(
+                  color: seleccionado ? WessexColors.white : WessexColors.darkGrape,
+                  fontWeight: FontWeight.w500,
+                ),
+                backgroundColor: seleccionado ? WessexColors.leafGreen : WessexColors.leafGreen.withOpacity(0.15),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: (!hayCambios || guardando)
+                      ? null
+                      : () async {
+                          setState(() { _exencionGuardando[id] = true; });
+                          final ok = await _justificanteService.actualizarMesesExencion(id, seleccion.toList()..sort());
+                          setState(() { _exencionGuardando[id] = false; });
+                          if (ok) {
+                            _showSuccessSnackBar('Meses de exención guardados');
+                          } else {
+                            _showErrorSnackBar('Error guardando meses de exención');
+                          }
+                        },
+                  icon: guardando ? const SizedBox(width:16,height:16,child:CircularProgressIndicator(strokeWidth:2)) : Icon(Icons.save, size: 16),
+                  label: Text(hayCambios ? 'Guardar Exenciones' : 'Sin cambios'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: WessexColors.leafGreen,
+                    foregroundColor: WessexColors.white,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              if (hayCambios && !guardando)
+                OutlinedButton.icon(
+                  onPressed: () {
+                    setState(() { _exencionMesesSeleccionados[id] = {...actuales}; });
+                  },
+                  icon: Icon(Icons.refresh, size: 16),
+                  label: const Text('Reiniciar'),
+                ),
+            ],
+          ),
+          if (actuales.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Meses actualmente exentos: ${actuales.toList()..sort()}',
+              style: TextStyle(color: WessexColors.darkGrape.withOpacity(0.7), fontSize: 12),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   Future<String?> _showRejectDialog() async {

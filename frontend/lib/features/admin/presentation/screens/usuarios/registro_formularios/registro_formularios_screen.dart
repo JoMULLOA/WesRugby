@@ -449,6 +449,22 @@ class _RegistroFormulariosScreenState extends State<RegistroFormulariosScreen> {
             ],
           ),
           const SizedBox(height: 16),
+          Center(
+            child: ElevatedButton.icon(
+              onPressed: _downloadTemplate,
+              icon: const Icon(Icons.download),
+              label: const Text('Descargar Plantilla Base'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: WessexColors.leafGreen,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 16,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
 
           Text(
             'El archivo Excel debe ser exportado directamente desde Google Forms y contener las siguientes columnas en orden:',
@@ -545,6 +561,13 @@ class _RegistroFormulariosScreenState extends State<RegistroFormulariosScreen> {
         ],
       ),
     );
+  }
+
+  void _downloadTemplate() {
+    const url = 'formBase.xlsx';
+    html.AnchorElement(href: url)
+      ..setAttribute('download', 'plantilla_registro.xlsx')
+      ..click();
   }
 
   Future<void> _pickFile() async {

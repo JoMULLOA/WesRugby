@@ -7,13 +7,20 @@ import {
   obtenerEstadisticasAsistencia,
   eliminarAsistencia
 } from "../controllers/asistencia.controller.js";
+import {
+  subirJustificanteAsistencia,
+  obtenerJustificacionesApoderado,
+  obtenerAsistenciasPendientesJustificacion
+} from "../controllers/asistenciaJustificacion.controller.js";
 
 import { authenticateJwt } from "../middlewares/authentication.middleware.js";
 import {
   isDirectiva,
   isEntrenador,
-  isAuthenticated
+  isAuthenticated,
+  isApoderado
 } from "../middlewares/authorization.middleware.js";
+import { uploadJustificacionAsistencia } from "../middlewares/upload.middleware.js";
 
 const router = Router();
 
@@ -34,5 +41,30 @@ router.get("/estadisticas/resumen", authenticateJwt, isAuthenticated, obtenerEst
 
 // Eliminar asistencia (Solo Directiva)
 router.delete("/:id", authenticateJwt, isDirectiva, eliminarAsistencia);
+
+// Subir justificante (Apoderado sobre su alumno)
+router.post(
+  "/:id/justificacion",
+  authenticateJwt,
+  isApoderado,
+  uploadJustificacionAsistencia.single("justificante"),
+  subirJustificanteAsistencia
+);
+
+// Listar justificantes del apoderado
+router.get(
+  "/apoderado/justificaciones",
+  authenticateJwt,
+  isApoderado,
+  obtenerJustificacionesApoderado
+);
+
+// Obtener asistencias pendientes de justificación
+router.get(
+  "/apoderado/asistencias-pendientes",
+  authenticateJwt,
+  isApoderado,
+  obtenerAsistenciasPendientesJustificacion
+);
 
 export default router;

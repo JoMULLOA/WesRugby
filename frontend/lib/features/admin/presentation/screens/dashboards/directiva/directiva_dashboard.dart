@@ -13,8 +13,11 @@ import 'package:wesrugby/features/admin/presentation/screens/eventos/gestion/ges
 import 'package:wesrugby/features/admin/presentation/screens/actas/gestion/gestion_actas_reunion_screen.dart';
 import 'package:wesrugby/features/admin/presentation/screens/informacion_publica/gestion_informacion_publica_screen.dart';
 import 'package:wesrugby/features/admin/presentation/screens/eventos/multimedia/multimedia_overview_screen.dart';
+import 'package:wesrugby/features/admin/presentation/screens/pagos/resumen/pagos_resumen_screen.dart';
 import 'package:wesrugby/features/inventory/presentation/screens/management/inventory_management_screen.dart';
 import 'package:wesrugby/features/auth/presentation/screens/simple_login/simple_login.dart' as login;
+import 'package:wesrugby/features/admin/presentation/screens/terminos/terminos_gestion_screen.dart';
+import 'package:wesrugby/features/admin/presentation/screens/asistencia/estadisticas/estadisticas_asistencia_screen.dart';
 
 class DirectivaDashboard extends StatefulWidget {
   const DirectivaDashboard({super.key});
@@ -610,6 +613,42 @@ class _DirectivaDashboardState extends State<DirectivaDashboard> {
 
                 const SizedBox(height: 12),
 
+                // Quinta fila: Estadísticas de Asistencia
+                _buildActionCard(
+                  'Estadísticas de Asistencia',
+                  'Ver análisis y tendencias de asistencia',
+                  Icons.analytics,
+                  WessexColors.deepRoyalBlue,
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const EstadisticasAsistenciaScreen(),
+                    ),
+                  ),
+                  isDesktop: isDesktop,
+                  isTablet: isTablet,
+                ),
+
+                const SizedBox(height: 12),
+
+                // Resumen de Pagos
+                _buildActionCard(
+                  'Resumen de Pagos',
+                  'Consultar estado de pagos de estudiantes',
+                  Icons.payments,
+                  WessexColors.leafGreen,
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const PagosResumenScreen(),
+                    ),
+                  ),
+                  isDesktop: isDesktop,
+                  isTablet: isTablet,
+                ),
+
+                const SizedBox(height: 12),
+
                 // Cuarta fila: Actas de Reunión
                 _buildActionCard(
                   'Actas de Reunión',
@@ -664,6 +703,32 @@ class _DirectivaDashboardState extends State<DirectivaDashboard> {
                         isTablet: isTablet,
                       ),
                     ),
+                  ],
+                ),
+
+                const SizedBox(height: 12),
+
+                // Sexta fila: Términos y Condiciones
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildActionCard(
+                        'Términos y Condiciones',
+                        'Gestionar términos y condiciones del club',
+                        Icons.description,
+                        WessexColors.leafGreen,
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const TerminosGestionScreen(),
+                          ),
+                        ),
+                        isDesktop: isDesktop,
+                        isTablet: isTablet,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(child: Container()), // Espacio vacío para mantener el grid
                   ],
                 ),
 

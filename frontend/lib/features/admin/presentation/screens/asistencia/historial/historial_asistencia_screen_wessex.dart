@@ -3,6 +3,8 @@ import 'package:wesrugby/data/models/asistencia_model.dart';
 import 'package:wesrugby/data/services/asistencia_service.dart';
 import 'package:wesrugby/core/config/colors.dart';
 import 'package:wesrugby/shared/widgets/layout/wessex_widgets.dart';
+import 'package:wesrugby/features/admin/presentation/screens/asistencia/tomar/tomar_asistencia_screen.dart';
+import 'package:wesrugby/features/admin/presentation/screens/justificantes/entrenador/justificados_activos_screen.dart';
 
 class HistorialAsistenciaScreen extends StatefulWidget {
   const HistorialAsistenciaScreen({super.key});
@@ -58,6 +60,26 @@ class _HistorialAsistenciaScreenState extends State<HistorialAsistenciaScreen> {
     );
   }
 
+  Future<void> _exportarSesionIndividual(SesionEntrenamiento sesion) async {
+    try {
+      await AsistenciaService.exportarHistorialExcel(
+        [sesion], // Solo esta sesión
+        categoria: sesion.categoria,
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('✅ ${sesion.nombre} descargado'),
+          backgroundColor: WessexColors.leafGreen,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      );
+    } catch (e) {
+      _mostrarError('Error al exportar: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
@@ -66,9 +88,15 @@ class _HistorialAsistenciaScreenState extends State<HistorialAsistenciaScreen> {
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: const WessexAppBar(
+      appBar: WessexAppBar(
         title: 'Historial de Asistencia',
         elevation: 2,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: WessexColors.white),
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+        ),
       ),
       body: WessexBackground(
         child: SafeArea(
@@ -80,11 +108,55 @@ class _HistorialAsistenciaScreenState extends State<HistorialAsistenciaScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const WessexSectionTitle(
-                      title: 'Historial de Sesiones',
-                      subtitle:
-                          'Consultar registros de entrenamientos anteriores',
-                      titleColor: WessexColors.white,
+                    // Botones de acceso rápido
+                    WessexCard(
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const TomarAsistenciaScreen(),
+                                  ),
+                                );
+                              },
+                              icon: Icon(Icons.how_to_reg, size: 18, color: WessexColors.deepRoyalBlue),
+                              label: Text(
+                                'Tomar Asistencia',
+                                style: TextStyle(fontSize: 13, color: WessexColors.deepRoyalBlue),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(color: WessexColors.deepRoyalBlue),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const JustificadosActivosScreen(),
+                                  ),
+                                );
+                              },
+                              icon: Icon(Icons.check_circle, size: 18, color: WessexColors.leafGreen),
+                              label: Text(
+                                'Justificados',
+                                style: TextStyle(fontSize: 13, color: WessexColors.leafGreen),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(color: WessexColors.leafGreen),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 20),
 
@@ -289,6 +361,16 @@ class _HistorialAsistenciaScreenState extends State<HistorialAsistenciaScreen> {
                     Icons.chevron_right,
                     color: WessexColors.darkGrape.withOpacity(0.5),
                     size: isDesktop ? 24 : (isTablet ? 22 : 20),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    onPressed: () => _exportarSesionIndividual(sesion),
+                    icon: Icon(
+                      Icons.download,
+                      color: WessexColors.primaryAction,
+                      size: isDesktop ? 24 : (isTablet ? 22 : 20),
+                    ),
+                    tooltip: 'Descargar en Excel',
                   ),
                 ],
               ),
