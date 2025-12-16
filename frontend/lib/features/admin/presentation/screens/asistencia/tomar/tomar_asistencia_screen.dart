@@ -805,286 +805,8 @@ class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
 
           const SizedBox(height: 20),
 
-          // Header de la tabla
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: WessexColors.deepRoyalBlue.withOpacity(0.1),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(8),
-                topRight: Radius.circular(8),
-              ),
-            ),
-            child: Row(
-              children: [
-                const SizedBox(width: 30), // N°
-                const SizedBox(width: 80), // RUT
-                Expanded(
-                  child: Text(
-                    'Alumno',
-                    style: TextStyle(
-                      color: WessexColors.darkGrape,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                SizedBox(
-                  width: 120,
-                  child: Text(
-                    'Asistencia',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: WessexColors.darkGrape,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                SizedBox(
-                  width: 50,
-                  child: Text(
-                    'Just.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: WessexColors.darkGrape,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                SizedBox(
-                  width: 60,
-                  child: Text(
-                    'Obs.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: WessexColors.darkGrape,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Filas de estudiantes
-          Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(8),
-                bottomRight: Radius.circular(8),
-              ),
-            ),
-            child: Column(
-              children: estudiantes.asMap().entries.map((entry) {
-                final index = entry.key;
-                final estudiante = entry.value;
-                final rut = estudiante['rut'];
-                final estadoAsistencia = _asistenciaEstudiantes[rut] ?? 'presente';
-                final tieneObservaciones = _observacionesEstudiantes.containsKey(rut);
-                final isLastItem = index == estudiantes.length - 1;
-
-                return Container(
-                  decoration: BoxDecoration(
-                    color: index % 2 == 0 ? Colors.white : Colors.grey.shade50,
-                    border: isLastItem ? null : Border(
-                      bottom: BorderSide(color: Colors.grey.shade200, width: 1),
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                        child: Row(
-                          children: [
-                            // Número
-                            SizedBox(
-                              width: 30,
-                              child: Text(
-                                '${index + 1}',
-                                style: TextStyle(
-                                  color: WessexColors.darkGrape.withOpacity(0.7),
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                            // RUT
-                            SizedBox(
-                              width: 80,
-                              child: Text(
-                                rut.toString(),
-                                style: TextStyle(
-                                  color: WessexColors.darkGrape.withOpacity(0.7),
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                            // Nombre
-                            Expanded(
-                              child: Text(
-                                estudiante['nombre'] ?? 'Sin nombre',
-                                style: TextStyle(
-                                  color: WessexColors.darkGrape,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            // Switch Presente/Ausente
-                            SizedBox(
-                              width: 120,
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    'A',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      color: estadoAsistencia == 'ausente' 
-                                          ? WessexColors.crimsonAlert 
-                                          : Colors.grey,
-                                    ),
-                                  ),
-                                  Switch(
-                                    value: estadoAsistencia == 'presente',
-                                    onChanged: (value) {
-                                      setState(() {
-                                        _asistenciaEstudiantes[rut] = value ? 'presente' : 'ausente';
-                                      });
-                                    },
-                                    activeColor: WessexColors.leafGreen,
-                                    inactiveThumbColor: WessexColors.crimsonAlert,
-                                    inactiveTrackColor: WessexColors.crimsonAlert.withOpacity(0.3),
-                                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                  ),
-                                  Text(
-                                    'P',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      color: estadoAsistencia == 'presente' 
-                                          ? WessexColors.leafGreen 
-                                          : Colors.grey,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            // Botón Justificado
-                            SizedBox(
-                              width: 50,
-                              child: IconButton(
-                                onPressed: _estadoForzadoPorJustificante[rut] == true
-                                    ? null // Deshabilitado si está forzado por justificante aprobado
-                                    : () {
-                                        setState(() {
-                                          _asistenciaEstudiantes[rut] = 
-                                              estadoAsistencia == 'justificado' ? 'ausente' : 'justificado';
-                                        });
-                                      },
-                                icon: Icon(
-                                  estadoAsistencia == 'justificado' 
-                                      ? Icons.check_circle 
-                                      : Icons.radio_button_unchecked,
-                                  color: estadoAsistencia == 'justificado'
-                                      ? (_estadoForzadoPorJustificante[rut] == true
-                                          ? WessexColors.leafGreen // Verde si es forzado (justificante aprobado)
-                                          : WessexColors.deepRoyalBlue)
-                                      : Colors.grey.shade400,
-                                  size: 20,
-                                ),
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
-                                tooltip: _estadoForzadoPorJustificante[rut] == true
-                                    ? 'Justificado (cert. médico aprobado)'
-                                    : 'Justificado',
-                              ),
-                            ),
-                            // Switch Observaciones
-                            SizedBox(
-                              width: 60,
-                              child: Transform.scale(
-                                scale: 0.8,
-                                child: Switch(
-                                  value: tieneObservaciones,
-                                  onChanged: (value) {
-                                    setState(() {
-                                      if (value) {
-                                        _observacionesEstudiantes[rut] = '';
-                                      } else {
-                                        _observacionesEstudiantes.remove(rut);
-                                      }
-                                    });
-                                  },
-                                  activeColor: WessexColors.darkGrape,
-                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      // Campo de observaciones (si está activado)
-                      if (tieneObservaciones)
-                        Container(
-                          padding: const EdgeInsets.fromLTRB(54, 4, 12, 12),
-                          child: TextFormField(
-                            initialValue: _observacionesEstudiantes[rut],
-                            autofocus: false,
-                            decoration: InputDecoration(
-                              labelText: 'Observaciones',
-                              hintText: 'Escribe aquí cualquier observación...',
-                              filled: true,
-                              fillColor: Colors.grey.shade50,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: WessexColors.darkGrape.withOpacity(0.3)),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: Colors.grey.shade400, width: 1.5),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: WessexColors.deepRoyalBlue, width: 2),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 10,
-                              ),
-                              isDense: true,
-                              labelStyle: TextStyle(
-                                color: WessexColors.darkGrape.withOpacity(0.7),
-                                fontSize: 13,
-                              ),
-                              hintStyle: TextStyle(
-                                color: Colors.grey.shade400,
-                                fontSize: 12,
-                              ),
-                            ),
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: WessexColors.darkGrape,
-                            ),
-                            maxLines: 2,
-                            minLines: 2,
-                            onChanged: (value) {
-                              _observacionesEstudiantes[rut] = value;
-                            },
-                          ),
-                        ),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
+          // Tabla Responsiva
+          _buildResponsiveTable(estudiantes),
 
           // Leyenda
           const SizedBox(height: 12),
@@ -1158,6 +880,341 @@ class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildResponsiveTable(List<Map<String, dynamic>> estudiantes) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool isScrollable = constraints.maxWidth < 700; 
+
+        Widget tableContent = Column(
+          children: [
+             _buildTableHeader(isScrollable),
+             _buildTableRows(estudiantes, isScrollable),
+          ],
+        );
+
+        if (isScrollable) {
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: SizedBox(
+              width: 700, 
+              child: tableContent,
+            ),
+          );
+        }
+        
+        return tableContent;
+      },
+    );
+  }
+
+  Widget _buildTableHeader(bool isScrollable) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: WessexColors.deepRoyalBlue.withOpacity(0.1),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(8),
+          topRight: Radius.circular(8),
+        ),
+      ),
+      child: Row(
+        children: [
+          const SizedBox(width: 30), // N°
+          const SizedBox(width: 80), // RUT
+          isScrollable
+              ? SizedBox(
+                  width: 200,
+                  child: Text(
+                    'Alumno',
+                    style: TextStyle(
+                      color: WessexColors.darkGrape,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                )
+              : Expanded(
+                  child: Text(
+                    'Alumno',
+                    style: TextStyle(
+                      color: WessexColors.darkGrape,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+          SizedBox(
+            width: 120,
+            child: Text(
+              'Asistencia',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: WessexColors.darkGrape,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          SizedBox(
+            width: 50,
+            child: Text(
+              'Just.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: WessexColors.darkGrape,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          SizedBox(
+            width: 60,
+            child: Text(
+              'Obs.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: WessexColors.darkGrape,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTableRows(List<Map<String, dynamic>> estudiantes, bool isScrollable) {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(8),
+          bottomRight: Radius.circular(8),
+        ),
+      ),
+      child: Column(
+        children: estudiantes.asMap().entries.map((entry) {
+          final index = entry.key;
+          final estudiante = entry.value;
+          final rut = estudiante['rut'];
+          final estadoAsistencia = _asistenciaEstudiantes[rut] ?? 'presente';
+          final tieneObservaciones = _observacionesEstudiantes.containsKey(rut);
+          final isLastItem = index == estudiantes.length - 1;
+
+          return Container(
+            decoration: BoxDecoration(
+              color: index % 2 == 0 ? Colors.white : Colors.grey.shade50,
+              border: isLastItem ? null : Border(
+                bottom: BorderSide(color: Colors.grey.shade200, width: 1),
+              ),
+            ),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  child: Row(
+                    children: [
+                      // Número
+                      SizedBox(
+                        width: 30,
+                        child: Text(
+                          '${index + 1}',
+                          style: TextStyle(
+                            color: WessexColors.darkGrape.withOpacity(0.7),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      // RUT
+                      SizedBox(
+                        width: 80,
+                        child: Text(
+                          rut.toString(),
+                          style: TextStyle(
+                            color: WessexColors.darkGrape.withOpacity(0.7),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                      // Nombre (RESPONSIVE)
+                      isScrollable 
+                        ? SizedBox(
+                            width: 200,
+                            child: Text(
+                              estudiante['nombre'] ?? 'Sin nombre',
+                              style: TextStyle(
+                                color: WessexColors.darkGrape,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          )
+                        : Expanded(
+                            child: Text(
+                              estudiante['nombre'] ?? 'Sin nombre',
+                              style: TextStyle(
+                                color: WessexColors.darkGrape,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                      // Switch Presente/Ausente
+                      SizedBox(
+                        width: 120,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'A',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: estadoAsistencia == 'ausente' 
+                                    ? WessexColors.crimsonAlert 
+                                    : Colors.grey,
+                              ),
+                            ),
+                            Switch(
+                              value: estadoAsistencia == 'presente',
+                              onChanged: (value) {
+                                setState(() {
+                                  _asistenciaEstudiantes[rut] = value ? 'presente' : 'ausente';
+                                });
+                              },
+                              activeColor: WessexColors.leafGreen,
+                              inactiveThumbColor: WessexColors.crimsonAlert,
+                              inactiveTrackColor: WessexColors.crimsonAlert.withOpacity(0.3),
+                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            Text(
+                              'P',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: estadoAsistencia == 'presente' 
+                                    ? WessexColors.leafGreen 
+                                    : Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Botón Justificado
+                      SizedBox(
+                        width: 50,
+                        child: IconButton(
+                          onPressed: _estadoForzadoPorJustificante[rut] == true
+                              ? null
+                              : () {
+                                  setState(() {
+                                    _asistenciaEstudiantes[rut] = 
+                                        estadoAsistencia == 'justificado' ? 'ausente' : 'justificado';
+                                  });
+                                },
+                          icon: Icon(
+                            estadoAsistencia == 'justificado' 
+                                ? Icons.check_circle 
+                                : Icons.radio_button_unchecked,
+                            color: estadoAsistencia == 'justificado'
+                                ? (_estadoForzadoPorJustificante[rut] == true
+                                    ? WessexColors.leafGreen
+                                    : WessexColors.deepRoyalBlue)
+                                : Colors.grey.shade400,
+                            size: 20,
+                          ),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          tooltip: _estadoForzadoPorJustificante[rut] == true
+                                    ? 'Justificado (cert. médico aprobado)'
+                                    : 'Justificado',
+                        ),
+                      ),
+                      // Switch Observaciones
+                      SizedBox(
+                        width: 60,
+                        child: Transform.scale(
+                          scale: 0.8,
+                          child: Switch(
+                            value: tieneObservaciones,
+                            onChanged: (value) {
+                              setState(() {
+                                if (value) {
+                                  _observacionesEstudiantes[rut] = '';
+                                } else {
+                                  _observacionesEstudiantes.remove(rut);
+                                }
+                              });
+                            },
+                            activeColor: WessexColors.darkGrape,
+                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Campo de observaciones
+                if (tieneObservaciones)
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(54, 4, 12, 12),
+                    child: TextFormField(
+                      initialValue: _observacionesEstudiantes[rut],
+                      autofocus: false,
+                      decoration: InputDecoration(
+                        labelText: 'Observaciones',
+                        hintText: 'Escribe aquí cualquier observación...',
+                        filled: true,
+                        fillColor: Colors.grey.shade50,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: WessexColors.darkGrape.withOpacity(0.3)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: Colors.grey.shade400, width: 1.5),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: WessexColors.deepRoyalBlue, width: 2),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        isDense: true,
+                        labelStyle: TextStyle(
+                          color: WessexColors.darkGrape.withOpacity(0.7),
+                          fontSize: 13,
+                        ),
+                        hintStyle: TextStyle(
+                          color: Colors.grey.shade400,
+                          fontSize: 12,
+                        ),
+                      ),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: WessexColors.darkGrape,
+                      ),
+                      maxLines: 2,
+                      minLines: 2,
+                      onChanged: (value) {
+                         _observacionesEstudiantes[rut] = value;
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          );
+        }).toList(),
       ),
     );
   }

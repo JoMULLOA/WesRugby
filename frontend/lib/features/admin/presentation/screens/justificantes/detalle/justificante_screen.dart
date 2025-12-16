@@ -8,6 +8,7 @@ import 'package:wesrugby/data/services/api_service.dart';
 import 'dart:typed_data';
 // ignore: avoid_web_libraries_in_flutter
 import 'package:universal_html/html.dart' as html;
+import 'package:file_picker/file_picker.dart';
 
 class JustificanteScreen extends StatefulWidget {
   const JustificanteScreen({super.key});
@@ -934,7 +935,7 @@ class _JustificanteScreenState extends State<JustificanteScreen> {
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    'Formatos permitidos: PDF, JPG, PNG (Máx. 10MB)',
+                                    'Formatos permitidos: PDF, JPG, JPEG, PNG (Máx. 10MB)',
                                     style: TextStyle(
                                       color: WessexColors.darkGrape.withOpacity(
                                         0.7,
@@ -1127,7 +1128,31 @@ class _JustificanteScreenState extends State<JustificanteScreen> {
           }
         });
       } else {
-        _showErrorSnackBar('Funcionalidad disponible solo en web por ahora');
+        // Para móvil: implementación con FilePicker
+        final result = await FilePicker.platform.pickFiles(
+          type: FileType.custom,
+          allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf'],
+          withData: true,
+        );
+
+        if (result != null && result.files.isNotEmpty) {
+          final file = result.files.first;
+
+          // Verificar tamaño (máx 10MB)
+          if (file.size > 10 * 1024 * 1024) {
+             _showErrorSnackBar(
+              'El archivo es muy grande. Máximo 10MB permitido.',
+            );
+            return;
+          }
+
+          setState(() {
+            _webFile = file.bytes;
+            _archivoNombre = file.name;
+          });
+
+          _showSuccessSnackBar('Archivo seleccionado: ${file.name}');
+        }
       }
     } catch (e) {
       print('Error al seleccionar archivo: $e');

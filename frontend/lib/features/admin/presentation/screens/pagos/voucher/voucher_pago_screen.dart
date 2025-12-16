@@ -7,6 +7,7 @@ import 'package:wesrugby/data/services/estudiante_service.dart';
 import 'package:wesrugby/data/services/api_service.dart';
 import 'package:wesrugby/data/services/pagos_service.dart';
 import 'package:wesrugby/data/services/configuracion_precio_service.dart';
+import 'package:file_picker/file_picker.dart';
 
 class VoucherPagoScreen extends StatefulWidget {
   const VoucherPagoScreen({super.key});
@@ -1379,7 +1380,7 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Formatos permitidos: JPG, PNG, PDF (Máx. 5MB)',
+                          'Formatos permitidos: JPEG, JPG, PNG, PDF (Máx. 5MB)',
                           style: TextStyle(
                             color: WessexColors.darkGrape.withOpacity(0.7),
                             fontSize: 12,
@@ -1445,7 +1446,7 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
                                 if (_archivoNombre == null) ...[
                                   const SizedBox(height: 8),
                                   Text(
-                                    'Formatos permitidos: PDF, PNG, JPG',
+                                    'Formatos permitidos: PDF, PNG, JPG, JPEG',
                                     style: TextStyle(
                                       color: WessexColors.darkGrape.withOpacity(
                                         0.6,
@@ -1629,8 +1630,31 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
           }
         });
       } else {
-        // Para móvil: implementación básica
-        _showErrorSnackBar('Funcionalidad disponible solo en web por ahora');
+        // Para móvil: implementación con FilePicker
+        final result = await FilePicker.platform.pickFiles(
+          type: FileType.custom,
+          allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf'],
+          withData: true, // Importante para obtener los bytes directamente
+        );
+
+        if (result != null && result.files.isNotEmpty) {
+          final file = result.files.first;
+          
+          // Verificar tamaño (máx 10MB) - file.size está en bytes
+          if (file.size > 10 * 1024 * 1024) {
+            _showErrorSnackBar(
+              'El archivo es muy grande. Máximo 10MB permitido.',
+            );
+            return;
+          }
+
+          setState(() {
+            _webFile = file.bytes;
+            _archivoNombre = file.name;
+          });
+          
+          _showSuccessSnackBar('Archivo seleccionado: ${file.name}');
+        }
       }
     } catch (e) {
       print('Error al seleccionar archivo: $e');

@@ -8,6 +8,7 @@ import 'package:wesrugby/data/services/voucher_service.dart'; // ignore: avoid_w
 import 'package:universal_html/html.dart' as html show Blob, Url, AnchorElement, IFrameElement;
 // ignore: avoid_web_libraries_in_flutter
 import 'package:wesrugby/core/utils/platform/platform_view_registry.dart' as ui_web;
+import 'package:intl/intl.dart';
 
 class HistorialVouchersScreen extends StatefulWidget {
   const HistorialVouchersScreen({super.key});
@@ -509,7 +510,7 @@ class _HistorialVouchersScreenState extends State<HistorialVouchersScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Voucher ${voucher['id']}',
+                      'Voucher ${voucher['id'].toString().length > 8 ? '${voucher['id'].toString().substring(0, 8)}...' : voucher['id']}',
                       style: TextStyle(
                         color: WessexColors.darkGrape,
                         fontSize: 16,
@@ -611,7 +612,7 @@ class _HistorialVouchersScreenState extends State<HistorialVouchersScreen> {
               Expanded(
                 child: _buildDetailItem(
                   'Fecha Envío',
-                  voucher['fechaEnvio'],
+                  _formatDate(voucher['fechaEnvio']),
                   Icons.schedule,
                   WessexColors.crimsonAlert,
                 ),
@@ -619,7 +620,7 @@ class _HistorialVouchersScreenState extends State<HistorialVouchersScreen> {
               Expanded(
                 child: _buildDetailItem(
                   'Archivo',
-                  voucher['archivo'],
+                  'Archivo adjunto',
                   Icons.attachment,
                   WessexColors.darkGrape,
                 ),
@@ -764,6 +765,15 @@ class _HistorialVouchersScreenState extends State<HistorialVouchersScreen> {
   }
 
   // Métodos auxiliares
+  String _formatDate(String dateStr) {
+    try {
+      final date = DateTime.parse(dateStr);
+      return DateFormat('dd/MM/yyyy HH:mm').format(date);
+    } catch (e) {
+      return dateStr;
+    }
+  }
+
   List<String> _getMesesDisponibles(List<Map<String, dynamic>> vouchers) {
     Set<String> meses = vouchers.map((v) => v['mes'] as String).toSet();
     List<String> mesesOrdenados = ['Todos', ...meses.toList()];

@@ -1008,7 +1008,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               icon: const Icon(Icons.login, size: 16),
               label: const Text(
-                'Iniciar Sesión',
+                'Login',
                 style: TextStyle(fontSize: 14),
               ),
             ),

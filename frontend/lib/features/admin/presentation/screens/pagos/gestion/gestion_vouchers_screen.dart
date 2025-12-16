@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:universal_html/html.dart' as html show Blob, Url, AnchorElement, IFrameElement;
 // ignore: avoid_web_libraries_in_flutter
 import 'package:wesrugby/core/utils/platform/platform_view_registry.dart' as ui_web;
+import 'package:intl/intl.dart';
 
 class GestionVouchersScreen extends StatefulWidget {
   const GestionVouchersScreen({super.key});
@@ -246,13 +247,9 @@ class _GestionVouchersScreenState extends State<GestionVouchersScreen> {
             // Layout vertical para móvil/tablet
             _buildSearchField(),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(child: _buildUserFilter()),
-                const SizedBox(width: 12),
-                Expanded(child: _buildStatusFilter()),
-              ],
-            ),
+            _buildUserFilter(),
+            const SizedBox(height: 12),
+            _buildStatusFilter(),
           ],
         ],
       ),
@@ -452,43 +449,49 @@ class _GestionVouchersScreenState extends State<GestionVouchersScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    voucher['usuario'],
-                    style: TextStyle(
-                      color: WessexColors.darkGrape,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      voucher['usuario'],
+                      style: TextStyle(
+                        color: WessexColors.darkGrape,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  if ((voucher['alumno'] ?? '').toString().isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        Icon(Icons.person, size: 14, color: WessexColors.deepRoyalBlue.withOpacity(0.7)),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Alumno: ${voucher['alumno']}',
-                          style: TextStyle(
-                            color: WessexColors.darkGrape.withOpacity(0.7),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
+                    if ((voucher['alumno'] ?? '').toString().isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          Icon(Icons.person, size: 14, color: WessexColors.deepRoyalBlue.withOpacity(0.7)),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              'Alumno: ${voucher['alumno']}',
+                              style: TextStyle(
+                                color: WessexColors.darkGrape.withOpacity(0.7),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
+                    ],
+                    Text(
+                      voucher['rol'],
+                      style: TextStyle(
+                        color: WessexColors.deepRoyalBlue,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ],
-                  Text(
-                    voucher['rol'],
-                    style: TextStyle(
-                      color: WessexColors.deepRoyalBlue,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
+                ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(
@@ -526,7 +529,7 @@ class _GestionVouchersScreenState extends State<GestionVouchersScreen> {
               Expanded(
                 child: _buildVoucherDetailItem(
                   'ID Voucher',
-                  voucher['id'],
+                  voucher['id'].toString().length > 8 ? '${voucher['id'].toString().substring(0, 8)}...' : voucher['id'],
                   Icons.receipt,
                   WessexColors.darkGrape,
                 ),
@@ -572,7 +575,7 @@ class _GestionVouchersScreenState extends State<GestionVouchersScreen> {
               Expanded(
                 child: _buildVoucherDetailItem(
                   'Fecha Envío',
-                  voucher['fechaEnvio'],
+                  _formatDate(voucher['fechaEnvio']),
                   Icons.schedule,
                   WessexColors.darkGrape,
                 ),
@@ -580,7 +583,7 @@ class _GestionVouchersScreenState extends State<GestionVouchersScreen> {
               Expanded(
                 child: _buildVoucherDetailItem(
                   'Archivo',
-                  voucher['archivo'],
+                  'Archivo adjunto',
                   Icons.attachment,
                   WessexColors.deepRoyalBlue,
                 ),
@@ -685,9 +688,19 @@ class _GestionVouchersScreenState extends State<GestionVouchersScreen> {
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
+          overflow: TextOverflow.ellipsis,
         ),
       ],
     );
+  }
+
+  String _formatDate(String dateStr) {
+    try {
+      final date = DateTime.parse(dateStr);
+      return DateFormat('dd/MM/yyyy HH:mm').format(date);
+    } catch (e) {
+      return dateStr;
+    }
   }
 
   void _viewVoucher(Map<String, dynamic> voucher) async {

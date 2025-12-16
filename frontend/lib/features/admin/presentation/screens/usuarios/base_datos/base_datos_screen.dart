@@ -453,14 +453,29 @@ class _BaseDatosScreenState extends State<BaseDatosScreen> {
                   ),
                 ),
                 const Spacer(),
-                ElevatedButton.icon(
-                  onPressed: _showAddStudentDialog,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Agregar Estudiante'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: WessexColors.leafGreen,
-                    foregroundColor: Colors.white,
-                  ),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isSmallScreen = MediaQuery.of(context).size.width < 600;
+                    return isSmallScreen
+                        ? ElevatedButton(
+                            onPressed: _showAddStudentDialog,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: WessexColors.leafGreen,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.all(12),
+                            ),
+                            child: const Icon(Icons.add),
+                          )
+                        : ElevatedButton.icon(
+                            onPressed: _showAddStudentDialog,
+                            icon: const Icon(Icons.add),
+                            label: const Text('Agregar Estudiante'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: WessexColors.leafGreen,
+                              foregroundColor: Colors.white,
+                            ),
+                          );
+                  },
                 ),
               ],
             ),
@@ -585,68 +600,71 @@ class _BaseDatosScreenState extends State<BaseDatosScreen> {
           if (totalPages > 1)
             Padding(
               padding: const EdgeInsets.all(16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  IconButton(
-                    onPressed: _currentPage > 0
-                        ? () => setState(() => _currentPage--)
-                        : null,
-                    icon: const Icon(Icons.chevron_left),
-                    tooltip: 'Página anterior',
-                  ),
-                  const SizedBox(width: 8),
-                  
-                  // Mostrar botones de página
-                  ...List.generate(
-                    totalPages > 7 ? 7 : totalPages,
-                    (index) {
-                      if (totalPages <= 7) {
-                        return _buildPageButton(index, totalPages);
-                      } else {
-                        // Lógica para mostrar páginas con puntos suspensivos
-                        if (index == 0) return _buildPageButton(0, totalPages);
-                        if (index == 1 && _currentPage > 3) {
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                            child: Text('...', style: TextStyle(fontSize: 18)),
-                          );
-                        }
-                        if (index == 5 && _currentPage < totalPages - 4) {
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                            child: Text('...', style: TextStyle(fontSize: 18)),
-                          );
-                        }
-                        if (index == 6) return _buildPageButton(totalPages - 1, totalPages);
-                        
-                        // Mostrar páginas alrededor de la actual
-                        int pageToShow;
-                        if (_currentPage <= 3) {
-                          pageToShow = index;
-                        } else if (_currentPage >= totalPages - 4) {
-                          pageToShow = totalPages - 7 + index;
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      onPressed: _currentPage > 0
+                          ? () => setState(() => _currentPage--)
+                          : null,
+                      icon: const Icon(Icons.chevron_left),
+                      tooltip: 'Página anterior',
+                    ),
+                    const SizedBox(width: 8),
+                    
+                    // Mostrar botones de página
+                    ...List.generate(
+                      totalPages > 7 ? 7 : totalPages,
+                      (index) {
+                        if (totalPages <= 7) {
+                          return _buildPageButton(index, totalPages);
                         } else {
-                          pageToShow = _currentPage - 3 + index;
+                          // Lógica para mostrar páginas con puntos suspensivos
+                          if (index == 0) return _buildPageButton(0, totalPages);
+                          if (index == 1 && _currentPage > 3) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                              child: Text('...', style: TextStyle(fontSize: 18)),
+                            );
+                          }
+                          if (index == 5 && _currentPage < totalPages - 4) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                              child: Text('...', style: TextStyle(fontSize: 18)),
+                            );
+                          }
+                          if (index == 6) return _buildPageButton(totalPages - 1, totalPages);
+                          
+                          // Mostrar páginas alrededor de la actual
+                          int pageToShow;
+                          if (_currentPage <= 3) {
+                            pageToShow = index;
+                          } else if (_currentPage >= totalPages - 4) {
+                            pageToShow = totalPages - 7 + index;
+                          } else {
+                            pageToShow = _currentPage - 3 + index;
+                          }
+                          
+                          if (pageToShow >= 0 && pageToShow < totalPages) {
+                            return _buildPageButton(pageToShow, totalPages);
+                          }
+                          return const SizedBox.shrink();
                         }
-                        
-                        if (pageToShow >= 0 && pageToShow < totalPages) {
-                          return _buildPageButton(pageToShow, totalPages);
-                        }
-                        return const SizedBox.shrink();
-                      }
-                    },
-                  ),
-                  
-                  const SizedBox(width: 8),
-                  IconButton(
-                    onPressed: _currentPage < totalPages - 1
-                        ? () => setState(() => _currentPage++)
-                        : null,
-                    icon: const Icon(Icons.chevron_right),
-                    tooltip: 'Página siguiente',
-                  ),
-                ],
+                      },
+                    ),
+                    
+                    const SizedBox(width: 8),
+                    IconButton(
+                      onPressed: _currentPage < totalPages - 1
+                          ? () => setState(() => _currentPage++)
+                          : null,
+                      icon: const Icon(Icons.chevron_right),
+                      tooltip: 'Página siguiente',
+                    ),
+                  ],
+                ),
               ),
             ),
         ],

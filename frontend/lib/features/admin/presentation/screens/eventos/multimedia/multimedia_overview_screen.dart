@@ -420,49 +420,51 @@ class _MultimediaOverviewScreenState extends State<MultimediaOverviewScreen> {
                         ? const Center(child: CircularProgressIndicator())
                         : _multimedia.isEmpty
                         ? Center(
-                          child: Container(
-                            padding: const EdgeInsets.all(32),
-                            margin: const EdgeInsets.all(24),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.photo_outlined,
-                                  size: 80,
-                                  color: WessexColors.darkGrape,
-                                ),
-                                const SizedBox(height: 20),
-                                const Text(
-                                  'No se encontraron imágenes con los filtros seleccionados.',
-                                  style: TextStyle(
+                          child: SingleChildScrollView(
+                            child: Container(
+                              padding: const EdgeInsets.all(32),
+                              margin: const EdgeInsets.all(24),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.photo_outlined,
+                                    size: 80,
                                     color: WessexColors.darkGrape,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w600,
                                   ),
-                                  textAlign: TextAlign.center,
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Intenta ajustar los filtros o agregar nueva multimedia.',
-                                  style: TextStyle(
-                                    color: WessexColors.midnightNavy.withOpacity(0.7),
-                                    fontSize: 14,
+                                  const SizedBox(height: 20),
+                                  const Text(
+                                    'No se encontraron imágenes con los filtros seleccionados.',
+                                    style: TextStyle(
+                                      color: WessexColors.darkGrape,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    textAlign: TextAlign.center,
                                   ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ],
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Intenta ajustar los filtros o agregar nueva multimedia.',
+                                    style: TextStyle(
+                                      color: WessexColors.midnightNavy.withOpacity(0.7),
+                                      fontSize: 14,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         )

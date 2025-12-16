@@ -5,6 +5,7 @@ import 'package:wesrugby/shared/widgets/layout/wessex_widgets.dart';
 import 'package:wesrugby/core/config/colors.dart';
 import 'package:wesrugby/data/services/estudiante_service.dart';
 // ignore: avoid_web_libraries_in_flutter
+import 'package:file_picker/file_picker.dart';
 import 'package:universal_html/html.dart' as html;
 
 class RegistroFormulariosScreen extends StatefulWidget {
@@ -450,10 +451,8 @@ class _RegistroFormulariosScreenState extends State<RegistroFormulariosScreen> {
           ),
           const SizedBox(height: 16),
           Center(
-            child: ElevatedButton.icon(
+            child: ElevatedButton(
               onPressed: _downloadTemplate,
-              icon: const Icon(Icons.download),
-              label: const Text('Descargar Plantilla Base'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: WessexColors.leafGreen,
                 foregroundColor: Colors.white,
@@ -461,6 +460,16 @@ class _RegistroFormulariosScreenState extends State<RegistroFormulariosScreen> {
                   horizontal: 24,
                   vertical: 16,
                 ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.download),
+                  if (isDesktop) ...[
+                    const SizedBox(width: 8),
+                    const Text('Descargar Plantilla Base'),
+                  ],
+                ],
               ),
             ),
           ),
@@ -572,19 +581,47 @@ class _RegistroFormulariosScreenState extends State<RegistroFormulariosScreen> {
 
   Future<void> _pickFile() async {
     try {
-      final uploadInput = html.FileUploadInputElement()..accept = '.xlsx';
-      uploadInput.click();
+      if (kIsWeb) {
+        final uploadInput = html.FileUploadInputElement()..accept = '.xlsx';
+        uploadInput.click();
 
-      uploadInput.onChange.listen((e) async {
-        final files = uploadInput.files;
-        if (files == null || files.isEmpty) return;
+        uploadInput.onChange.listen((e) async {
+          final files = uploadInput.files;
+          if (files == null || files.isEmpty) return;
 
-        final file = files[0];
-        final reader = html.FileReader();
+          final file = files[0];
+          final reader = html.FileReader();
 
-        reader.onLoadEnd.listen((e) async {
-          if (reader.result != null) {
-            final bytes = reader.result as Uint8List;
+          reader.onLoadEnd.listen((e) async {
+            if (reader.result != null) {
+              final bytes = reader.result as Uint8List;
+              setState(() {
+                _fileName = file.name;
+                _isProcessing = true;
+                _errorMessages = [];
+                _previewData = [];
+                _showPreview = false;
+              });
+
+              await _processFile(bytes);
+            }
+          });
+
+          reader.readAsArrayBuffer(file);
+        });
+      } else {
+        // Android / Desktop implementation
+        final result = await FilePicker.platform.pickFiles(
+          type: FileType.custom,
+          allowedExtensions: ['xlsx'],
+          withData: true,
+        );
+
+        if (result != null && result.files.isNotEmpty) {
+          final file = result.files.first;
+          final bytes = file.bytes;
+          
+          if (bytes != null) {
             setState(() {
               _fileName = file.name;
               _isProcessing = true;
@@ -592,13 +629,10 @@ class _RegistroFormulariosScreenState extends State<RegistroFormulariosScreen> {
               _previewData = [];
               _showPreview = false;
             });
-
             await _processFile(bytes);
           }
-        });
-
-        reader.readAsArrayBuffer(file);
-      });
+        }
+      }
     } catch (e) {
       _showErrorSnackBar('Error al seleccionar archivo: $e');
     }

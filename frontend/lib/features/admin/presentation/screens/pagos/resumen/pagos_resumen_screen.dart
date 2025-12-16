@@ -674,32 +674,100 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
   }
 
   Widget _buildPaginacionControls(int totalPages) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        IconButton(
-          onPressed: _currentPage > 0
-              ? () => setState(() => _currentPage--)
-              : null,
-          icon: const Icon(Icons.chevron_left),
-          color: WessexColors.deepRoyalBlue,
+    // Lógica para mostrar solo algunas páginas (Smart Pagination)
+    List<Widget> pageButtons = [];
+    
+    // Función helper para agregar botón
+    void addButton(int page) {
+      pageButtons.add(
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: _buildPageButton(page, totalPages),
         ),
-        const SizedBox(width: 16),
-        ...List.generate(totalPages, (index) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: _buildPageButton(index, totalPages),
-          );
-        }),
-        const SizedBox(width: 16),
-        IconButton(
-          onPressed: _currentPage < totalPages - 1
-              ? () => setState(() => _currentPage++)
-              : null,
-          icon: const Icon(Icons.chevron_right),
-          color: WessexColors.deepRoyalBlue,
+      );
+    }
+    
+    // Función helper para agregar elipsis
+    void addEllipsis() {
+      pageButtons.add(
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 4),
+          child: Text('...', style: TextStyle(color: WessexColors.deepRoyalBlue)),
         ),
-      ],
+      );
+    }
+
+    if (totalPages <= 5) {
+      // Si son pocas páginas, mostrar todas
+      for (int i = 0; i < totalPages; i++) {
+        addButton(i);
+      }
+    } else {
+      // Siempre mostrar primera página
+      addButton(0);
+      
+      // Calcular rango alrededor de la página actual
+      int start = _currentPage - 1;
+      int end = _currentPage + 1;
+      
+      // Ajustar si está cerca del inicio
+      if (start <= 1) {
+        start = 1;
+        end = 3;
+      }
+      
+      // Ajustar si está cerca del final
+      if (end >= totalPages - 2) {
+        end = totalPages - 2;
+        start = totalPages - 4;
+        if (start < 1) start = 1;
+      }
+      
+      // Agregar elipsis inicial
+      if (start > 1) {
+        addEllipsis();
+      }
+      
+      // Agregar páginas del rango medio
+      for (int i = start; i <= end; i++) {
+        if (i < totalPages - 1) { // Evitar duplicar la última
+           addButton(i);
+        }
+      }
+      
+      // Agregar elipsis final
+      if (end < totalPages - 2) {
+        addEllipsis();
+      }
+      
+      // Siempre mostrar última página
+      addButton(totalPages - 1);
+    }
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          IconButton(
+            onPressed: _currentPage > 0
+                ? () => setState(() => _currentPage--)
+                : null,
+            icon: const Icon(Icons.chevron_left),
+            color: WessexColors.deepRoyalBlue,
+          ),
+          const SizedBox(width: 8),
+          ...pageButtons,
+          const SizedBox(width: 8),
+          IconButton(
+            onPressed: _currentPage < totalPages - 1
+                ? () => setState(() => _currentPage++)
+                : null,
+            icon: const Icon(Icons.chevron_right),
+            color: WessexColors.deepRoyalBlue,
+          ),
+        ],
+      ),
     );
   }
 
@@ -995,191 +1063,230 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
     final pagosExpanded = _pagosExpandidos[rutKey] ?? false;
     final equipamientoExpanded = _equipamientoExpandido[rutKey] ?? false;
 
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: WessexCard(
         padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isSmall = constraints.maxWidth < 500;
+            
+            return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                // Header: Info + Email
+                if (isSmall)
+                   Column(
+                     crossAxisAlignment: CrossAxisAlignment.start,
+                     children: [
+                       _buildEstudianteInfo(estudiante),
+                       const SizedBox(height: 12),
+                       if (estudiante['correoApoderadoGenerado'] != null &&
+                           estudiante['correoApoderadoGenerado'].toString().isNotEmpty)
+                         Chip(
+                           avatar: const Icon(Icons.alternate_email, size: 18),
+                           label: Text(estudiante['correoApoderadoGenerado']),
+                           backgroundColor: WessexColors.deepRoyalBlue.withOpacity(0.1),
+                         ),
+                     ],
+                   )
+                else
+                   Row(
+                     crossAxisAlignment: CrossAxisAlignment.start,
+                     children: [
+                       Expanded(child: _buildEstudianteInfo(estudiante)),
+                       if (estudiante['correoApoderadoGenerado'] != null &&
+                           estudiante['correoApoderadoGenerado'].toString().isNotEmpty)
+                         Padding(
+                           padding: const EdgeInsets.only(left: 12),
+                           child: Chip(
+                             avatar: const Icon(Icons.alternate_email, size: 18),
+                             label: Text(estudiante['correoApoderadoGenerado']),
+                             backgroundColor: WessexColors.deepRoyalBlue.withOpacity(0.1),
+                           ),
+                         ),
+                     ],
+                   ),
+                
+                const SizedBox(height: 20),
+                
+                // Botones en horizontal o vertical
+                if (isSmall)
+                  Column(
                     children: [
-                      Text(
-                        estudiante['nombre'] ?? 'Sin nombre',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: WessexColors.darkGrape,
+                      _buildBotonDesplegable(
+                        icon: Icons.payments,
+                        label: 'Pagos',
+                        color: WessexColors.deepRoyalBlue,
+                        isExpanded: pagosExpanded,
+                        onTap: () {
+                          setState(() {
+                            _pagosExpandidos[rutKey] = !pagosExpanded;
+                          });
+                        },
+                      ),
+                      if (equipamiento.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        _buildBotonDesplegable(
+                          icon: Icons.sports_rugby,
+                          label: 'Equipamiento',
+                          color: WessexColors.leafGreen,
+                          isExpanded: equipamientoExpanded,
+                          onTap: () {
+                            setState(() {
+                              _equipamientoExpandido[rutKey] = !equipamientoExpanded;
+                            });
+                          },
+                        ),
+                      ],
+                    ],
+                  )
+                else
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildBotonDesplegable(
+                          icon: Icons.payments,
+                          label: 'Pagos',
+                          color: WessexColors.deepRoyalBlue,
+                          isExpanded: pagosExpanded,
+                          onTap: () {
+                            setState(() {
+                              _pagosExpandidos[rutKey] = !pagosExpanded;
+                            });
+                          },
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'RUT: ${estudiante['rut'] ?? 'Sin RUT'}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: WessexColors.darkGrape.withOpacity(0.7),
+                      if (equipamiento.isNotEmpty) ...[
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildBotonDesplegable(
+                            icon: Icons.sports_rugby,
+                            label: 'Equipamiento',
+                            color: WessexColors.leafGreen,
+                            isExpanded: equipamientoExpanded,
+                            onTap: () {
+                              setState(() {
+                                _equipamientoExpandido[rutKey] = !equipamientoExpanded;
+                              });
+                            },
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Wrap(
-                        spacing: 12,
-                        runSpacing: 8,
-                        children: [
-                          _buildEtiquetaDetalle('Curso', estudiante['curso']),
-                          _buildEtiquetaDetalle(
-                            'Categoría',
-                            estudiante['categoria'],
-                          ),
-                          _buildEtiquetaDetalle(
-                            'Responsable',
-                            estudiante['nombreResponsable'],
-                          ),
-                        ],
-                      ),
+                      ],
                     ],
                   ),
-                ),
-                if (estudiante['correoApoderadoGenerado'] != null &&
-                    estudiante['correoApoderadoGenerado'].toString().isNotEmpty)
-                  Chip(
-                    avatar: const Icon(Icons.alternate_email, size: 18),
-                    label: Text(estudiante['correoApoderadoGenerado']),
-                    backgroundColor: WessexColors.deepRoyalBlue.withOpacity(
-                      0.1,
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            
-            // Botones en horizontal
-            Row(
-              children: [
-                // Botón de Pagos
-                Expanded(
-                  child: InkWell(
-                    onTap: () {
-                      setState(() {
-                        _pagosExpandidos[rutKey] = !pagosExpanded;
-                      });
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: WessexColors.deepRoyalBlue.withOpacity(0.05),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: WessexColors.deepRoyalBlue.withOpacity(0.2),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.payments,
-                            color: WessexColors.deepRoyalBlue,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Pagos',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: WessexColors.deepRoyalBlue,
-                              ),
-                            ),
-                          ),
-                          Icon(
-                            pagosExpanded ? Icons.expand_less : Icons.expand_more,
-                            color: WessexColors.deepRoyalBlue,
-                            size: 20,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
                 
-                // Espaciado entre botones
-                if (equipamiento.isNotEmpty) const SizedBox(width: 12),
-                
-                // Botón de Equipamiento
-                if (equipamiento.isNotEmpty)
-                  Expanded(
-                    child: InkWell(
-                      onTap: () {
-                        setState(() {
-                          _equipamientoExpandido[rutKey] = !equipamientoExpanded;
-                        });
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: WessexColors.leafGreen.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: WessexColors.leafGreen.withOpacity(0.2),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.sports_rugby,
-                              color: WessexColors.leafGreen,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'Equipamiento',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                  color: WessexColors.leafGreen,
-                                ),
-                              ),
-                            ),
-                            Icon(
-                              equipamientoExpanded ? Icons.expand_less : Icons.expand_more,
-                              color: WessexColors.leafGreen,
-                              size: 20,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                // Contenido de Pagos (desplegable)
+                if (pagosExpanded) ...[
+                  const SizedBox(height: 16),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      _buildPagoEstatusChip('Matrícula', matricula),
+                      _buildPagoEstatusChip('Total año', totalAnio),
+                    ],
                   ),
-              ],
-            ),
-            
-            // Contenido de Pagos (desplegable)
-            if (pagosExpanded) ...[
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  _buildPagoEstatusChip('Matrícula', matricula),
-                  _buildPagoEstatusChip('Total año', totalAnio),
+                  const SizedBox(height: 16),
+                  _buildMesesGrid(pagosMeses),
                 ],
+                
+                // Contenido de Equipamiento (desplegable)
+                if (equipamientoExpanded) ...[
+                  const SizedBox(height: 16),
+                  _buildEquipamientoResumen(equipamiento),
+                ],
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEstudianteInfo(Map<String, dynamic> estudiante) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          estudiante['nombre'] ?? 'Sin nombre',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: WessexColors.darkGrape,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'RUT: ${estudiante['rut'] ?? 'Sin RUT'}',
+          style: TextStyle(
+            fontSize: 12,
+            color: WessexColors.darkGrape.withOpacity(0.7),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Wrap(
+          spacing: 12,
+          runSpacing: 8,
+          children: [
+            _buildEtiquetaDetalle('Curso', estudiante['curso']),
+            _buildEtiquetaDetalle(
+              'Categoría',
+              estudiante['categoria'],
+            ),
+            _buildEtiquetaDetalle(
+              'Responsable',
+              estudiante['nombreResponsable'],
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBotonDesplegable({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required bool isExpanded,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: color.withOpacity(0.2),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: color,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
               ),
-              const SizedBox(height: 16),
-              _buildMesesGrid(pagosMeses),
-            ],
-            
-            // Contenido de Equipamiento (desplegable)
-            if (equipamientoExpanded) ...[
-              const SizedBox(height: 16),
-              _buildEquipamientoResumen(equipamiento),
-            ],
+            ),
+            Icon(
+              isExpanded ? Icons.expand_less : Icons.expand_more,
+              color: color,
+              size: 20,
+            ),
           ],
         ),
       ),
@@ -1244,95 +1351,66 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
     return WessexCard(
       padding: const EdgeInsets.all(16),
       backgroundColor: Colors.white,
-      child: Column(
-        children: [
-          // Primera fila (5 meses)
-          Row(
-            children: _meses.take(5).map((mes) {
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isSmall = constraints.maxWidth < 600;
+          final crossAxisCount = isSmall ? 2 : 5;
+          final childAspectRatio = isSmall ? 2.5 : 1.2;
+
+          return GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+              childAspectRatio: childAspectRatio,
+            ),
+            itemCount: _meses.length,
+            itemBuilder: (context, index) {
+              final mes = _meses[index];
               final valor = _obtenerValorMes(meses, mes);
               final color = _colorEstado(valor);
-              return Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(right: 8, bottom: 8),
-                  child: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: color.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: color.withOpacity(0.3)),
+              
+              return Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: color.withOpacity(0.3)),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _mesTitulo(mes),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: WessexColors.darkGrape,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _mesTitulo(mes),
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: WessexColors.darkGrape,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          valor,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: WessexColors.darkGrape,
-                          ),
-                        ),
-                      ],
+                    const SizedBox(height: 2),
+                    Text(
+                      valor,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: WessexColors.darkGrape,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
+                  ],
                 ),
               );
-            }).toList(),
-          ),
-          // Segunda fila (5 meses)
-          Row(
-            children: _meses.skip(5).map((mes) {
-              final valor = _obtenerValorMes(meses, mes);
-              final color = _colorEstado(valor);
-              return Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: color.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: color.withOpacity(0.3)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _mesTitulo(mes),
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: WessexColors.darkGrape,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          valor,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: WessexColors.darkGrape,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-        ],
+            },
+          );
+        },
       ),
     );
   }

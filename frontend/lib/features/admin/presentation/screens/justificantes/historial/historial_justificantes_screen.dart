@@ -671,8 +671,8 @@ class _HistorialJustificantesScreenState
                                 color: WessexColors.deepRoyalBlue,
                               ),
                               const SizedBox(width: 8),
-                              Text(
-                                'Archivo adjunto: ${justificante['archivo']}',
+                                Text(
+                                'Archivo adjunto',
                                 style: TextStyle(
                                   color: WessexColors.deepRoyalBlue,
                                   fontSize: 14,

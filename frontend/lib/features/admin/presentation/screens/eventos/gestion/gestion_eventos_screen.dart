@@ -2243,150 +2243,293 @@ class _GestionEventosScreenState extends State<GestionEventosScreen>
                             onChanged: (value) => setState(() {}),
                           ),
                         SizedBox(height: 12),
-                        // Filtros por fecha
-                        Row(
-                          children: [
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () => _seleccionarFecha(true),
-                                child: Container(
-                                  padding: EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: WessexColors.darkGrape.withOpacity(
-                                        0.3,
-                                      ),
-                                    ),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        Icons.calendar_today,
-                                        color: WessexColors.darkGrape,
-                                        size: 18,
-                                      ),
-                                      SizedBox(width: 8),
-                                      Text(
-                                        _filtroFechaInicio != null
-                                            ? 'Desde: ${_filtroFechaInicio!.day}/${_filtroFechaInicio!.month}/${_filtroFechaInicio!.year}'
-                                            : 'Fecha desde',
-                                        style: TextStyle(
-                                          color:
+                          // Filtros por fecha y botones de gestión responsive
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              final isSmallScreen = constraints.maxWidth < 600;
+
+                              if (isSmallScreen) {
+                                return Column(
+                                  children: [
+                                    // Filtros por fecha (Stacked)
+                                    GestureDetector(
+                                      onTap: () => _seleccionarFecha(true),
+                                      child: Container(
+                                        padding: EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: WessexColors.darkGrape.withOpacity(0.3),
+                                          ),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.calendar_today,
+                                              color: WessexColors.darkGrape,
+                                              size: 18,
+                                            ),
+                                            SizedBox(width: 8),
+                                            Text(
                                               _filtroFechaInicio != null
-                                                  ? WessexColors.darkGrape
-                                                  : WessexColors.midnightNavy
-                                                      .withOpacity(0.6),
+                                                  ? 'Desde: ${_filtroFechaInicio!.day}/${_filtroFechaInicio!.month}/${_filtroFechaInicio!.year}'
+                                                  : 'Fecha desde',
+                                              style: TextStyle(
+                                                color: _filtroFechaInicio != null
+                                                    ? WessexColors.darkGrape
+                                                    : WessexColors.midnightNavy.withOpacity(0.6),
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: 12),
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () => _seleccionarFecha(false),
-                                child: Container(
-                                  padding: EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: WessexColors.darkGrape.withOpacity(
-                                        0.3,
-                                      ),
                                     ),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        Icons.calendar_today,
-                                        color: WessexColors.darkGrape,
-                                        size: 18,
-                                      ),
-                                      SizedBox(width: 8),
-                                      Text(
-                                        _filtroFechaFin != null
-                                            ? 'Hasta: ${_filtroFechaFin!.day}/${_filtroFechaFin!.month}/${_filtroFechaFin!.year}'
-                                            : 'Fecha hasta',
-                                        style: TextStyle(
-                                          color:
+                                    SizedBox(height: 12),
+                                    GestureDetector(
+                                      onTap: () => _seleccionarFecha(false),
+                                      child: Container(
+                                        padding: EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: WessexColors.darkGrape.withOpacity(0.3),
+                                          ),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.calendar_today,
+                                              color: WessexColors.darkGrape,
+                                              size: 18,
+                                            ),
+                                            SizedBox(width: 8),
+                                            Text(
                                               _filtroFechaFin != null
-                                                  ? WessexColors.darkGrape
-                                                  : WessexColors.midnightNavy
-                                                      .withOpacity(0.6),
+                                                  ? 'Hasta: ${_filtroFechaFin!.day}/${_filtroFechaFin!.month}/${_filtroFechaFin!.year}'
+                                                  : 'Fecha hasta',
+                                              style: TextStyle(
+                                                color: _filtroFechaFin != null
+                                                    ? WessexColors.darkGrape
+                                                    : WessexColors.midnightNavy.withOpacity(0.6),
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: 12),
-                            // Botón limpiar filtros
-                            IconButton(
-                              onPressed: _limpiarFiltros,
-                              icon: Icon(
-                                Icons.clear,
-                                color: WessexColors.crimsonAlert,
-                              ),
-                              tooltip: 'Limpiar filtros',
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 16),
-                        // Botones de gestión
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: _mostrarGestionCategorias,
-                                icon: Icon(Icons.category),
-                                label: Text('Gestionar Categorías'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: WessexColors.deepRoyalBlue,
-                                  foregroundColor: Colors.white,
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: 24,
-                                    vertical: 16,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: 12),
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => AdminTiposEventoScreen(),
                                     ),
-                                  );
-                                },
-                                icon: Icon(Icons.event_note),
-                                label: Text('Tipos de Evento'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: WessexColors.leafGreen,
-                                  foregroundColor: Colors.white,
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: 24,
-                                    vertical: 16,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                                    SizedBox(height: 12),
+                                    // Botón limpiar filtros (Full width)
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: OutlinedButton.icon(
+                                        onPressed: _limpiarFiltros,
+                                        icon: Icon(
+                                          Icons.clear,
+                                          color: WessexColors.crimsonAlert,
+                                        ),
+                                        label: Text(
+                                          'Limpiar filtros',
+                                          style: TextStyle(color: WessexColors.crimsonAlert),
+                                        ),
+                                        style: OutlinedButton.styleFrom(
+                                          side: BorderSide(color: WessexColors.crimsonAlert),
+                                          padding: EdgeInsets.symmetric(vertical: 12),
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(height: 16),
+                                    // Botones de gestión (Stacked)
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: ElevatedButton.icon(
+                                        onPressed: _mostrarGestionCategorias,
+                                        icon: Icon(Icons.category),
+                                        label: Text('Gestionar Categorías'),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: WessexColors.deepRoyalBlue,
+                                          foregroundColor: Colors.white,
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 24,
+                                            vertical: 16,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(height: 12),
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: ElevatedButton.icon(
+                                        onPressed: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => AdminTiposEventoScreen(),
+                                            ),
+                                          );
+                                        },
+                                        icon: Icon(Icons.event_note),
+                                        label: Text('Tipos de Evento'),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: WessexColors.leafGreen,
+                                          foregroundColor: Colors.white,
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 24,
+                                            vertical: 16,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              } else {
+                                return Column(
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: GestureDetector(
+                                            onTap: () => _seleccionarFecha(true),
+                                            child: Container(
+                                              padding: EdgeInsets.all(12),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius: BorderRadius.circular(12),
+                                                border: Border.all(
+                                                  color: WessexColors.darkGrape.withOpacity(0.3),
+                                                ),
+                                              ),
+                                              child: Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.calendar_today,
+                                                    color: WessexColors.darkGrape,
+                                                    size: 18,
+                                                  ),
+                                                  SizedBox(width: 8),
+                                                  Text(
+                                                    _filtroFechaInicio != null
+                                                        ? 'Desde: ${_filtroFechaInicio!.day}/${_filtroFechaInicio!.month}/${_filtroFechaInicio!.year}'
+                                                        : 'Fecha desde',
+                                                    style: TextStyle(
+                                                      color: _filtroFechaInicio != null
+                                                          ? WessexColors.darkGrape
+                                                          : WessexColors.midnightNavy.withOpacity(0.6),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        SizedBox(width: 12),
+                                        Expanded(
+                                          child: GestureDetector(
+                                            onTap: () => _seleccionarFecha(false),
+                                            child: Container(
+                                              padding: EdgeInsets.all(12),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius: BorderRadius.circular(12),
+                                                border: Border.all(
+                                                  color: WessexColors.darkGrape.withOpacity(0.3),
+                                                ),
+                                              ),
+                                              child: Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.calendar_today,
+                                                    color: WessexColors.darkGrape,
+                                                    size: 18,
+                                                  ),
+                                                  SizedBox(width: 8),
+                                                  Text(
+                                                    _filtroFechaFin != null
+                                                        ? 'Hasta: ${_filtroFechaFin!.day}/${_filtroFechaFin!.month}/${_filtroFechaFin!.year}'
+                                                        : 'Fecha hasta',
+                                                    style: TextStyle(
+                                                      color: _filtroFechaFin != null
+                                                          ? WessexColors.darkGrape
+                                                          : WessexColors.midnightNavy.withOpacity(0.6),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        SizedBox(width: 12),
+                                        IconButton(
+                                          onPressed: _limpiarFiltros,
+                                          icon: Icon(
+                                            Icons.clear,
+                                            color: WessexColors.crimsonAlert,
+                                          ),
+                                          tooltip: 'Limpiar filtros',
+                                        ),
+                                      ],
+                                    ),
+                                    SizedBox(height: 16),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: ElevatedButton.icon(
+                                            onPressed: _mostrarGestionCategorias,
+                                            icon: Icon(Icons.category),
+                                            label: Text('Gestionar Categorías'),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: WessexColors.deepRoyalBlue,
+                                              foregroundColor: Colors.white,
+                                              padding: EdgeInsets.symmetric(
+                                                horizontal: 24,
+                                                vertical: 16,
+                                              ),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(12),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        SizedBox(width: 12),
+                                        Expanded(
+                                          child: ElevatedButton.icon(
+                                            onPressed: () {
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (context) => AdminTiposEventoScreen(),
+                                                ),
+                                              );
+                                            },
+                                            icon: Icon(Icons.event_note),
+                                            label: Text('Tipos de Evento'),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: WessexColors.leafGreen,
+                                              foregroundColor: Colors.white,
+                                              padding: EdgeInsets.symmetric(
+                                                horizontal: 24,
+                                                vertical: 16,
+                                              ),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(12),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                );
+                              }
+                            },
+                          ),
                       ],
                     ),
                   ),

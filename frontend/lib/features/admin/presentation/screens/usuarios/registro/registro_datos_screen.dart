@@ -8,6 +8,7 @@ import 'package:wesrugby/core/config/colors.dart';
 import 'package:wesrugby/data/services/estudiante_service.dart';
 import 'package:wesrugby/data/services/refresh_service.dart';
 // ignore: avoid_web_libraries_in_flutter
+import 'package:file_picker/file_picker.dart';
 import 'package:universal_html/html.dart' as html;
 
 class RegistroDatosScreen extends StatefulWidget {
@@ -168,18 +169,29 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
                 ),
               ),
               const Spacer(),
-              OutlinedButton.icon(
-                onPressed: _downloadTemplate,
-                icon: Icon(Icons.download, color: WessexColors.deepRoyalBlue),
-                label: Text(
-                  'Descargar Plantilla',
-                  style: TextStyle(color: WessexColors.deepRoyalBlue),
+              if (isDesktop)
+                OutlinedButton.icon(
+                  onPressed: _downloadTemplate,
+                  icon: Icon(Icons.download, color: WessexColors.deepRoyalBlue),
+                  label: Text(
+                    'Descargar Plantilla',
+                    style: TextStyle(color: WessexColors.deepRoyalBlue),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: WessexColors.deepRoyalBlue),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                )
+              else
+                IconButton(
+                  onPressed: _downloadTemplate,
+                  icon: Icon(Icons.download, color: WessexColors.deepRoyalBlue),
+                  tooltip: 'Descargar Plantilla',
+                  style: IconButton.styleFrom(
+                    side: BorderSide(color: WessexColors.deepRoyalBlue),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
                 ),
-                style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: WessexColors.deepRoyalBlue),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                ),
-              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -1006,7 +1018,35 @@ class _RegistroDatosScreenState extends State<RegistroDatosScreen> {
           }
         });
       } else {
-        _showErrorSnackBar('Funcionalidad disponible solo en web por ahora');
+        // Android / Desktop implementation
+        final result = await FilePicker.platform.pickFiles(
+          type: FileType.custom,
+          allowedExtensions: ['xlsx'],
+          withData: true,
+        );
+
+        if (result != null && result.files.isNotEmpty) {
+          final file = result.files.first;
+          final bytes = file.bytes;
+          
+          if (bytes != null) {
+            // Verificar extensión (FilePicker ya filtra, pero doble check)
+            if (!file.name.toLowerCase().endsWith('.xlsx')) {
+               _showErrorSnackBar('Solo se permiten archivos Excel (.xlsx).');
+               return;
+            }
+
+             setState(() {
+                _fileData = bytes;
+                _fileName = file.name;
+                _showPreview = false;
+                _errorMessages.clear();
+                _previewData.clear();
+              });
+
+             _showSuccessSnackBar('Archivo seleccionado: ${file.name}');
+          }
+        }
       }
     } catch (e) {
       debugPrint('Error al seleccionar archivo: $e');

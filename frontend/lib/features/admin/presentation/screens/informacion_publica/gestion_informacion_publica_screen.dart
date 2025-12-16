@@ -260,14 +260,14 @@ class _NoticiasTabState extends State<_NoticiasTab> {
                 ),
               ],
             ),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isSmallScreen = constraints.maxWidth < 600;
+                return Column(
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    if (isSmallScreen)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Row(
                             children: [
@@ -284,40 +284,102 @@ class _NoticiasTabState extends State<_NoticiasTab> {
                                 ),
                               ),
                               const SizedBox(width: 12),
-                              const Text(
-                                'Gestión de Noticias',
-                                style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                  color: WessexColors.white,
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Gestión de Noticias',
+                                      style: TextStyle(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.bold,
+                                        color: WessexColors.white,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${_noticias.length} noticias publicadas',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: WessexColors.white.withOpacity(0.9),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            '${_noticias.length} noticias publicadas',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: WessexColors.white.withOpacity(0.9),
+                          const SizedBox(height: 16),
+                          WessexButton(
+                            onPressed: () => _showCreateDialog(),
+                            text: 'Nueva Noticia',
+                            icon: Icons.add_circle,
+                            backgroundColor: WessexColors.crimsonAlert,
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 14,
+                            ),
+                          ),
+                        ],
+                      )
+                    else
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: WessexColors.white.withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Icon(
+                                        Icons.article,
+                                        color: WessexColors.white,
+                                        size: 24,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    const Text(
+                                      'Gestión de Noticias',
+                                      style: TextStyle(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.bold,
+                                        color: WessexColors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  '${_noticias.length} noticias publicadas',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: WessexColors.white.withOpacity(0.9),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          WessexButton(
+                            onPressed: () => _showCreateDialog(),
+                            text: isDesktop ? 'Nueva Noticia' : 'Crear',
+                            icon: Icons.add_circle,
+                            backgroundColor: WessexColors.crimsonAlert,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: isDesktop ? 24 : 16,
+                              vertical: 14,
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    WessexButton(
-                      onPressed: () => _showCreateDialog(),
-                      text: isDesktop ? 'Nueva Noticia' : 'Crear',
-                      icon: Icons.add_circle,
-                      backgroundColor: WessexColors.crimsonAlert,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isDesktop ? 24 : 16,
-                        vertical: 14,
-                      ),
-                    ),
                   ],
-                ),
-              ],
+                );
+              },
             ),
           ),
           
@@ -1236,14 +1298,14 @@ class _AuspiciadoresTabState extends State<_AuspiciadoresTab> {
                 ),
               ],
             ),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isSmallScreen = constraints.maxWidth < 600;
+                return Column(
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    if (isSmallScreen)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Row(
                             children: [
@@ -1260,40 +1322,102 @@ class _AuspiciadoresTabState extends State<_AuspiciadoresTab> {
                                 ),
                               ),
                               const SizedBox(width: 12),
-                              const Text(
-                                'Gestión de Auspiciadores',
-                                style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                  color: WessexColors.white,
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Gestión de Auspiciadores',
+                                      style: TextStyle(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.bold,
+                                        color: WessexColors.white,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${_auspiciadores.length} auspiciadores activos',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: WessexColors.white.withOpacity(0.9),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            '${_auspiciadores.length} auspiciadores activos',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: WessexColors.white.withOpacity(0.9),
+                          const SizedBox(height: 16),
+                          WessexButton(
+                            onPressed: _showCreateDialog,
+                            text: 'Nuevo Auspiciador',
+                            icon: Icons.add_circle,
+                            backgroundColor: WessexColors.crimsonAlert,
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 14,
+                            ),
+                          ),
+                        ],
+                      )
+                    else
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: WessexColors.white.withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Icon(
+                                        Icons.business,
+                                        color: WessexColors.white,
+                                        size: 24,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    const Text(
+                                      'Gestión de Auspiciadores',
+                                      style: TextStyle(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.bold,
+                                        color: WessexColors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  '${_auspiciadores.length} auspiciadores activos',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: WessexColors.white.withOpacity(0.9),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          WessexButton(
+                            onPressed: _showCreateDialog,
+                            text: isDesktop ? 'Nuevo Auspiciador' : 'Crear',
+                            icon: Icons.add_circle,
+                            backgroundColor: WessexColors.crimsonAlert,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: isDesktop ? 24 : 16,
+                              vertical: 14,
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    WessexButton(
-                      onPressed: _showCreateDialog,
-                      text: isDesktop ? 'Nuevo Auspiciador' : 'Crear',
-                      icon: Icons.add_circle,
-                      backgroundColor: WessexColors.crimsonAlert,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isDesktop ? 24 : 16,
-                        vertical: 14,
-                      ),
-                    ),
                   ],
-                ),
-              ],
+                );
+              },
             ),
           ),
           
@@ -2129,14 +2253,14 @@ class _MerchandisingTabState extends State<_MerchandisingTab> {
                 ),
               ],
             ),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isSmallScreen = constraints.maxWidth < 600;
+                return Column(
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    if (isSmallScreen)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Row(
                             children: [
@@ -2153,40 +2277,102 @@ class _MerchandisingTabState extends State<_MerchandisingTab> {
                                 ),
                               ),
                               const SizedBox(width: 12),
-                              const Text(
-                                'Gestión de Merchandising',
-                                style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                  color: WessexColors.white,
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Gestión de Merchandising',
+                                      style: TextStyle(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.bold,
+                                        color: WessexColors.white,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${_productos.length} productos en tienda',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: WessexColors.white.withOpacity(0.9),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            '${_productos.length} productos en tienda',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: WessexColors.white.withOpacity(0.9),
+                          const SizedBox(height: 16),
+                          WessexButton(
+                            onPressed: _showCreateDialog,
+                            text: 'Nuevo Producto',
+                            icon: Icons.add_circle,
+                            backgroundColor: WessexColors.crimsonAlert,
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 14,
+                            ),
+                          ),
+                        ],
+                      )
+                    else
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: WessexColors.white.withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Icon(
+                                        Icons.shopping_bag,
+                                        color: WessexColors.white,
+                                        size: 24,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    const Text(
+                                      'Gestión de Merchandising',
+                                      style: TextStyle(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.bold,
+                                        color: WessexColors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  '${_productos.length} productos en tienda',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: WessexColors.white.withOpacity(0.9),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          WessexButton(
+                            onPressed: _showCreateDialog,
+                            text: isDesktop ? 'Nuevo Producto' : 'Crear',
+                            icon: Icons.add_circle,
+                            backgroundColor: WessexColors.crimsonAlert,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: isDesktop ? 24 : 16,
+                              vertical: 14,
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    WessexButton(
-                      onPressed: _showCreateDialog,
-                      text: isDesktop ? 'Nuevo Producto' : 'Crear',
-                      icon: Icons.add_circle,
-                      backgroundColor: WessexColors.crimsonAlert,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isDesktop ? 24 : 16,
-                        vertical: 14,
-                      ),
-                    ),
                   ],
-                ),
-              ],
+                );
+              },
             ),
           ),
           
@@ -4075,63 +4261,127 @@ class _ClubWessexTabState extends State<_ClubWessexTab> {
                 ),
               ],
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Row(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isSmallScreen = constraints.maxWidth < 600;
+                if (isSmallScreen) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: WessexColors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          Icons.info,
-                          color: WessexColors.white,
-                          size: 24,
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: WessexColors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.info,
+                              color: WessexColors.white,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Club Wessex - Información Pública',
+                                  style: TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                    color: WessexColors.white,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Edita la información visible en la página de inicio',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: WessexColors.white.withOpacity(0.9),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      WessexButton(
+                        onPressed: _isSaving ? null : _guardarInformacion,
+                        text: 'Guardar Cambios',
+                        icon: Icons.save,
+                        backgroundColor: WessexColors.leafGreen,
+                        isLoading: _isSaving,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 14,
                         ),
                       ),
-                      const SizedBox(width: 12),
+                    ],
+                  );
+                } else {
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Row(
                           children: [
-                            const Text(
-                              'Club Wessex - Información Pública',
-                              style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: WessexColors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(
+                                Icons.info,
                                 color: WessexColors.white,
+                                size: 24,
                               ),
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Edita la información visible en la página de inicio',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: WessexColors.white.withOpacity(0.9),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Club Wessex - Información Pública',
+                                    style: TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold,
+                                      color: WessexColors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Edita la información visible en la página de inicio',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: WessexColors.white.withOpacity(0.9),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
                       ),
+                      WessexButton(
+                        onPressed: _isSaving ? null : _guardarInformacion,
+                        text: isDesktop ? 'Guardar Cambios' : 'Guardar',
+                        icon: Icons.save,
+                        backgroundColor: WessexColors.leafGreen,
+                        isLoading: _isSaving,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isDesktop ? 24 : 16,
+                          vertical: 14,
+                        ),
+                      ),
                     ],
-                  ),
-                ),
-                WessexButton(
-                  onPressed: _isSaving ? null : _guardarInformacion,
-                  text: isDesktop ? 'Guardar Cambios' : 'Guardar',
-                  icon: Icons.save,
-                  backgroundColor: WessexColors.leafGreen,
-                  isLoading: _isSaving,
-                  padding: EdgeInsets.symmetric(
-                    horizontal: isDesktop ? 24 : 16,
-                    vertical: 14,
-                  ),
-                ),
-              ],
+                  );
+                }
+              },
             ),
           ),
 

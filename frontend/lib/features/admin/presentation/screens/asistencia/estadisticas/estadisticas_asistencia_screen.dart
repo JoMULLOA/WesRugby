@@ -161,9 +161,9 @@ class _EstadisticasAsistenciaScreenState
         title: 'Estadísticas de Asistencia',
         elevation: 2,
         leading: IconButton(
-          icon: Icon(Icons.home, color: WessexColors.white),
+          icon: Icon(Icons.arrow_back, color: WessexColors.white),
           onPressed: () {
-            Navigator.of(context).popUntil((route) => route.isFirst);
+            Navigator.of(context).pop();
           },
         ),
       ),
@@ -242,7 +242,7 @@ class _EstadisticasAsistenciaScreenState
                         style: TextStyle(
                           fontSize: isDesktop ? 20 : 18,
                           fontWeight: FontWeight.bold,
-                          color: WessexColors.darkGrape,
+                          color: WessexColors.white,
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -253,7 +253,7 @@ class _EstadisticasAsistenciaScreenState
                         crossAxisCount: isDesktop ? 4 : (isTablet ? 2 : 2),
                         mainAxisSpacing: 16,
                         crossAxisSpacing: 16,
-                        childAspectRatio: isDesktop ? 1.5 : (isTablet ? 1.8 : 1.6),
+                        childAspectRatio: isDesktop ? 1.5 : (isTablet ? 1.5 : 1.0),
                         children: [
                           _buildStatCard(
                             'Sesiones',
@@ -348,7 +348,7 @@ class _EstadisticasAsistenciaScreenState
                           style: TextStyle(
                             fontSize: isDesktop ? 20 : 18,
                             fontWeight: FontWeight.bold,
-                            color: WessexColors.darkGrape,
+                            color: WessexColors.white,
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -419,7 +419,7 @@ class _EstadisticasAsistenciaScreenState
                           style: TextStyle(
                             fontSize: isDesktop ? 20 : 18,
                             fontWeight: FontWeight.bold,
-                            color: WessexColors.darkGrape,
+                            color: WessexColors.white,
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -520,28 +520,41 @@ class _EstadisticasAsistenciaScreenState
     Color color,
   ) {
     return WessexCard(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 32, color: color),
-          const SizedBox(height: 12),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: WessexColors.darkGrape,
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Center(
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 32, color: color),
+                const SizedBox(height: 8),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    value,
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: WessexColors.darkGrape,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: WessexColors.darkGrape.withOpacity(0.7),
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 14,
-              color: WessexColors.darkGrape.withOpacity(0.7),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

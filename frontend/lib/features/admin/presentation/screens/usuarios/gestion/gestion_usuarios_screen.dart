@@ -429,7 +429,7 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
 
           LayoutBuilder(
             builder: (context, constraints) {
-              bool isDesktop = constraints.maxWidth > 800;
+              bool isDesktop = constraints.maxWidth > 1200;
 
               if (isDesktop) {
                 return Row(
@@ -451,10 +451,11 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
                     _buildRolDropdown(),
                     const SizedBox(height: 16),
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        Expanded(child: _buildRefreshButton()),
+                        _buildRefreshButton(compact: true),
                         const SizedBox(width: 16),
-                        Expanded(child: _buildCreateUserButton()),
+                        _buildCreateUserButton(compact: true),
                       ],
                     ),
                   ],
@@ -508,7 +509,19 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
     );
   }
 
-  Widget _buildRefreshButton() {
+  Widget _buildRefreshButton({bool compact = false}) {
+    if (compact) {
+      return ElevatedButton(
+        onPressed: _loadUsuarios,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: WessexColors.deepRoyalBlue,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.all(16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        child: const Icon(Icons.refresh),
+      );
+    }
     return ElevatedButton.icon(
       onPressed: _loadUsuarios,
       icon: const Icon(Icons.refresh),
@@ -522,7 +535,19 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
     );
   }
 
-  Widget _buildCreateUserButton() {
+  Widget _buildCreateUserButton({bool compact = false}) {
+    if (compact) {
+      return ElevatedButton(
+        onPressed: _showCreateUserDialog,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: WessexColors.leafGreen,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.all(16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        child: const Icon(Icons.person_add),
+      );
+    }
     return ElevatedButton.icon(
       onPressed: _showCreateUserDialog,
       icon: const Icon(Icons.person_add),
@@ -595,27 +620,13 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-            child: Row(
-              children: [
-                Text(
-                  'Lista de Usuarios (${_filteredUsuarios.length})',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: WessexColors.darkGrape,
-                  ),
-                ),
-                const Spacer(),
-                ElevatedButton.icon(
-                  onPressed: _showCreateUserDialog,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Crear Usuario'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: WessexColors.leafGreen,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-              ],
+            child: Text(
+              'Lista de Usuarios (${_filteredUsuarios.length})',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: WessexColors.darkGrape,
+              ),
             ),
           ),
           Divider(
@@ -656,44 +667,47 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
           if (totalPages > 1)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  IconButton(
-                    onPressed: _currentPage > 0
-                        ? () => setState(() => _currentPage--)
-                        : null,
-                    icon: const Icon(Icons.chevron_left),
-                    tooltip: 'Página anterior',
-                  ),
-                  const SizedBox(width: 16),
-                  ...List.generate(totalPages, (index) {
-                    // Mostrar solo las páginas cercanas a la actual
-                    if (totalPages > 7) {
-                      if (index == 0 || 
-                          index == totalPages - 1 ||
-                          (index >= _currentPage - 1 && index <= _currentPage + 1)) {
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      onPressed: _currentPage > 0
+                          ? () => setState(() => _currentPage--)
+                          : null,
+                      icon: const Icon(Icons.chevron_left),
+                      tooltip: 'Página anterior',
+                    ),
+                    const SizedBox(width: 16),
+                    ...List.generate(totalPages, (index) {
+                      // Mostrar solo las páginas cercanas a la actual
+                      if (totalPages > 7) {
+                        if (index == 0 || 
+                            index == totalPages - 1 ||
+                            (index >= _currentPage - 1 && index <= _currentPage + 1)) {
+                          return _buildPageButton(index);
+                        } else if (index == _currentPage - 2 || index == _currentPage + 2) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 4),
+                            child: Text('...', style: TextStyle(color: WessexColors.darkGrape)),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      } else {
                         return _buildPageButton(index);
-                      } else if (index == _currentPage - 2 || index == _currentPage + 2) {
-                        return const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 4),
-                          child: Text('...', style: TextStyle(color: WessexColors.darkGrape)),
-                        );
                       }
-                      return const SizedBox.shrink();
-                    } else {
-                      return _buildPageButton(index);
-                    }
-                  }),
-                  const SizedBox(width: 16),
-                  IconButton(
-                    onPressed: _currentPage < totalPages - 1
-                        ? () => setState(() => _currentPage++)
-                        : null,
-                    icon: const Icon(Icons.chevron_right),
-                    tooltip: 'Página siguiente',
-                  ),
-                ],
+                    }),
+                    const SizedBox(width: 16),
+                    IconButton(
+                      onPressed: _currentPage < totalPages - 1
+                          ? () => setState(() => _currentPage++)
+                          : null,
+                      icon: const Icon(Icons.chevron_right),
+                      tooltip: 'Página siguiente',
+                    ),
+                  ],
+                ),
               ),
             ),
         ],
