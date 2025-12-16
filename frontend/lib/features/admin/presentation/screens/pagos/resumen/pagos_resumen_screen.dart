@@ -24,7 +24,12 @@ int _ordenarCategoriasAlfanumericamente(String a, String b) {
 }
 
 class PagosResumenScreen extends StatefulWidget {
-  const PagosResumenScreen({super.key});
+  final bool canSendNotifications;
+
+  const PagosResumenScreen({
+    super.key,
+    this.canSendNotifications = true,
+  });
 
   @override
   State<PagosResumenScreen> createState() => _PagosResumenScreenState();
@@ -264,19 +269,19 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 2,
+      length: widget.canSendNotifications ? 2 : 1,
       child: Scaffold(
         extendBodyBehindAppBar: true,
         appBar: WessexAppBar(
           title: 'Resumen de Pagos',
           elevation: 2,
-          bottom: const TabBar(
+          bottom: TabBar(
             indicatorColor: WessexColors.goldenYellow,
             labelColor: WessexColors.white,
             unselectedLabelColor: Colors.white70,
             tabs: [
-              Tab(text: 'Resumen'),
-              Tab(text: 'Notificaciones'),
+              const Tab(text: 'Resumen'),
+              if (widget.canSendNotifications) const Tab(text: 'Notificaciones'),
             ],
           ),
         ),
@@ -287,7 +292,7 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
                 : TabBarView(
                     children: [
                       _buildResumenTab(),
-                      _buildNotificacionesTab(),
+                      if (widget.canSendNotifications) _buildNotificacionesTab(),
                     ],
                   ),
           ),

@@ -593,7 +593,9 @@ class _DirectivaDashboardState extends State<DirectivaDashboard> {
                       () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const PagosResumenScreen(),
+                          builder: (context) => const PagosResumenScreen(
+                            canSendNotifications: false,
+                          ),
                         ),
                       ),
                       isDesktop: isDesktop,
