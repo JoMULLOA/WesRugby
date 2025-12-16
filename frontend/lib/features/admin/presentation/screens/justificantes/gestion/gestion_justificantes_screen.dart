@@ -6,8 +6,8 @@ import 'package:wesrugby/data/services/justificante_service.dart';
 import 'package:http/http.dart' as http;
 import 'dart:typed_data';
 // ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
-import 'dart:ui_web' as ui_web;
+import 'package:universal_html/html.dart' as html;
+import 'package:wesrugby/core/utils/platform/platform_view_registry.dart' as ui_web;
 
 class GestionJustificantesScreen extends StatefulWidget {
   const GestionJustificantesScreen({super.key});
@@ -839,7 +839,7 @@ class _GestionJustificantesScreenState
         return iframe;
       });
 
-      return HtmlElementView(viewType: viewId);
+      return kIsWeb ? HtmlElementView(viewType: viewId) : const Center(child: Text('Vista previa no disponible en móvil'));
     } catch (e) {
       print('Error creando visor PDF: $e');
       return Column(
@@ -1016,7 +1016,7 @@ class _GestionJustificantesScreenState
         return iframe;
       });
 
-      return HtmlElementView(viewType: 'pdf-viewer-$fileName');
+      return kIsWeb ? HtmlElementView(viewType: 'pdf-viewer-$fileName') : const Center(child: Text('Vista previa no disponible en móvil'));
     } catch (e) {
       return Center(
         child: Column(

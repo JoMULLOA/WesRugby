@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:html' as html;
+import 'package:universal_html/html.dart' as html;
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';

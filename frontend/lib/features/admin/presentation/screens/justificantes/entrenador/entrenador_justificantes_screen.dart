@@ -5,8 +5,8 @@ import 'package:wesrugby/core/config/colors.dart';
 import 'package:wesrugby/data/services/justificante_service.dart';
 import 'dart:typed_data';
 // ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
-import 'dart:ui_web' as ui_web;
+import 'package:universal_html/html.dart' as html;
+import 'package:wesrugby/core/utils/platform/platform_view_registry.dart' as ui_web;
 
 class EntrenadorJustificantesScreen extends StatefulWidget {
   const EntrenadorJustificantesScreen({super.key});
@@ -799,7 +799,7 @@ class _EntrenadorJustificantesScreenState
         },
       );
 
-      return HtmlElementView(viewType: 'pdf-viewer-entrenador-$fileName');
+      return kIsWeb ? HtmlElementView(viewType: 'pdf-viewer-entrenador-$fileName') : const Center(child: Text('Vista previa no disponible en móvil'));
     } catch (e) {
       return Center(
         child: Column(

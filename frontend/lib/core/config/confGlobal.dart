@@ -1,30 +1,40 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 
 class confGlobal {
   static const String _devHost = "http://localhost:3000";
+  static const String _androidEmulatorHost = "http://10.0.2.2:3000"; // Host para emulador Android
   static const String _prodHost = "https://wesrugby.site";
   static const String _basePath = "/api";
 
-  static bool get _runningOnLocalhost {
-    final host = Uri.base.host;
-    return host.isEmpty || host == "localhost" || host == "127.0.0.1";
-  }
-
   static String get _baseHost {
-    if (_runningOnLocalhost) {
-      return _devHost;
+    if (kIsWeb) {
+      final host = Uri.base.host;
+      if (host.isEmpty || host == "localhost" || host == "127.0.0.1") {
+        return _devHost;
+      }
+      final scheme = Uri.base.scheme.isEmpty ? "https" : Uri.base.scheme;
+      final port =
+          Uri.base.hasPort && Uri.base.port != 80 && Uri.base.port != 443
+              ? ":${Uri.base.port}"
+              : "";
+      return "$scheme://$host$port";
+    } else {
+      // Mobile / Desktop application
+      if (kDebugMode) {
+        if (defaultTargetPlatform == TargetPlatform.android) {
+          // Cambiar esto por la IP de tu PC si usas dispositivo físico (ej: http://192.168.1.X:3000)
+          return _androidEmulatorHost;
+        }
+        return _devHost;
+      }
+      return _prodHost;
     }
-    final scheme = Uri.base.scheme.isEmpty ? "https" : Uri.base.scheme;
-    final host = Uri.base.host;
-    final port =
-        Uri.base.hasPort && Uri.base.port != 80 && Uri.base.port != 443
-            ? ":${Uri.base.port}"
-            : "";
-    return "$scheme://$host$port";
   }
 
   static String get baseUrl => "$_baseHost$_basePath";
 }
+
 // Colores del Wessex Rugby Club
 class AppColors {
   // Colores principales del club

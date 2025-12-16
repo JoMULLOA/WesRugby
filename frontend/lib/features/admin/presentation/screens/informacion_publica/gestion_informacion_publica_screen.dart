@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'dart:html' as html;
+import 'package:universal_html/html.dart' as html;
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:wesrugby/shared/widgets/layout/wessex_widgets.dart';
@@ -3608,106 +3608,188 @@ class _FormularioEntrenadorDialogState
             ),
             const SizedBox(height: 24),
 
-            _buildTextField(
-              controller: _tituloController,
-              label: 'T��tulo Profesional',
-              hint: 'Ej: Entrenador Nivel 1 World Rugby',
-              icon: Icons.workspace_premium,
-              maxLength: 255,
-              validator: (value) => _validarTextoRequerido(
-                value,
-                nombreCampo: 'titulo profesional',
-                minLength: 3,
-                maxLength: 255,
-              ),
+            _buildTextField(
+
+              controller: _tituloController,
+
+              label: 'T��tulo Profesional',
+
+              hint: 'Ej: Entrenador Nivel 1 World Rugby',
+
+              icon: Icons.workspace_premium,
+
+              maxLength: 255,
+
+              validator: (value) => _validarTextoRequerido(
+
+                value,
+
+                nombreCampo: 'titulo profesional',
+
+                minLength: 3,
+
+                maxLength: 255,
+
+              ),
+
             ),
             const SizedBox(height: 16),
 
-            _buildTextField(
-              controller: _especialidadController,
-              label: 'Especialidad',
-              hint: 'Ej: Entrenamiento F��sico y TǸcnico',
-              icon: Icons.sports_kabaddi,
-              maxLength: 255,
-              validator: (value) => _validarTextoRequerido(
-                value,
-                nombreCampo: 'especialidad',
-                minLength: 3,
-                maxLength: 255,
-              ),
+            _buildTextField(
+
+              controller: _especialidadController,
+
+              label: 'Especialidad',
+
+              hint: 'Ej: Entrenamiento F��sico y TǸcnico',
+
+              icon: Icons.sports_kabaddi,
+
+              maxLength: 255,
+
+              validator: (value) => _validarTextoRequerido(
+
+                value,
+
+                nombreCampo: 'especialidad',
+
+                minLength: 3,
+
+                maxLength: 255,
+
+              ),
+
             ),
             const SizedBox(height: 16),
 
-            _buildTextField(
-              controller: _aniosExperienciaController,
-              label: 'A��os de Experiencia',
-              hint: 'Ej: 10',
-              icon: Icons.timer,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              validator: _validarAnios,
-              maxLength: 2,
+            _buildTextField(
+
+              controller: _aniosExperienciaController,
+
+              label: 'A��os de Experiencia',
+
+              hint: 'Ej: 10',
+
+              icon: Icons.timer,
+
+              keyboardType: TextInputType.number,
+
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+
+              validator: _validarAnios,
+
+              maxLength: 2,
+
             ),
             const SizedBox(height: 16),
 
-            _buildTextField(
-              controller: _categoriasController,
-              label: 'Categor��as que Entrena',
-              hint: 'Ej: M6, M8, M10, M12',
-              icon: Icons.groups,
-              maxLength: 500,
-              validator: (value) => _validarTextoRequerido(
-                value,
-                nombreCampo: 'categorias',
-                minLength: 2,
-                maxLength: 500,
-              ),
+            _buildTextField(
+
+              controller: _categoriasController,
+
+              label: 'Categor��as que Entrena',
+
+              hint: 'Ej: M6, M8, M10, M12',
+
+              icon: Icons.groups,
+
+              maxLength: 500,
+
+              validator: (value) => _validarTextoRequerido(
+
+                value,
+
+                nombreCampo: 'categorias',
+
+                minLength: 2,
+
+                maxLength: 500,
+
+              ),
+
             ),
             const SizedBox(height: 16),
 
-            _buildTextField(
-              controller: _biografiaController,
-              label: 'Biograf��a',
-              hint: 'Describe la trayectoria y experiencia del entrenador...',
-              icon: Icons.person,
-              maxLines: 4,
-              maxLength: 2000,
-              validator: (value) => _validarTextoRequerido(
-                value,
-                nombreCampo: 'biografia',
-                minLength: 20,
-                maxLength: 2000,
-              ),
+            _buildTextField(
+
+              controller: _biografiaController,
+
+              label: 'Biograf��a',
+
+              hint: 'Describe la trayectoria y experiencia del entrenador...',
+
+              icon: Icons.person,
+
+              maxLines: 4,
+
+              maxLength: 2000,
+
+              validator: (value) => _validarTextoRequerido(
+
+                value,
+
+                nombreCampo: 'biografia',
+
+                minLength: 20,
+
+                maxLength: 2000,
+
+              ),
+
             ),
             const SizedBox(height: 16),
 
-            _buildTextField(
-              controller: _logrosController,
-              label: 'Logros Destacados',
-              hint: 'Enumera los logros mǭs importantes...',
-              icon: Icons.emoji_events,
-              maxLines: 3,
-              maxLength: 1500,
-              helperText: 'Opcional',
-              validator: (value) => _validarTextoOpcional(
-                value,
-                maxLength: 1500,
-              ),
+            _buildTextField(
+
+              controller: _logrosController,
+
+              label: 'Logros Destacados',
+
+              hint: 'Enumera los logros mǭs importantes...',
+
+              icon: Icons.emoji_events,
+
+              maxLines: 3,
+
+              maxLength: 1500,
+
+              helperText: 'Opcional',
+
+              validator: (value) => _validarTextoOpcional(
+
+                value,
+
+                maxLength: 1500,
+
+              ),
+
             ),
             const SizedBox(height: 16),
 
-            _buildTextField(
-              controller: _certificacionesController,
-              label: 'Certificaciones',
-              hint: 'Lista certificaciones y cursos relevantes...',
-              icon: Icons.school,
-              maxLines: 3,
-              maxLength: 1500,
-              helperText: 'Opcional',
-              validator: (value) => _validarTextoOpcional(
-                value,
-                maxLength: 1500,
-              ),
+            _buildTextField(
+
+              controller: _certificacionesController,
+
+              label: 'Certificaciones',
+
+              hint: 'Lista certificaciones y cursos relevantes...',
+
+              icon: Icons.school,
+
+              maxLines: 3,
+
+              maxLength: 1500,
+
+              helperText: 'Opcional',
+
+              validator: (value) => _validarTextoOpcional(
+
+                value,
+
+                maxLength: 1500,
+
+              ),
+
             ),
             const SizedBox(height: 16),
 

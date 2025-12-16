@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'dart:html' as html;
+import 'package:universal_html/html.dart' as html;
 import 'package:wesrugby/shared/widgets/layout/wessex_widgets.dart';
 import 'package:wesrugby/core/config/colors.dart';
 import 'package:wesrugby/data/services/estudiante_service.dart';

@@ -5,9 +5,9 @@ import 'dart:typed_data';
 import 'package:wesrugby/shared/widgets/layout/wessex_widgets.dart';
 import 'package:wesrugby/core/config/colors.dart';
 import 'package:wesrugby/data/services/voucher_service.dart'; // ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html show Blob, Url, AnchorElement, IFrameElement;
+import 'package:universal_html/html.dart' as html show Blob, Url, AnchorElement, IFrameElement;
 // ignore: avoid_web_libraries_in_flutter
-import 'dart:ui_web' as ui_web;
+import 'package:wesrugby/core/utils/platform/platform_view_registry.dart' as ui_web;
 
 class HistorialVouchersScreen extends StatefulWidget {
   const HistorialVouchersScreen({super.key});
@@ -960,7 +960,7 @@ class _HistorialVouchersScreenState extends State<HistorialVouchersScreen> {
         return iframe;
       });
 
-      return HtmlElementView(viewType: viewId);
+      return kIsWeb ? HtmlElementView(viewType: viewId) : const Center(child: Text('Vista previa no disponible en móvil'));
     } catch (e) {
       print('Error creando visor PDF: $e');
       return Column(
@@ -1133,7 +1133,7 @@ class _HistorialVouchersScreenState extends State<HistorialVouchersScreen> {
           return iframe;
         });
 
-        return HtmlElementView(viewType: viewId);
+        return kIsWeb ? HtmlElementView(viewType: viewId) : const Center(child: Text('Vista previa no disponible en móvil'));
       } else {
         return _buildPdfPlaceholder(voucher);
       }
