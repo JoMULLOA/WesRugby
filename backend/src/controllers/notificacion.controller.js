@@ -3,8 +3,8 @@ import {
   obtenerNotificacionesService,
   contarNotificacionesPendientesService,
   marcarComoLeidaService,
-  responderSolicitudViajeService,
-  manejarAbandonoViaje
+  crearNotificacionMasivaService,
+  eliminarNotificacion as eliminarNotificacionService
 } from "../services/notificacion.service.js";
 import {
   handleErrorClient,
@@ -16,13 +16,9 @@ export async function obtenerNotificaciones(req, res) {
   try {
     const rutUsuario = req.user.rut;
 
-    const [notificaciones, error] = await obtenerNotificacionesService(rutUsuario);
+    const result = await obtenerNotificacionesService(rutUsuario);
 
-    if (error) {
-      return handleErrorClient(res, 400, error);
-    }
-
-    handleSuccess(res, 200, "Notificaciones obtenidas correctamente", notificaciones);
+    handleSuccess(res, 200, "Notificaciones obtenidas correctamente", result.data);
   } catch (error) {
     console.error("Error en obtenerNotificaciones:", error);
     handleErrorServer(res, 500, error.message);
@@ -33,76 +29,54 @@ export async function contarNotificacionesPendientes(req, res) {
   try {
     const rutUsuario = req.user.rut;
 
-    const [count, error] = await contarNotificacionesPendientesService(rutUsuario);
+    const result = await contarNotificacionesPendientesService(rutUsuario);
 
-    if (error) {
-      return handleErrorClient(res, 400, error);
-    }
-
-    handleSuccess(res, 200, "Conteo de notificaciones obtenido correctamente", { count });
+    handleSuccess(res, 200, "Conteo de notificaciones obtenido correctamente", result.data);
   } catch (error) {
     console.error("Error en contarNotificacionesPendientes:", error);
     handleErrorServer(res, 500, error.message);
   }
 }
 
-export async function marcarComoLeida(req, res) {
+export async function eliminarNotificacion(req, res) {
   try {
     const { id } = req.params;
     const rutUsuario = req.user.rut;
 
-    const [notificacion, error] = await marcarComoLeidaService(id, rutUsuario);
+    const result = await eliminarNotificacionService(id, rutUsuario);
 
-    if (error) {
-      return handleErrorClient(res, 400, error);
-    }
-
-    handleSuccess(res, 200, "Notificación marcada como leída", notificacion);
+    handleSuccess(res, 200, "Notificación eliminada correctamente", result);
   } catch (error) {
-    console.error("Error en marcarComoLeida:", error);
+    console.error("Error en eliminarNotificacion:", error);
     handleErrorServer(res, 500, error.message);
   }
 }
 
-export async function responderSolicitudViaje(req, res) {
+export async function crearNotificacionMasiva(req, res) {
   try {
-    const { id } = req.params;
-    const { aceptar } = req.body;
-    const rutUsuario = req.user.rut;
+    const { destinatarios, titulo, mensaje, tipo, datos } = req.body;
+    const rutEmisor = req.user.rut;
 
-    const [resultado, error] = await responderSolicitudViajeService(id, aceptar, rutUsuario);
-
-    if (error) {
-      return handleErrorClient(res, 400, error);
+    if (!destinatarios || !Array.isArray(destinatarios) || destinatarios.length === 0) {
+      return handleErrorClient(res, 400, "Se requiere una lista de destinatarios");
     }
 
-    handleSuccess(res, 200, resultado.mensaje, resultado);
-  } catch (error) {
-    console.error("Error en responderSolicitudViaje:", error);
-    handleErrorServer(res, 500, error.message);
-  }
-}
-
-export async function abandonarViaje(req, res) {
-  try {
-    const { viajeId } = req.params;
-    const pasajeroRut = req.user.rut;
-
-    if (!viajeId) {
-      return handleErrorClient(res, 400, "ID de viaje requerido");
-    }
-
-    const resultado = await manejarAbandonoViaje(viajeId, pasajeroRut);
-
-    handleSuccess(res, 200, resultado.message, {
-      viajeId: resultado.viajeId,
-      pasajeroRut: resultado.pasajeroRut,
-      plazasLiberadas: resultado.plazasLiberadas,
-      nuevasPlazasDisponibles: resultado.nuevasPlazasDisponibles,
-      devolucion: resultado.devolucion
+    const [resultado, error] = await crearNotificacionMasivaService({
+      destinatarios,
+      titulo,
+      mensaje,
+      tipo,
+      datos,
+      rutEmisor
     });
+
+    if (error) {
+      return handleErrorClient(res, 400, error);
+    }
+
+    handleSuccess(res, 201, "Notificaciones enviadas correctamente", resultado);
   } catch (error) {
-    console.error("Error en abandonarViaje:", error);
+    console.error("Error en crearNotificacionMasiva:", error);
     handleErrorServer(res, 500, error.message);
   }
 }

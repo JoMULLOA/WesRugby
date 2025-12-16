@@ -20,7 +20,7 @@ class Notificacion {
   factory Notificacion.fromJson(Map<String, dynamic> json) {
     try {
       return Notificacion(
-        id: json['_id']?.toString() ?? '',
+        id: (json['id'] ?? json['_id'])?.toString() ?? '',
         titulo: json['titulo']?.toString() ?? '',
         mensaje: json['mensaje']?.toString() ?? '',
         tipo: json['tipo']?.toString() ?? '',

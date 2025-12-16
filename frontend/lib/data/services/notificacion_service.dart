@@ -103,15 +103,15 @@ class NotificacionService {
     }
   }
 
-  // Marcar notificación como leída
-  static Future<Map<String, dynamic>> marcarComoLeida(
+  // Eliminar notificación
+  static Future<Map<String, dynamic>> eliminarNotificacion(
     String notificacionId,
   ) async {
     try {
       final headers = await _getHeaders();
 
-      final response = await http.patch(
-        Uri.parse('${confGlobal.baseUrl}/notificaciones/$notificacionId/leer'),
+      final response = await http.delete(
+        Uri.parse('${confGlobal.baseUrl}/notificaciones/$notificacionId'),
         headers: headers,
       );
 
@@ -120,12 +120,53 @@ class NotificacionService {
       if (response.statusCode == 200) {
         return {
           'success': true,
-          'message': data['message'] ?? 'Notificación marcada como leída',
+          'message': data['message'] ?? 'Notificación eliminada correctamente',
         };
       } else {
         return {
           'success': false,
-          'message': data['message'] ?? 'Error al marcar como leída',
+          'message': data['message'] ?? 'Error al eliminar notificación',
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Error de conexión: $e'};
+    }
+  }
+
+  // Enviar notificación masiva
+  static Future<Map<String, dynamic>> enviarNotificacionMasiva({
+    required List<String> destinatarios,
+    required String titulo,
+    required String mensaje,
+    required String tipo,
+    Map<String, dynamic>? datos,
+  }) async {
+    try {
+      final headers = await _getHeaders();
+
+      final response = await http.post(
+        Uri.parse('${confGlobal.baseUrl}/notificaciones/masiva'),
+        headers: headers,
+        body: jsonEncode({
+          'destinatarios': destinatarios,
+          'titulo': titulo,
+          'mensaje': mensaje,
+          'tipo': tipo,
+          'datos': datos,
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return {
+          'success': true,
+          'message': data['message'] ?? 'Notificaciones enviadas correctamente',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Error al enviar notificaciones',
         };
       }
     } catch (e) {

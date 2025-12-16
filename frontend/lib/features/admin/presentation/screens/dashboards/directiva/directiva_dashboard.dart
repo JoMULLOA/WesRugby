@@ -464,271 +464,200 @@ class _DirectivaDashboardState extends State<DirectivaDashboard> {
                   subtitle: 'Control y administración del club',
                   titleColor: WessexColors.white,
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
 
-                // Primera fila: Registro de Datos, Formularios de Registro
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildActionCard(
-                        'Registro de Datos',
-                        'Importar estudiantes desde Excel',
-                        Icons.upload_file,
-                        WessexColors.primaryAction,
-                        () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const RegistroDatosScreen(),
-                          ),
+                _buildResponsiveGrid(
+                  context,
+                  [
+                    _buildActionCard(
+                      'Registro de Datos',
+                      'Importar estudiantes desde Excel',
+                      Icons.upload_file,
+                      WessexColors.primaryAction,
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const RegistroDatosScreen(),
                         ),
-                        isDesktop: isDesktop,
-                        isTablet: isTablet,
                       ),
+                      isDesktop: isDesktop,
+                      isTablet: isTablet,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildActionCard(
-                        'Formularios de Registro',
-                        'Importar formularios de inscripción',
-                        Icons.assignment,
-                        WessexColors.leafGreen,
-                        () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const RegistroFormulariosScreen(),
-                          ),
+                    _buildActionCard(
+                      'Formularios de Registro',
+                      'Importar formularios de inscripción',
+                      Icons.assignment,
+                      WessexColors.leafGreen,
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              const RegistroFormulariosScreen(),
                         ),
-                        isDesktop: isDesktop,
-                        isTablet: isTablet,
                       ),
+                      isDesktop: isDesktop,
+                      isTablet: isTablet,
                     ),
-                  ],
-                ),
-
-                const SizedBox(height: 12),
-
-                // Segunda fila: Gestión de Usuarios, Base de Datos
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildActionCard(
-                        'Gestión de Usuarios',
-                        'Administrar miembros del club',
-                        Icons.people,
-                        WessexColors.secondaryAction,
-                        () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const GestionUsuariosScreen(),
-                          ),
+                    _buildActionCard(
+                      'Gestión de Usuarios',
+                      'Administrar miembros del club',
+                      Icons.people,
+                      WessexColors.secondaryAction,
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const GestionUsuariosScreen(),
                         ),
-                        isDesktop: isDesktop,
-                        isTablet: isTablet,
                       ),
+                      isDesktop: isDesktop,
+                      isTablet: isTablet,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildActionCard(
-                        'Base de Datos',
-                        'Consultar estudiantes registrados',
-                        Icons.storage,
-                        WessexColors.secondaryAction,
-                        () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const BaseDatosScreen(),
-                          ),
+                    _buildActionCard(
+                      'Base de Datos',
+                      'Consultar estudiantes registrados',
+                      Icons.storage,
+                      WessexColors.secondaryAction,
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const BaseDatosScreen(),
                         ),
-                        isDesktop: isDesktop,
-                        isTablet: isTablet,
                       ),
+                      isDesktop: isDesktop,
+                      isTablet: isTablet,
                     ),
-                  ],
-                ),
-
-                const SizedBox(height: 12),
-
-                // Tercera fila: Inventario y Ventas (span completo)
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildActionCard(
-                        'Inventario y Ventas',
-                        'Gestionar productos, ventas y códigos',
-                        Icons.storefront,
-                        WessexColors.leafGreen,
-                        () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const InventoryManagementScreen(),
-                          ),
+                    _buildActionCard(
+                      'Inventario y Ventas',
+                      'Gestionar productos, ventas y códigos',
+                      Icons.storefront,
+                      WessexColors.leafGreen,
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              const InventoryManagementScreen(),
                         ),
-                        isDesktop: isDesktop,
-                        isTablet: isTablet,
                       ),
+                      isDesktop: isDesktop,
+                      isTablet: isTablet,
                     ),
-                  ],
-                ),
-
-                const SizedBox(height: 12),
-
-                // Cuarta fila: Gestión de Justificantes, Gestión de Eventos
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildActionCard(
-                        'Gestión de Justificantes',
-                        'Evaluar justificantes de inasistencia',
-                        Icons.assignment_turned_in,
-                        WessexColors.primaryAction,
-                        () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const GestionJustificantesScreen(),
-                          ),
+                    _buildActionCard(
+                      'Gestión de Justificantes',
+                      'Evaluar justificantes de inasistencia',
+                      Icons.assignment_turned_in,
+                      WessexColors.primaryAction,
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              const GestionJustificantesScreen(),
                         ),
-                        isDesktop: isDesktop,
-                        isTablet: isTablet,
                       ),
+                      isDesktop: isDesktop,
+                      isTablet: isTablet,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildActionCard(
-                        'Gestión de Eventos',
-                        'Administrar eventos deportivos',
-                        Icons.event,
-                        WessexColors.primaryAction,
-                        () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => GestionEventosScreen(),
-                          ),
+                    _buildActionCard(
+                      'Gestión de Eventos',
+                      'Administrar eventos deportivos',
+                      Icons.event,
+                      WessexColors.primaryAction,
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => GestionEventosScreen(),
                         ),
-                        isDesktop: isDesktop,
-                        isTablet: isTablet,
                       ),
+                      isDesktop: isDesktop,
+                      isTablet: isTablet,
                     ),
-                  ],
-                ),
-
-                const SizedBox(height: 12),
-
-                // Quinta fila: Estadísticas de Asistencia
-                _buildActionCard(
-                  'Estadísticas de Asistencia',
-                  'Ver análisis y tendencias de asistencia',
-                  Icons.analytics,
-                  WessexColors.deepRoyalBlue,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const EstadisticasAsistenciaScreen(),
-                    ),
-                  ),
-                  isDesktop: isDesktop,
-                  isTablet: isTablet,
-                ),
-
-                const SizedBox(height: 12),
-
-                // Resumen de Pagos
-                _buildActionCard(
-                  'Resumen de Pagos',
-                  'Consultar estado de pagos de estudiantes',
-                  Icons.payments,
-                  WessexColors.leafGreen,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const PagosResumenScreen(),
-                    ),
-                  ),
-                  isDesktop: isDesktop,
-                  isTablet: isTablet,
-                ),
-
-                const SizedBox(height: 12),
-
-                // Cuarta fila: Actas de Reunión
-                _buildActionCard(
-                  'Actas de Reunión',
-                  'Gestionar actas y minutas de reuniones',
-                  Icons.description,
-                  WessexColors.accentAction,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const GestionActasReunionScreen(),
-                    ),
-                  ),
-                  isDesktop: isDesktop,
-                  isTablet: isTablet,
-                ),
-
-                const SizedBox(height: 12),
-
-                // Quinta fila: Información Pública, Multimedia
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildActionCard(
-                        'Información Pública',
-                        'Gestionar noticias, auspiciadores y entrenadores',
-                        Icons.public,
-                        WessexColors.secondaryAction,
-                        () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const GestionInformacionPublicaScreen(),
-                          ),
+                    _buildActionCard(
+                      'Estadísticas de Asistencia',
+                      'Ver análisis y tendencias de asistencia',
+                      Icons.analytics,
+                      WessexColors.deepRoyalBlue,
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              const EstadisticasAsistenciaScreen(),
                         ),
-                        isDesktop: isDesktop,
-                        isTablet: isTablet,
                       ),
+                      isDesktop: isDesktop,
+                      isTablet: isTablet,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildActionCard(
-                        'Multimedia',
-                        'Gestionar fotos y videos de eventos',
-                        Icons.photo_library,
-                        WessexColors.deepRoyalBlue,
-                        () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const MultimediaOverviewScreen(),
-                          ),
+                    _buildActionCard(
+                      'Resumen de Pagos',
+                      'Consultar estado de pagos de estudiantes',
+                      Icons.payments,
+                      WessexColors.leafGreen,
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const PagosResumenScreen(),
                         ),
-                        isDesktop: isDesktop,
-                        isTablet: isTablet,
                       ),
+                      isDesktop: isDesktop,
+                      isTablet: isTablet,
                     ),
-                  ],
-                ),
-
-                const SizedBox(height: 12),
-
-                // Sexta fila: Términos y Condiciones
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildActionCard(
-                        'Términos y Condiciones',
-                        'Gestionar términos y condiciones del club',
-                        Icons.description,
-                        WessexColors.leafGreen,
-                        () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const TerminosGestionScreen(),
-                          ),
+                    _buildActionCard(
+                      'Actas de Reunión',
+                      'Gestionar actas y minutas de reuniones',
+                      Icons.description,
+                      WessexColors.accentAction,
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              const GestionActasReunionScreen(),
                         ),
-                        isDesktop: isDesktop,
-                        isTablet: isTablet,
                       ),
+                      isDesktop: isDesktop,
+                      isTablet: isTablet,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(child: Container()), // Espacio vacío para mantener el grid
+                    _buildActionCard(
+                      'Información Pública',
+                      'Gestionar noticias, auspiciadores y entrenadores',
+                      Icons.public,
+                      WessexColors.secondaryAction,
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              const GestionInformacionPublicaScreen(),
+                        ),
+                      ),
+                      isDesktop: isDesktop,
+                      isTablet: isTablet,
+                    ),
+                    _buildActionCard(
+                      'Multimedia',
+                      'Gestionar fotos y videos de eventos',
+                      Icons.photo_library,
+                      WessexColors.deepRoyalBlue,
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              const MultimediaOverviewScreen(),
+                        ),
+                      ),
+                      isDesktop: isDesktop,
+                      isTablet: isTablet,
+                    ),
+                    _buildActionCard(
+                      'Términos y Condiciones',
+                      'Gestionar términos y condiciones del club',
+                      Icons.description,
+                      WessexColors.leafGreen,
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const TerminosGestionScreen(),
+                        ),
+                      ),
+                      isDesktop: isDesktop,
+                      isTablet: isTablet,
+                    ),
                   ],
                 ),
 
@@ -738,6 +667,30 @@ class _DirectivaDashboardState extends State<DirectivaDashboard> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildResponsiveGrid(BuildContext context, List<Widget> children) {
+    final width = MediaQuery.of(context).size.width;
+    int crossAxisCount = 1;
+    double childAspectRatio = 1.8; // Adjusted for mobile to prevent overflow
+
+    if (width > 1200) {
+      crossAxisCount = 3;
+      childAspectRatio = 1.5;
+    } else if (width > 600) {
+      crossAxisCount = 2;
+      childAspectRatio = 1.6;
+    }
+
+    return GridView.count(
+      crossAxisCount: crossAxisCount,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisSpacing: 16,
+      mainAxisSpacing: 16,
+      childAspectRatio: childAspectRatio,
+      children: children,
     );
   }
 
@@ -756,11 +709,12 @@ class _DirectivaDashboardState extends State<DirectivaDashboard> {
         onTap: onPressed,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: EdgeInsets.all(isDesktop ? 20 : (isTablet ? 16 : 14)),
-          child: Row(
+          padding: EdgeInsets.all(isDesktop ? 16 : (isTablet ? 14 : 12)),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                padding: EdgeInsets.all(isDesktop ? 16 : (isTablet ? 14 : 12)),
+                padding: EdgeInsets.all(isDesktop ? 12 : (isTablet ? 10 : 8)),
                 decoration: BoxDecoration(
                   color: color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
@@ -771,34 +725,29 @@ class _DirectivaDashboardState extends State<DirectivaDashboard> {
                   size: isDesktop ? 28 : (isTablet ? 24 : 20),
                 ),
               ),
-              SizedBox(width: isDesktop ? 20 : (isTablet ? 16 : 12)),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: isDesktop ? 18 : (isTablet ? 16 : 14),
-                        fontWeight: FontWeight.bold,
-                        color: WessexColors.crestShadow,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: isDesktop ? 14 : (isTablet ? 13 : 12),
-                        color: WessexColors.crestSlate.withOpacity(0.7),
-                      ),
-                    ),
-                  ],
+              SizedBox(height: isDesktop ? 12 : (isTablet ? 10 : 8)),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: isDesktop ? 16 : (isTablet ? 14 : 13),
+                  fontWeight: FontWeight.bold,
+                  color: WessexColors.darkGrape,
                 ),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              Icon(
-                Icons.chevron_right,
-                color: WessexColors.crestSlate.withOpacity(0.3),
-                size: isDesktop ? 20 : (isTablet ? 18 : 16),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: isDesktop ? 13 : (isTablet ? 12 : 11),
+                  color: WessexColors.darkGrape.withOpacity(0.7),
+                  height: 1.2,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),

@@ -13,6 +13,8 @@ import 'package:wesrugby/features/admin/presentation/screens/usuarios/editar_est
 import 'package:wesrugby/features/auth/presentation/screens/simple_login/simple_login.dart' as login;
 import 'package:wesrugby/shared/widgets/terminos_condiciones_dialog.dart';
 import 'package:wesrugby/features/admin/presentation/screens/asistencia/apoderado/asistencia_apoderado_screen.dart';
+import 'package:wesrugby/data/services/notificacion_service.dart';
+import 'package:wesrugby/data/models/notificacion_model.dart';
 
 class ApoderadoDashboard extends StatefulWidget {
   const ApoderadoDashboard({super.key});
@@ -25,15 +27,158 @@ class _ApoderadoDashboardState extends State<ApoderadoDashboard> {
   String? _avatarUrl;
   String? _userName;
   bool _avatarUploading = false;
+  List<Notificacion> _notificaciones = [];
+  bool _hasUnreadDebtNotifications = false;
 
   @override
   void initState() {
     super.initState();
     _loadUserInfo();
+    _checkNotifications();
     // Verificar términos y condiciones después de que el widget esté construido
     WidgetsBinding.instance.addPostFrameCallback((_) {
       verificarYMostrarTerminos(context);
     });
+  }
+
+  Future<void> _checkNotifications() async {
+    try {
+      final response = await NotificacionService.obtenerNotificacionesPendientes();
+      if (mounted && response['success'] == true) {
+        final List<dynamic> data = response['data'] ?? [];
+        setState(() {
+          _notificaciones = data.map((json) => Notificacion.fromJson(json)).toList();
+          _hasUnreadDebtNotifications = _notificaciones.any((n) => 
+            !n.leida && (n.datos?['tipoDeuda'] != null)
+          );
+        });
+      }
+    } catch (e) {
+      print('Error al cargar notificaciones: $e');
+    }
+  }
+
+  Future<void> _eliminarNotificacion(String id, StateSetter setDialogState) async {
+    // Optimistic update: Remove immediately from UI
+    setState(() {
+      _notificaciones.removeWhere((n) => n.id == id);
+      _hasUnreadDebtNotifications = _notificaciones.any((n) => 
+        !n.leida && (n.datos?['tipoDeuda'] != null)
+      );
+    });
+    
+    // Update dialog UI immediately
+    setDialogState(() {});
+
+    // Close dialog if empty
+    if (_notificaciones.isEmpty && mounted) {
+      Navigator.of(context).pop();
+    }
+
+    try {
+      // Call API in background
+      final response = await NotificacionService.eliminarNotificacion(id);
+      if (response['success'] != true) {
+        print('Error deleting notification: ${response['message']}');
+      }
+    } catch (e) {
+      print('Error al eliminar notificación: $e');
+    }
+  }
+
+  void _showNotificationsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return Dialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              width: 400,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Notificaciones',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: WessexColors.darkGrape,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  if (_notificaciones.isEmpty)
+                    const Text('No tienes notificaciones pendientes.')
+                  else
+                    ..._notificaciones.where((n) => !n.leida).map((n) {
+                      String mensaje = n.mensaje;
+                      if (n.datos != null && n.datos!['tipoDeuda'] != null) {
+                        if (n.datos!['tipoDeuda'] == 'matricula') {
+                          mensaje = 'Debes matrícula';
+                        } else if (n.datos!['tipoDeuda'] == 'mes') {
+                          mensaje = 'Debes mes ${n.datos!['mes']}';
+                        }
+                      }
+                      
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: WessexColors.crimsonAlert.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: WessexColors.crimsonAlert.withOpacity(0.3)),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(Icons.warning_amber_rounded, color: WessexColors.crimsonAlert),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                mensaje,
+                                style: TextStyle(
+                                  color: WessexColors.darkGrape,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                            Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(20),
+                                onTap: () => _eliminarNotificacion(n.id, setDialogState),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Icon(
+                                    Icons.close,
+                                    size: 20,
+                                    color: WessexColors.darkGrape.withOpacity(0.6),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                ],
+              ),
+            ),
+          );
+        }
+      ),
+    );
   }
 
   Future<void> _loadUserInfo({bool refreshRemote = true}) async {
@@ -391,6 +536,29 @@ class _ApoderadoDashboardState extends State<ApoderadoDashboard> {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showNotificationsDialog,
+        backgroundColor: WessexColors.deepRoyalBlue,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            const Icon(Icons.notifications, color: Colors.white),
+            if (_hasUnreadDebtNotifications)
+              Positioned(
+                right: 0,
+                top: 0,
+                child: Container(
+                  width: 10,
+                  height: 10,
+                  decoration: const BoxDecoration(
+                    color: WessexColors.leafGreen,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
       body: WessexBackground(
         child: SafeArea(
           child: SingleChildScrollView(
@@ -452,30 +620,36 @@ class _ApoderadoDashboardState extends State<ApoderadoDashboard> {
                   ),
                 ),
 
-                // Sección: Información de Estudiantes
+                // Sección: Mis Estudiantes
                 const WessexSectionTitle(
                   title: 'Mis Estudiantes',
                   subtitle: 'Visualizar y editar información de estudiantes',
                   titleColor: WessexColors.white,
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
 
-                _buildActionCard(
-                  'Gestionar Estudiantes',
-                  'Ver y editar información de mis estudiantes',
-                  Icons.school,
-                  WessexColors.deepRoyalBlue,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const EditarEstudianteApoderadoScreen(),
+                _buildResponsiveGrid(
+                  context,
+                  [
+                    _buildActionCard(
+                      'Gestionar Estudiantes',
+                      'Ver y editar información de mis estudiantes',
+                      Icons.school,
+                      WessexColors.deepRoyalBlue,
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              const EditarEstudianteApoderadoScreen(),
+                        ),
+                      ),
+                      isDesktop: isDesktop,
+                      isTablet: isTablet,
                     ),
-                  ),
-                  isDesktop: isDesktop,
-                  isTablet: isTablet,
+                  ],
                 ),
 
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
 
                 // Sección: Gestión de Pagos
                 const WessexSectionTitle(
@@ -483,152 +657,179 @@ class _ApoderadoDashboardState extends State<ApoderadoDashboard> {
                   subtitle: 'Vouchers y comprobantes de mensualidad',
                   titleColor: WessexColors.white,
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
 
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildActionCard(
-                        'Subir Voucher',
-                        'Adjuntar comprobante de pago',
-                        Icons.upload_file,
-                        WessexColors.crimsonAlert,
-                        () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const VoucherPagoScreen(),
-                          ),
+                _buildResponsiveGrid(
+                  context,
+                  [
+                    _buildActionCard(
+                      'Subir Voucher',
+                      'Adjuntar comprobante de pago',
+                      Icons.upload_file,
+                      WessexColors.crimsonAlert,
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const VoucherPagoScreen(),
                         ),
-                        isDesktop: isDesktop,
-                        isTablet: isTablet,
                       ),
+                      isDesktop: isDesktop,
+                      isTablet: isTablet,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildActionCard(
-                        'Historial',
-                        'Ver vouchers enviados',
-                        Icons.history,
-                        WessexColors.leafGreen,
-                        () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder:
-                                (context) => const HistorialVouchersScreen(),
-                          ),
+                    _buildActionCard(
+                      'Historial',
+                      'Ver vouchers enviados',
+                      Icons.history,
+                      WessexColors.leafGreen,
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const HistorialVouchersScreen(),
                         ),
-                        isDesktop: isDesktop,
-                        isTablet: isTablet,
                       ),
+                      isDesktop: isDesktop,
+                      isTablet: isTablet,
                     ),
                   ],
                 ),
 
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
 
-                // Sección: Justificantes de Inasistencia
+                // Sección: Justificantes
                 const WessexSectionTitle(
                   title: 'Justificantes de Inasistencia',
                   subtitle: 'Justificar ausencias a entrenamientos o eventos',
                   titleColor: WessexColors.white,
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
 
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildActionCard(
-                        'Subir Justificante',
-                        'Justificar una inasistencia',
-                        Icons.medical_information,
-                        WessexColors.deepRoyalBlue,
-                        () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const JustificanteScreen(),
-                          ),
+                _buildResponsiveGrid(
+                  context,
+                  [
+                    _buildActionCard(
+                      'Subir Justificante',
+                      'Justificar una inasistencia',
+                      Icons.medical_information,
+                      WessexColors.deepRoyalBlue,
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const JustificanteScreen(),
                         ),
-                        isDesktop: isDesktop,
-                        isTablet: isTablet,
                       ),
+                      isDesktop: isDesktop,
+                      isTablet: isTablet,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildActionCard(
-                        'Historial Justificantes',
-                        'Ver justificantes enviados',
-                        Icons.assignment_turned_in,
-                        WessexColors.leafGreen,
-                        () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder:
-                                (context) =>
-                                    const HistorialJustificantesScreen(),
-                          ),
+                    _buildActionCard(
+                      'Historial Justificantes',
+                      'Ver justificantes enviados',
+                      Icons.assignment_turned_in,
+                      WessexColors.leafGreen,
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              const HistorialJustificantesScreen(),
                         ),
-                        isDesktop: isDesktop,
-                        isTablet: isTablet,
                       ),
+                      isDesktop: isDesktop,
+                      isTablet: isTablet,
                     ),
                   ],
                 ),
 
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
 
+                // Sección: Asistencia
                 const WessexSectionTitle(
                   title: 'Asistencia',
                   subtitle: 'Seguimiento de asistencia de mi hijo/a',
                   titleColor: WessexColors.white,
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
 
-                _buildActionCard(
-                  'Ver Asistencia',
-                  'Historial de asistencia a entrenamientos',
-                  Icons.fact_check,
-                  WessexColors.leafGreen,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const AsistenciaApoderadoScreen(),
+                _buildResponsiveGrid(
+                  context,
+                  [
+                    _buildActionCard(
+                      'Ver Asistencia',
+                      'Historial de asistencia a entrenamientos',
+                      Icons.fact_check,
+                      WessexColors.leafGreen,
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              const AsistenciaApoderadoScreen(),
+                        ),
+                      ),
+                      isDesktop: isDesktop,
+                      isTablet: isTablet,
                     ),
-                  ),
-                  isDesktop: isDesktop,
-                  isTablet: isTablet,
+                  ],
                 ),
 
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
 
+                // Sección: Documentos
                 const WessexSectionTitle(
                   title: 'Documentos del Club',
                   subtitle: 'Material compartido con apoderados',
                   titleColor: WessexColors.white,
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
 
-                _buildActionCard(
-                  'Actas de Reunión',
-                  'Ver actas publicadas',
-                  Icons.description,
-                  WessexColors.deepRoyalBlue,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder:
-                          (context) => const VisualizarActasReunionScreen(),
+                _buildResponsiveGrid(
+                  context,
+                  [
+                    _buildActionCard(
+                      'Actas de Reunión',
+                      'Ver actas publicadas',
+                      Icons.description,
+                      WessexColors.deepRoyalBlue,
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              const VisualizarActasReunionScreen(),
+                        ),
+                      ),
+                      isDesktop: isDesktop,
+                      isTablet: isTablet,
                     ),
-                  ),
-                  isDesktop: isDesktop,
-                  isTablet: isTablet,
+                  ],
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 32),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildResponsiveGrid(BuildContext context, List<Widget> children) {
+    final width = MediaQuery.of(context).size.width;
+    int crossAxisCount = 1;
+    double childAspectRatio = 1.8; // Adjusted for mobile to prevent overflow
+
+    if (width > 1200) {
+      crossAxisCount = 3;
+      childAspectRatio = 1.5;
+    } else if (width > 600) {
+      crossAxisCount = 2;
+      childAspectRatio = 1.6;
+    }
+
+    return GridView.count(
+      crossAxisCount: crossAxisCount,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisSpacing: 16,
+      mainAxisSpacing: 16,
+      childAspectRatio: childAspectRatio,
+      children: children,
     );
   }
 
@@ -647,11 +848,12 @@ class _ApoderadoDashboardState extends State<ApoderadoDashboard> {
         onTap: onPressed,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: EdgeInsets.all(isDesktop ? 20 : (isTablet ? 16 : 14)),
+          padding: EdgeInsets.all(isDesktop ? 16 : (isTablet ? 14 : 12)),
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                padding: EdgeInsets.all(isDesktop ? 16 : (isTablet ? 14 : 12)),
+                padding: EdgeInsets.all(isDesktop ? 12 : (isTablet ? 10 : 8)),
                 decoration: BoxDecoration(
                   color: color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
@@ -659,27 +861,32 @@ class _ApoderadoDashboardState extends State<ApoderadoDashboard> {
                 child: Icon(
                   icon,
                   color: color,
-                  size: isDesktop ? 32 : (isTablet ? 28 : 24),
+                  size: isDesktop ? 28 : (isTablet ? 24 : 20),
                 ),
               ),
-              SizedBox(height: isDesktop ? 16 : (isTablet ? 14 : 12)),
+              SizedBox(height: isDesktop ? 12 : (isTablet ? 10 : 8)),
               Text(
                 title,
                 style: TextStyle(
-                  fontSize: isDesktop ? 18 : (isTablet ? 16 : 14),
+                  fontSize: isDesktop ? 16 : (isTablet ? 14 : 13),
                   fontWeight: FontWeight.bold,
                   color: WessexColors.darkGrape,
                 ),
                 textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 4),
               Text(
                 subtitle,
                 style: TextStyle(
-                  fontSize: isDesktop ? 14 : (isTablet ? 13 : 12),
+                  fontSize: isDesktop ? 13 : (isTablet ? 12 : 11),
                   color: WessexColors.darkGrape.withOpacity(0.7),
+                  height: 1.2,
                 ),
                 textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -687,5 +894,4 @@ class _ApoderadoDashboardState extends State<ApoderadoDashboard> {
       ),
     );
   }
-
 }

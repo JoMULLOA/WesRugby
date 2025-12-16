@@ -7,6 +7,7 @@ import 'package:wesrugby/data/services/api_service.dart';
 import 'package:wesrugby/features/admin/presentation/screens/pagos/gestion/gestion_vouchers_screen.dart';
 import 'package:wesrugby/features/admin/presentation/screens/pagos/resumen/pagos_resumen_screen.dart';
 import 'package:wesrugby/features/admin/presentation/screens/actas/visualizar/visualizar_actas_reunion_screen.dart';
+import 'package:wesrugby/features/admin/presentation/screens/actas/gestion/gestion_actas_reunion_screen.dart';
 import 'package:wesrugby/features/inventory/presentation/screens/management/inventory_management_screen.dart';
 import 'package:wesrugby/features/admin/presentation/screens/pagos/configuracion/configuracion_precios_screen.dart';
 import 'package:wesrugby/features/auth/presentation/screens/simple_login/simple_login.dart' as login;
@@ -448,108 +449,136 @@ class _TesoreraDashboardState extends State<TesoreraDashboard> {
                 // Sección: Gestión Financiera
                 const WessexSectionTitle(
                   title: 'Gestión Financiera',
-                  subtitle: 'Control de ingresos y pagos',
+                  subtitle: 'Control de pagos y tesorería',
                   titleColor: WessexColors.white,
                 ),
-                const SizedBox(height: 20),
-
-                _buildActionCard(
-                  'Gestión de Vouchers',
-                  'Aprobar pagos de apoderados',
-                  Icons.receipt_long,
-                  WessexColors.crimsonAlert,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const GestionVouchersScreen(),
-                    ),
-                  ),
-                  isDesktop: isDesktop,
-                  isTablet: isTablet,
-                ),
-
                 const SizedBox(height: 16),
 
-                _buildActionCard(
-                  'Resumen de Pagos',
-                  'Ver matrícula y mensualidades por estudiante',
-                  Icons.table_chart,
-                  WessexColors.leafGreen,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const PagosResumenScreen(),
+                _buildResponsiveGrid(
+                  context,
+                  [
+                    _buildActionCard(
+                      'Gestión de Vouchers',
+                      'Revisar comprobantes de pago',
+                      Icons.receipt_long,
+                      WessexColors.primaryAction,
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const GestionVouchersScreen(),
+                        ),
+                      ),
+                      isDesktop: isDesktop,
+                      isTablet: isTablet,
                     ),
-                  ),
-                  isDesktop: isDesktop,
-                  isTablet: isTablet,
-                ),
-
-                const SizedBox(height: 16),
-
-                _buildActionCard(
-                  'Inventario y Ventas',
-                  'Visualizar ventas y administrar productos',
-                  Icons.store,
-                  WessexColors.primaryAction,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const InventoryManagementScreen(),
+                    _buildActionCard(
+                      'Resumen de Pagos',
+                      'Ver estado de pagos por estudiante',
+                      Icons.payments,
+                      WessexColors.leafGreen,
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const PagosResumenScreen(),
+                        ),
+                      ),
+                      isDesktop: isDesktop,
+                      isTablet: isTablet,
                     ),
-                  ),
-                  isDesktop: isDesktop,
-                  isTablet: isTablet,
-                ),
-
-                const SizedBox(height: 16),
-
-                _buildActionCard(
-                  'Configuración de Precios',
-                  'Definir precios de mensualidad y matrícula',
-                  Icons.settings,
-                  WessexColors.deepRoyalBlue,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const ConfiguracionPreciosScreen(),
+                    _buildActionCard(
+                      'Inventario y Ventas',
+                      'Gestionar productos y ventas',
+                      Icons.storefront,
+                      WessexColors.secondaryAction,
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              const InventoryManagementScreen(),
+                        ),
+                      ),
+                      isDesktop: isDesktop,
+                      isTablet: isTablet,
                     ),
-                  ),
-                  isDesktop: isDesktop,
-                  isTablet: isTablet,
-                ),
-
-                const SizedBox(height: 32),
-
-                const WessexSectionTitle(
-                  title: 'Documentos del Club',
-                  subtitle: 'Material accesible para tesorería',
-                  titleColor: WessexColors.white,
-                ),
-                const SizedBox(height: 20),
-
-                _buildActionCard(
-                  'Actas de Reunión',
-                  'Ver actas del club',
-                  Icons.description,
-                  WessexColors.deepRoyalBlue,
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder:
-                          (context) => const VisualizarActasReunionScreen(),
+                    _buildActionCard(
+                      'Configuración de Precios',
+                      'Ajustar valores de mensualidad',
+                      Icons.price_change,
+                      WessexColors.deepRoyalBlue,
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              const ConfiguracionPreciosScreen(),
+                        ),
+                      ),
+                      isDesktop: isDesktop,
+                      isTablet: isTablet,
                     ),
-                  ),
-                  isDesktop: isDesktop,
-                  isTablet: isTablet,
+                  ],
                 ),
 
                 const SizedBox(height: 24),
+
+                // Sección: Documentos
+                const WessexSectionTitle(
+                  title: 'Documentos del Club',
+                  subtitle: 'Gestión de actas y documentos',
+                  titleColor: WessexColors.white,
+                ),
+                const SizedBox(height: 16),
+
+                _buildResponsiveGrid(
+                  context,
+                  [
+                    _buildActionCard(
+                      'Actas de Reunión',
+                      'Gestionar actas de reuniones',
+                      Icons.description,
+                      WessexColors.accentAction,
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              const GestionActasReunionScreen(),
+                        ),
+                      ),
+                      isDesktop: isDesktop,
+                      isTablet: isTablet,
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 32),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildResponsiveGrid(BuildContext context, List<Widget> children) {
+    final width = MediaQuery.of(context).size.width;
+    int crossAxisCount = 1;
+    double childAspectRatio = 1.8; // Adjusted for mobile to prevent overflow
+
+    if (width > 1200) {
+      crossAxisCount = 3;
+      childAspectRatio = 1.5;
+    } else if (width > 600) {
+      crossAxisCount = 2;
+      childAspectRatio = 1.6;
+    }
+
+    return GridView.count(
+      crossAxisCount: crossAxisCount,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisSpacing: 16,
+      mainAxisSpacing: 16,
+      childAspectRatio: childAspectRatio,
+      children: children,
     );
   }
 
@@ -568,11 +597,12 @@ class _TesoreraDashboardState extends State<TesoreraDashboard> {
         onTap: onPressed,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: EdgeInsets.all(isDesktop ? 20 : (isTablet ? 16 : 14)),
-          child: Row(
+          padding: EdgeInsets.all(isDesktop ? 16 : (isTablet ? 14 : 12)),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                padding: EdgeInsets.all(isDesktop ? 16 : (isTablet ? 14 : 12)),
+                padding: EdgeInsets.all(isDesktop ? 12 : (isTablet ? 10 : 8)),
                 decoration: BoxDecoration(
                   color: color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
@@ -583,34 +613,29 @@ class _TesoreraDashboardState extends State<TesoreraDashboard> {
                   size: isDesktop ? 28 : (isTablet ? 24 : 20),
                 ),
               ),
-              SizedBox(width: isDesktop ? 20 : (isTablet ? 16 : 12)),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: isDesktop ? 18 : (isTablet ? 16 : 14),
-                        fontWeight: FontWeight.bold,
-                        color: WessexColors.darkGrape,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: isDesktop ? 14 : (isTablet ? 13 : 12),
-                        color: WessexColors.darkGrape.withOpacity(0.7),
-                      ),
-                    ),
-                  ],
+              SizedBox(height: isDesktop ? 12 : (isTablet ? 10 : 8)),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: isDesktop ? 16 : (isTablet ? 14 : 13),
+                  fontWeight: FontWeight.bold,
+                  color: WessexColors.darkGrape,
                 ),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              Icon(
-                Icons.chevron_right,
-                color: WessexColors.darkGrape.withOpacity(0.3),
-                size: isDesktop ? 20 : (isTablet ? 18 : 16),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: isDesktop ? 13 : (isTablet ? 12 : 11),
+                  color: WessexColors.darkGrape.withOpacity(0.7),
+                  height: 1.2,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),

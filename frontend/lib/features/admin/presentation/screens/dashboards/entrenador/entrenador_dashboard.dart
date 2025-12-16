@@ -463,94 +463,76 @@ class _EntrenadorDashboardState extends State<EntrenadorDashboard> {
                   subtitle: 'Control y seguimiento de entrenamientos',
                   titleColor: WessexColors.white,
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
 
                 // Botones de gestión de asistencia
-                if (isTablet) ...[
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildActionCard(
-                          'Ver Historial',
-                          'Consultar registros anteriores',
-                          Icons.history,
-                          WessexColors.deepRoyalBlue,
-                          () => _navigateToHistorialAsistencia(context),
-                          isDesktop: isDesktop,
-                          isTablet: isTablet,
+                _buildResponsiveGrid(
+                  context,
+                  [
+                    _buildActionCard(
+                      'Ver Historial',
+                      'Consultar registros anteriores',
+                      Icons.history,
+                      WessexColors.deepRoyalBlue,
+                      () => _navigateToHistorialAsistencia(context),
+                      isDesktop: isDesktop,
+                      isTablet: isTablet,
+                    ),
+                    _buildActionCard(
+                      'Tomar Asistencia',
+                      'Iniciar nueva sesión de entrenamiento',
+                      Icons.how_to_reg,
+                      WessexColors.leafGreen,
+                      () => _navigateToGestionAsistencia(context),
+                      isDesktop: isDesktop,
+                      isTablet: isTablet,
+                    ),
+                    _buildActionCard(
+                      'Alumnos Justificados',
+                      'Ver alumnos con justificantes activos',
+                      Icons.verified_user,
+                      WessexColors.deepRoyalBlue,
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const JustificadosActivosScreen(),
                         ),
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: _buildActionCard(
-                          'Tomar Asistencia',
-                          'Iniciar nueva sesión de entrenamiento',
-                          Icons.how_to_reg,
-                          WessexColors.leafGreen,
-                          () => _navigateToGestionAsistencia(context),
-                          isDesktop: isDesktop,
-                          isTablet: isTablet,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  _buildActionCard(
-                    'Alumnos Justificados',
-                    'Ver alumnos con justificantes activos',
-                    Icons.verified_user,
-                    WessexColors.deepRoyalBlue,
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const JustificadosActivosScreen(),
-                      ),
+                      isDesktop: isDesktop,
+                      isTablet: isTablet,
                     ),
-                    isDesktop: isDesktop,
-                    isTablet: isTablet,
-                  ),
-                ] else ...[
-                  _buildActionCard(
-                    'Ver Historial',
-                    'Consultar registros anteriores',
-                    Icons.history,
-                    WessexColors.deepRoyalBlue,
-                    () => _navigateToHistorialAsistencia(context),
-                    isDesktop: isDesktop,
-                    isTablet: isTablet,
-                  ),
-                  const SizedBox(height: 12),
-                  _buildActionCard(
-                    'Tomar Asistencia',
-                    'Iniciar nueva sesión de entrenamiento',
-                    Icons.how_to_reg,
-                    WessexColors.leafGreen,
-                    () => _navigateToGestionAsistencia(context),
-                    isDesktop: isDesktop,
-                    isTablet: isTablet,
-                  ),
-                  const SizedBox(height: 12),
-                  _buildActionCard(
-                    'Alumnos Justificados',
-                    'Ver alumnos con justificantes activos',
-                    Icons.verified_user,
-                    WessexColors.deepRoyalBlue,
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const JustificadosActivosScreen(),
-                      ),
-                    ),
-                    isDesktop: isDesktop,
-                    isTablet: isTablet,
-                  ),
-                ],
+                  ],
+                ),
                 const SizedBox(height: 16),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildResponsiveGrid(BuildContext context, List<Widget> children) {
+    final width = MediaQuery.of(context).size.width;
+    int crossAxisCount = 1;
+    double childAspectRatio = 1.8; // Adjusted for mobile to prevent overflow
+
+    if (width > 1200) {
+      crossAxisCount = 3;
+      childAspectRatio = 1.5;
+    } else if (width > 600) {
+      crossAxisCount = 2;
+      childAspectRatio = 1.6;
+    }
+
+    return GridView.count(
+      crossAxisCount: crossAxisCount,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisSpacing: 16,
+      mainAxisSpacing: 16,
+      childAspectRatio: childAspectRatio,
+      children: children,
     );
   }
 
@@ -563,21 +545,18 @@ class _EntrenadorDashboardState extends State<EntrenadorDashboard> {
     required bool isDesktop,
     required bool isTablet,
   }) {
-    final isCompact = !isDesktop && !isTablet;
-
     return WessexCard(
-      margin: EdgeInsets.only(bottom: isCompact ? 12 : 0),
+      margin: const EdgeInsets.only(bottom: 0),
       child: InkWell(
         onTap: onPressed,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: EdgeInsets.all(isDesktop ? 20 : (isTablet ? 16 : 12)),
-          child: Row(
-            crossAxisAlignment:
-                isCompact ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+          padding: EdgeInsets.all(isDesktop ? 16 : (isTablet ? 14 : 12)),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                padding: EdgeInsets.all(isDesktop ? 16 : (isTablet ? 14 : 10)),
+                padding: EdgeInsets.all(isDesktop ? 12 : (isTablet ? 10 : 8)),
                 decoration: BoxDecoration(
                   color: color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
@@ -585,39 +564,32 @@ class _EntrenadorDashboardState extends State<EntrenadorDashboard> {
                 child: Icon(
                   icon,
                   color: color,
-                  size: isDesktop ? 28 : (isTablet ? 24 : 22),
+                  size: isDesktop ? 28 : (isTablet ? 24 : 20),
                 ),
               ),
-              SizedBox(width: isDesktop ? 20 : (isTablet ? 16 : 12)),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: isDesktop ? 18 : (isTablet ? 16 : 15),
-                        fontWeight: FontWeight.w700,
-                        color: WessexColors.darkGrape,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: isDesktop ? 14 : (isTablet ? 13 : 12),
-                        color: WessexColors.darkGrape.withOpacity(0.7),
-                        height: 1.3,
-                      ),
-                    ),
-                  ],
+              SizedBox(height: isDesktop ? 12 : (isTablet ? 10 : 8)),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: isDesktop ? 16 : (isTablet ? 14 : 13),
+                  fontWeight: FontWeight.bold,
+                  color: WessexColors.darkGrape,
                 ),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              SizedBox(width: isCompact ? 4 : 8),
-              Icon(
-                Icons.chevron_right,
-                color: WessexColors.darkGrape.withOpacity(0.5),
-                size: isDesktop ? 24 : (isTablet ? 22 : 20),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: isDesktop ? 13 : (isTablet ? 12 : 11),
+                  color: WessexColors.darkGrape.withOpacity(0.7),
+                  height: 1.2,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -625,6 +597,7 @@ class _EntrenadorDashboardState extends State<EntrenadorDashboard> {
       ),
     );
   }
+
 
   void _navigateToGestionAsistencia(BuildContext context) {
     Navigator.push(

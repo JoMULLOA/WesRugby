@@ -46,6 +46,47 @@ export async function crearNotificacionService(notificacionData) {
 }
 
 /**
+ * Crear notificaciones masivas
+ * @param {Object} params - Parámetros
+ * @param {Array} params.destinatarios - Lista de RUTs de destinatarios
+ * @param {string} params.titulo - Título de la notificación
+ * @param {string} params.mensaje - Mensaje de la notificación
+ * @param {string} params.tipo - Tipo de notificación
+ * @param {Object} params.datos - Datos adicionales
+ * @param {string} params.rutEmisor - RUT del emisor
+ * @returns {Promise<Array>} Resultado
+ */
+export async function crearNotificacionMasivaService({ destinatarios, titulo, mensaje, tipo, datos, rutEmisor }) {
+  try {
+    const notificaciones = destinatarios.map(rutReceptor => ({
+      tipo,
+      titulo,
+      mensaje,
+      rutReceptor,
+      rutEmisor,
+      datos,
+      leida: false,
+      fechaCreacion: new Date(),
+    }));
+
+    // Validar que existan los usuarios (opcional, por rendimiento se puede omitir o hacer en lote)
+    // Por ahora asumimos que los RUTs vienen validados desde el frontend/controlador anterior
+
+    const resultado = await notificacionRepository.save(notificaciones);
+
+    return [{
+      success: true,
+      count: resultado.length,
+      message: `${resultado.length} notificaciones creadas`
+    }, null];
+
+  } catch (error) {
+    console.error("Error al crear notificaciones masivas:", error.message);
+    return [null, `Error al crear notificaciones: ${error.message}`];
+  }
+}
+
+/**
  * Obtener notificaciones de un usuario
  * @param {string} rutUsuario - RUT del usuario
  * @param {number} limite - Límite de notificaciones a obtener
@@ -71,17 +112,32 @@ export async function obtenerNotificacionesUsuario(rutUsuario, limite = 50) {
 }
 
 /**
- * Marcar notificación como leída
+ * Eliminar una notificación
  * @param {number} idNotificacion - ID de la notificación
  * @param {string} rutUsuario - RUT del usuario
  * @returns {Promise<Object>} Resultado de la operación
  */
-export async function marcarComoLeida(idNotificacion, rutUsuario) {
+export async function eliminarNotificacion(idNotificacion, rutUsuario) {
   try {
-    const resultado = await notificacionRepository.update(
-      { id: idNotificacion, rutReceptor: rutUsuario },
-      { leida: true }
-    );
+    console.log(`[DEBUG] Intentando eliminar notificación. ID: ${idNotificacion}, RUT Usuario: ${rutUsuario}`);
+
+    // Verificar si existe primero para debug
+    const notificacion = await notificacionRepository.findOne({ where: { id: parseInt(idNotificacion) } });
+    if (!notificacion) {
+      console.log(`[DEBUG] Notificación ${idNotificacion} no encontrada en DB.`);
+    } else {
+      console.log(`[DEBUG] Notificación encontrada:`, notificacion);
+      if (notificacion.rutReceptor !== rutUsuario) {
+        console.log(`[DEBUG] Mismatch de RUT. Receptor en DB: ${notificacion.rutReceptor}, Usuario solicitante: ${rutUsuario}`);
+      }
+    }
+
+    const resultado = await notificacionRepository.delete({
+      id: parseInt(idNotificacion),
+      rutReceptor: rutUsuario,
+    });
+
+    console.log(`[DEBUG] Resultado delete:`, resultado);
 
     if (resultado.affected === 0) {
       throw new Error("Notificación no encontrada o no tienes permisos");
@@ -89,12 +145,12 @@ export async function marcarComoLeida(idNotificacion, rutUsuario) {
 
     return {
       success: true,
-      message: "Notificación marcada como leída",
+      message: "Notificación eliminada correctamente",
     };
 
   } catch (error) {
-    console.error("Error al marcar notificación como leída:", error.message);
-    throw new Error(`Error al marcar notificación: ${error.message}`);
+    console.error("Error al eliminar notificación:", error.message);
+    throw new Error(`Error al eliminar notificación: ${error.message}`);
   }
 }
 
@@ -137,7 +193,15 @@ export async function contarNotificacionesPendientesService(rutUsuario) {
  * @returns {Promise<Object>} Resultado de la operación
  */
 export async function marcarComoLeidaService(idNotificacion, rutUsuario) {
-  return await marcarComoLeida(idNotificacion, rutUsuario);
+  try {
+    const resultado = await notificacionRepository.update(
+      { id: idNotificacion, rutReceptor: rutUsuario },
+      { leida: true }
+    );
+    return { success: true, message: "Notificación marcada como leída" };
+  } catch (error) {
+    throw error;
+  }
 }
 
 /**

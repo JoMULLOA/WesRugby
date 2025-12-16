@@ -287,6 +287,7 @@ class EstudianteService extends ChangeNotifier {
       'contactoEmergencia': backendEstudiante['contactoEmergencia'] ?? '',
       'telefonoEmergencia': backendEstudiante['telefonoEmergencia'] ?? '',
       'nombreResponsable': backendEstudiante['nombreResponsable'] ?? '',
+      'rutResponsable': backendEstudiante['rutResponsable'] ?? '',
       'nombreMadre': backendEstudiante['nombreMadre'] ?? '',
       'telefonoMadre': backendEstudiante['telefonoMadre'] ?? '',
       'emailMadre': backendEstudiante['emailMadre'] ?? '',
