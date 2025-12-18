@@ -161,9 +161,9 @@ class _EstadisticasAsistenciaScreenState
         title: 'Estadísticas de Asistencia',
         elevation: 2,
         leading: IconButton(
-          icon: Icon(Icons.home, color: WessexColors.white),
+          icon: Icon(Icons.arrow_back, color: WessexColors.white),
           onPressed: () {
-            Navigator.of(context).popUntil((route) => route.isFirst);
+            Navigator.of(context).pop();
           },
         ),
       ),

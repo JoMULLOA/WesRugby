@@ -884,6 +884,37 @@ class ApiService {
     }
   }
 
+  // Método para subir imágenes de información pública (auspiciadores, noticias, merchandising)
+  static Future<String?> uploadImagenInformacionPublica({
+    required Uint8List bytes,
+    required String fileName,
+    required String mimeType,
+  }) async {
+    try {
+      final response = await _subirMultimediaEvento(
+        endpoint: '/upload/imagen',
+        bytes: bytes,
+        fileName: fileName,
+        mimeType: mimeType,
+        fieldName: 'image', // El backend espera 'image' según upload.routes.js
+      );
+
+      // Extraer la URL de la respuesta
+      final data = response['data'];
+      if (data is Map<String, dynamic>) {
+        final url = data['url'] as String?;
+        if (url != null) {
+          return url;
+        }
+      }
+
+      return null;
+    } catch (e) {
+      print('Error al subir imagen: $e');
+      return null;
+    }
+  }
+
   // ===== GESTIÓN DE TIPOS DE EVENTO =====
 
   // Obtener tipos de evento activos (todos los roles)

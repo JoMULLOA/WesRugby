@@ -4,9 +4,7 @@ import 'package:excel/excel.dart' as excel_lib;
 import 'package:wesrugby/shared/widgets/layout/wessex_widgets.dart';
 import 'package:wesrugby/core/config/colors.dart';
 import 'package:wesrugby/data/services/estudiante_service.dart';
-// ignore: avoid_web_libraries_in_flutter
 import 'dart:html' as html;
-
 class RegistroFormulariosScreen extends StatefulWidget {
   const RegistroFormulariosScreen({super.key});
 

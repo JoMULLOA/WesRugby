@@ -916,7 +916,7 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
               IconButton(
                 onPressed: () => _resetPassword(usuario),
                 icon: const Icon(Icons.lock_reset, size: 20),
-                tooltip: 'Resetear contrasena',
+                tooltip: 'Resetear contraseña',
                 color: WessexColors.maximumGrayMint,
                 padding: EdgeInsets.all(8),
                 constraints: BoxConstraints(),
@@ -1007,7 +1007,7 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
     // TODO: Implementar reset de contrasena via API
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Funcionalidad de reset de contrasena en desarrollo'),
+        content: Text('Funcionalidad de reset de contraseña en desarrollo'),
         backgroundColor: WessexColors.maximumGrayMint,
       ),
     );
@@ -1173,17 +1173,17 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
                         controller: passwordController,
                         obscureText: true,
                         decoration: InputDecoration(
-                          labelText: 'Contrasena',
+                          labelText: 'Contraseña',
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
-                            return 'La contrasena es obligatoria';
+                            return 'La contraseña es obligatoria';
                           }
                           if (value.length < 6) {
-                            return 'La contrasena debe tener al menos 6 caracteres';
+                            return 'La contraseña debe tener al menos 6 caracteres';
                           }
                           return null;
                         },
