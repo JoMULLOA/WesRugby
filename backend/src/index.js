@@ -1,4 +1,15 @@
 "use strict";
+
+// ⚠️ IMPORTANTE: Cargar .env PRIMERO, antes de cualquier otro módulo
+import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, "config", ".env") });
+
+// AHORA sí, importar el resto después de que .env esté cargado
 import cors from "cors";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
@@ -7,9 +18,8 @@ import passport from "passport";
 import express, { json, urlencoded } from "express";
 import cron from "node-cron";
 import http from "http";
-import "dotenv/config";
+import fs from "fs";
 import indexRoutes from "./routes/index.routes.js";
-// Socket.io removido - no necesario para WesRugby
 import { cookieKey, HOST, PORT } from "./config/configEnv.js";
 import { connectDB } from "./config/configDb.js";
 import { createInitialData } from "./config/initialSetup.js";
@@ -40,8 +50,12 @@ async function setupServer() {
       }),
     );
 
-    // Servir archivos estáticos subidos cuando no hay S3
-    app.use("/uploads", express.static("uploads"));
+    // Servir archivos estáticos desde la carpeta uploads (almacenamiento local)
+    const uploadsPath = path.resolve(__dirname, "..", "uploads");
+    if (!fs.existsSync(uploadsPath)) {
+      fs.mkdirSync(uploadsPath, { recursive: true });
+    }
+    app.use("/uploads", express.static(uploadsPath));
 
     // Configurar charset UTF-8 para evitar problemas con acentos
     app.use((req, res, next) => {
