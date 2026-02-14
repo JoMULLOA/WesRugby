@@ -5,6 +5,36 @@ import Justificante from "../entity/justificante.entity.js";
 import { AppDataSource } from "../config/configDb.js";
 
 /**
+ * Calcula la categoría basándose en la edad del estudiante.
+ * @param {Date|string} fechaNacimiento - Fecha de nacimiento del estudiante
+ * @returns {string|null} - Categoría asignada (M6, M8, M10, M12) o null si no hay fecha
+ */
+export function calcularCategoria(fechaNacimiento) {
+  if (!fechaNacimiento) return null;
+
+  const fecha = new Date(fechaNacimiento);
+  const hoy = new Date();
+  
+  // Calcular edad en años
+  let edad = hoy.getFullYear() - fecha.getFullYear();
+  const mes = hoy.getMonth() - fecha.getMonth();
+  
+  // Ajustar si aún no ha cumplido años este año
+  if (mes < 0 || (mes === 0 && hoy.getDate() < fecha.getDate())) {
+    edad--;
+  }
+
+  // Asignar categoría según edad
+  if (edad >= 6 && edad <= 7) return "M6";
+  if (edad >= 8 && edad <= 9) return "M8";
+  if (edad >= 10 && edad <= 11) return "M10";
+  if (edad >= 12) return "M12";
+  
+  // Si es menor de 6 años, no asignar categoría
+  return null;
+}
+
+/**
  * Aplica meses de exención de justificantes aprobados a la estructura de pagos de estudiantes.
  * @param {Array} estudiantes - Lista de estudiantes con estructura pagos.
  * @returns {Promise<Array>} - Estudiantes con pagos.meses actualizados (meses exentos marcados como "justificado").
@@ -91,6 +121,12 @@ export async function createEstudianteService(estudianteData) {
 
     if (existingEstudiante) {
       return [null, "El estudiante ya existe"];
+    }
+
+    // Calcular y asignar categoría automáticamente si tiene fecha de nacimiento
+    if (estudianteData.fechaNacimiento && !estudianteData.categoria) {
+      estudianteData.categoria = calcularCategoria(estudianteData.fechaNacimiento);
+      console.log(`📊 Categoría asignada automáticamente: ${estudianteData.categoria} para estudiante con edad calculada desde ${estudianteData.fechaNacimiento}`);
     }
 
     // Crear nuevo estudiante
@@ -251,6 +287,15 @@ export async function updateEstudianteService(rut, updateData) {
       return [null, "Estudiante no encontrado"];
     }
 
+    // Si se actualiza la fecha de nacimiento, recalcular categoría automáticamente
+    if (updateData.fechaNacimiento) {
+      const nuevaCategoria = calcularCategoria(updateData.fechaNacimiento);
+      if (nuevaCategoria) {
+        updateData.categoria = nuevaCategoria;
+        console.log(`📊 Categoría recalculada automáticamente: ${nuevaCategoria} para estudiante ${rut}`);
+      }
+    }
+
     // Actualizar campos
     Object.assign(estudiante, updateData);
     estudiante.updatedAt = new Date();
@@ -305,6 +350,56 @@ export async function updateEstudianteFotoService(rut, fotoUrl) {
     return [updatedEstudiante, null];
   } catch (error) {
     console.error("Error actualizar foto de estudiante:", error);
+    return [null, "Error interno del servidor"];
+  }
+}
+
+/**
+ * Recalcula las categorías de todos los estudiantes basándose en su fecha de nacimiento
+ * @returns {Promise<[Object, string|null]>} - Resultado de la operación
+ */
+export async function recalcularCategoriasService() {
+  try {
+    const estudianteRepository = AppDataSource.getRepository(Estudiante);
+
+    // Obtener todos los estudiantes con fecha de nacimiento
+    const estudiantes = await estudianteRepository.find({
+      where: {}
+    });
+
+    let actualizados = 0;
+    let sinFecha = 0;
+    let sinCambios = 0;
+
+    for (const estudiante of estudiantes) {
+      if (!estudiante.fechaNacimiento) {
+        sinFecha++;
+        continue;
+      }
+
+      const categoriaCalculada = calcularCategoria(estudiante.fechaNacimiento);
+      
+      if (categoriaCalculada && categoriaCalculada !== estudiante.categoria) {
+        estudiante.categoria = categoriaCalculada;
+        await estudianteRepository.save(estudiante);
+        actualizados++;
+        console.log(`✅ Categoría actualizada para ${estudiante.nombre}: ${categoriaCalculada}`);
+      } else {
+        sinCambios++;
+      }
+    }
+
+    const resultado = {
+      total: estudiantes.length,
+      actualizados,
+      sinFecha,
+      sinCambios
+    };
+
+    console.log(`📊 Recálculo completado:`, resultado);
+    return [resultado, null];
+  } catch (error) {
+    console.error("❌ Error recalcular categorías:", error);
     return [null, "Error interno del servidor"];
   }
 }

@@ -9,6 +9,7 @@ import {
   updateEstudianteService,
   deleteEstudianteService,
   updateEstudianteFotoService,
+  recalcularCategoriasService,
 } from "../services/estudiante.service.js";
 import {
   handleErrorClient,
@@ -229,6 +230,26 @@ export async function updateEstudianteFoto(req, res) {
     }
 
     handleSuccess(res, 200, "Foto del estudiante actualizada exitosamente", estudiante);
+  } catch (error) {
+    handleErrorServer(res, 500, error.message);
+  }
+}
+
+/**
+ * Recalcula las categorías de todos los estudiantes basándose en su fecha de nacimiento
+ * @param {Object} req - Objeto de petición
+ * @param {Object} res - Objeto de respuesta
+ */
+export async function recalcularCategorias(req, res) {
+  try {
+    const resultado = await recalcularCategoriasService();
+    
+    handleSuccess(
+      res, 
+      200, 
+      "Categorías recalculadas exitosamente", 
+      resultado
+    );
   } catch (error) {
     handleErrorServer(res, 500, error.message);
   }

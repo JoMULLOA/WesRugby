@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:wesrugby/core/config/confGlobal.dart';
 import 'package:wesrugby/data/models/asistencia_model.dart';
 import 'package:wesrugby/data/services/tokenManager.dart';
-import 'dart:html' as html show Blob, Url, AnchorElement;
+import 'package:wesrugby/core/utils/html.dart' as html;
 
 class AsistenciaService {
   static String get baseUrl => confGlobal.baseUrl;

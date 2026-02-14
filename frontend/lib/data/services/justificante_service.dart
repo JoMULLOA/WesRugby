@@ -182,10 +182,12 @@ class JustificanteService extends ChangeNotifier {
         final nombreAlumno = alumno != null
             ? (alumno['nombreCompleto'] ?? '${alumno['nombre'] ?? ''} ${alumno['apellidos'] ?? ''}').toString().trim()
             : '';
+        final rutAlumno = alumno != null ? (alumno['rut'] ?? '').toString() : '';
 
         return <String, dynamic>{
           'id': raw['id'],
           'usuario': nombreAlumno,
+          'rut': rutAlumno,
           'rol': 'Apoderado',
           'tipoJustificante': raw['tipoActividad'] ?? 'justificacion',
           'fechaInasistencia': DateTime.tryParse(raw['fecha'] ?? '') ?? DateTime.now(),

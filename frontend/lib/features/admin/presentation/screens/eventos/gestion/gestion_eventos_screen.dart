@@ -1,4 +1,4 @@
-import 'dart:html' as html;
+import 'package:wesrugby/core/utils/html.dart' as html;
 
 import 'package:flutter/material.dart';
 import 'package:wesrugby/data/services/api_service.dart';

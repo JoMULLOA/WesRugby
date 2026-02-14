@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:wesrugby/core/config/colors.dart';
 import 'package:wesrugby/data/services/api_service.dart';
+import 'package:wesrugby/data/services/estudiante_service.dart';
 import 'package:wesrugby/data/services/refresh_service.dart';
 import 'package:wesrugby/data/services/tokenManager.dart';
 import 'package:wesrugby/shared/widgets/layout/wessex_widgets.dart';
@@ -15,6 +16,7 @@ class GestionUsuariosScreen extends StatefulWidget {
 
 class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final EstudianteService _estudianteService = EstudianteService();
   late StreamSubscription _refreshSubscription;
 
   String _selectedRol = 'Todos';
@@ -439,7 +441,7 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
                     Expanded(child: _buildRolDropdown()),
                     const SizedBox(width: 16),
                     _buildRefreshButton(),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 12),
                     _buildCreateUserButton(),
                   ],
                 );
@@ -453,7 +455,7 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
                     Row(
                       children: [
                         Expanded(child: _buildRefreshButton()),
-                        const SizedBox(width: 16),
+                        const SizedBox(width: 12),
                         Expanded(child: _buildCreateUserButton()),
                       ],
                     ),
@@ -525,7 +527,7 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
   Widget _buildCreateUserButton() {
     return ElevatedButton.icon(
       onPressed: _showCreateUserDialog,
-      icon: const Icon(Icons.person_add),
+      icon: const Icon(Icons.add),
       label: const Text('Crear Usuario'),
       style: ElevatedButton.styleFrom(
         backgroundColor: WessexColors.leafGreen,
@@ -595,27 +597,13 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-            child: Row(
-              children: [
-                Text(
-                  'Lista de Usuarios (${_filteredUsuarios.length})',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: WessexColors.darkGrape,
-                  ),
-                ),
-                const Spacer(),
-                ElevatedButton.icon(
-                  onPressed: _showCreateUserDialog,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Crear Usuario'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: WessexColors.leafGreen,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-              ],
+            child: Text(
+              'Lista de Usuarios (${_filteredUsuarios.length})',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: WessexColors.darkGrape,
+              ),
             ),
           ),
           Divider(
@@ -995,6 +983,37 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
     return date.toString();
   }
 
+  String _formatRut(String rut) {
+    // Remover todo excepto números y K
+    String cleaned = rut.replaceAll(RegExp(r'[^0-9Kk]'), '');
+    if (cleaned.isEmpty) return '';
+    
+    // Si termina en K, convertir a mayúscula
+    if (cleaned.toLowerCase().endsWith('k')) {
+      cleaned = cleaned.substring(0, cleaned.length - 1) + 'K';
+    }
+    
+    // Separar número y dígito verificador
+    if (cleaned.length < 2) return cleaned;
+    
+    String dv = cleaned.substring(cleaned.length - 1);
+    String numbers = cleaned.substring(0, cleaned.length - 1);
+    
+    // Formatear con puntos
+    String formatted = '';
+    int count = 0;
+    for (int i = numbers.length - 1; i >= 0; i--) {
+      if (count == 3) {
+        formatted = '.$formatted';
+        count = 0;
+      }
+      formatted = numbers[i] + formatted;
+      count++;
+    }
+    
+    return '$formatted-$dv';
+  }
+
   void _showCreateUserDialog() {
     _showUserFormDialog();
   }
@@ -1007,7 +1026,7 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
     // TODO: Implementar reset de contrasena via API
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Funcionalidad de reset de contraseña en desarrollo'),
+        content: Text('Funcionalidad de reset de contrasena en desarrollo'),
         backgroundColor: WessexColors.maximumGrayMint,
       ),
     );
@@ -1079,7 +1098,12 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
       text: usuario?['email'] ?? '',
     );
     final passwordController = TextEditingController();
-    String selectedRol = usuario?['rol'] ?? 'apoderado';
+    String selectedRol = usuario?['rol'] ?? 'directiva';
+    
+    // Para apoderados: lista de estudiantes y opción de crear nuevo
+    List<Map<String, dynamic>> allEstudiantes = _estudianteService.getAllStudents();
+    String? selectedEstudianteRut;
+    bool createNewStudent = false;
 
     showDialog(
       context: context,
@@ -1112,15 +1136,31 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
                       controller: rutController,
                       enabled: !isEditing, // No editable en modo edicion
                       decoration: InputDecoration(
-                        labelText: 'RUT',
+                        labelText: 'RUT *',
                         hintText: '12.345.678-9',
+                        helperText: 'Se formatea automáticamente',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
+                      onChanged: (value) {
+                        final formatted = _formatRut(value);
+                        if (formatted != value) {
+                          rutController.value = TextEditingValue(
+                            text: formatted,
+                            selection: TextSelection.collapsed(
+                              offset: formatted.length,
+                            ),
+                          );
+                        }
+                      },
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
                           return 'El RUT es obligatorio';
+                        }
+                        final cleaned = value.replaceAll(RegExp(r'[^0-9Kk]'), '');
+                        if (cleaned.length < 8) {
+                          return 'RUT inválido';
                         }
                         return null;
                       },
@@ -1191,43 +1231,52 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
                     if (!isEditing) const SizedBox(height: 16),
 
                     // Rol
-                    DropdownButtonFormField<String>(
-                      value:
-                          [
-                                'directiva',
-                                'tesorera',
-                                'entrenador',
-                                'apoderado',
-                                'RamaExterna',
-                              ].contains(selectedRol)
-                              ? selectedRol
-                              : 'apoderado',
-                      onChanged: (value) => selectedRol = value!,
-                      decoration: InputDecoration(
-                        labelText: 'Rol',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                    StatefulBuilder(
+                      builder: (context, setState) => Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          DropdownButtonFormField<String>(
+                            value:
+                                [
+                                      'directiva',
+                                      'tesorera',
+                                      'entrenador',
+                                      'RamaExterna',
+                                    ].contains(selectedRol)
+                                    ? selectedRol
+                                    : 'directiva',
+                            onChanged: (value) {
+                              setState(() {
+                                selectedRol = value!;
+                              });
+                            },
+                            decoration: InputDecoration(
+                              labelText: 'Rol *',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            items:
+                                [
+                                      'directiva',
+                                      'tesorera',
+                                      'entrenador',
+                                      'RamaExterna',
+                                    ]
+                                    .map(
+                                      (rol) => DropdownMenuItem(
+                                        value: rol,
+                                        child: Text(
+                                          rol == 'RamaExterna'
+                                              ? 'RAMA EXTERNA'
+                                              : rol.toUpperCase(),
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
+                          ),
+                        ],
                       ),
-                      items:
-                          [
-                                'directiva',
-                                'tesorera',
-                                'entrenador',
-                                'apoderado',
-                                'RamaExterna',
-                              ]
-                              .map(
-                                (rol) => DropdownMenuItem(
-                                  value: rol,
-                                  child: Text(
-                                    rol == 'RamaExterna'
-                                        ? 'RAMA EXTERNA'
-                                        : rol.toUpperCase(),
-                                  ),
-                                ),
-                              )
-                              .toList(),
                     ),
                     const SizedBox(height: 24),
 
@@ -1252,6 +1301,7 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
                                 passwordController.text,
                                 selectedRol,
                                 usuario,
+                                selectedEstudianteRut,
                               ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor:
@@ -1286,6 +1336,7 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
     String password,
     String rol,
     Map<String, dynamic>? usuario,
+    String? selectedEstudianteRut,
   ) async {
     if (!formKey.currentState!.validate()) return;
 

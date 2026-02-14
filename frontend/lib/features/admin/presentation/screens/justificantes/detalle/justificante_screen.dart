@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:wesrugby/shared/widgets/layout/wessex_widgets.dart';
 import 'package:wesrugby/core/config/colors.dart';
 import 'package:wesrugby/data/services/justificante_service.dart';
 import 'package:wesrugby/data/services/estudiante_service.dart';
 import 'package:wesrugby/data/services/api_service.dart';
 import 'dart:typed_data';
+import 'dart:io' show File;
 // ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
+import 'package:wesrugby/core/utils/html.dart' as html;
 
 class JustificanteScreen extends StatefulWidget {
   const JustificanteScreen({super.key});
@@ -1095,39 +1097,50 @@ class _JustificanteScreenState extends State<JustificanteScreen> {
 
   Future<void> _pickFile() async {
     try {
-      if (kIsWeb) {
-        final html.FileUploadInputElement uploadInput =
-            html.FileUploadInputElement();
-        uploadInput.accept = 'image/*,.pdf';
-        uploadInput.click();
+      // Usar file_picker que funciona en todas las plataformas
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+        allowMultiple: false,
+      );
 
-        uploadInput.onChange.listen((event) async {
-          final files = uploadInput.files;
-          if (files!.isNotEmpty) {
-            final file = files[0];
+      if (result != null && result.files.isNotEmpty) {
+        final file = result.files.first;
+        
+        // Verificar tamaño (máx 10MB)
+        if (file.size > 10 * 1024 * 1024) {
+          _showErrorSnackBar(
+            'El archivo es muy grande. Máximo 10MB permitido.',
+          );
+          return;
+        }
 
-            // Verificar tamaño (máx 10MB)
-            if (file.size > 10 * 1024 * 1024) {
-              _showErrorSnackBar(
-                'El archivo es muy grande. Máximo 10MB permitido.',
-              );
-              return;
+        // Obtener los bytes del archivo
+        Uint8List? fileBytes;
+        if (kIsWeb) {
+          fileBytes = file.bytes;
+        } else {
+          // En móvil, leer desde el path
+          if (file.path != null) {
+            try {
+              final ioFile = File(file.path!);
+              fileBytes = await ioFile.readAsBytes();
+            } catch (e) {
+              print('❌ Error leyendo archivo: $e');
+              fileBytes = null;
             }
-
-            final reader = html.FileReader();
-            reader.readAsArrayBuffer(file);
-            reader.onLoadEnd.listen((event) {
-              setState(() {
-                _webFile = reader.result as Uint8List;
-                _archivoNombre = file.name;
-              });
-
-              _showSuccessSnackBar('Archivo seleccionado: ${file.name}');
-            });
           }
-        });
-      } else {
-        _showErrorSnackBar('Funcionalidad disponible solo en web por ahora');
+        }
+
+        if (fileBytes != null) {
+          setState(() {
+            _webFile = fileBytes;
+            _archivoNombre = file.name;
+          });
+          _showSuccessSnackBar('Archivo seleccionado: ${file.name}');
+        } else {
+          _showErrorSnackBar('No se pudo leer el archivo');
+        }
       }
     } catch (e) {
       print('Error al seleccionar archivo: $e');

@@ -5,9 +5,8 @@ import 'package:wesrugby/core/config/colors.dart';
 import 'package:wesrugby/data/services/justificante_service.dart';
 import 'package:http/http.dart' as http;
 import 'dart:typed_data';
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
-import 'dart:ui_web' as ui_web;
+import 'package:wesrugby/core/utils/html.dart' as html;
+import 'package:wesrugby/core/utils/ui_web.dart' as ui_web;
 
 class GestionJustificantesScreen extends StatefulWidget {
   const GestionJustificantesScreen({super.key});
@@ -429,6 +428,15 @@ class _GestionJustificantesScreenState
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
+                            if (justificante['rut'] != null && justificante['rut'].toString().isNotEmpty)
+                              Text(
+                                'RUT: ${justificante['rut']}',
+                                style: TextStyle(
+                                  color: WessexColors.deepRoyalBlue,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
                             Text(
                               '${justificante['rol']} • ${justificante['tipoJustificante']}',
                               style: TextStyle(
@@ -481,7 +489,7 @@ class _GestionJustificantesScreenState
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              'Fecha de Inasistencia: ${justificante['fechaInasistencia'].toString().substring(0, 10)}',
+                              'Fecha de Inasistencia: ${_formatFecha(justificante['fechaInasistencia'].toString())}',
                               style: TextStyle(
                                 color: WessexColors.darkGrape,
                                 fontSize: 14,
@@ -547,7 +555,7 @@ class _GestionJustificantesScreenState
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                'Archivo adjunto: ${justificante['archivo']}',
+                                'Archivo adjunto: Adjunto',
                                 style: TextStyle(
                                   color: WessexColors.deepRoyalBlue,
                                   fontSize: 14,
@@ -661,7 +669,7 @@ class _GestionJustificantesScreenState
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          'Enviado: ${justificante['fechaCreacion'].toString().substring(0, 16)}',
+                          'Enviado: ${_formatFecha(justificante['fechaCreacion'].toString())}',
                           style: TextStyle(
                             color: WessexColors.deepRoyalBlue,
                             fontSize: 12,
@@ -790,7 +798,7 @@ class _GestionJustificantesScreenState
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Archivo: ${justificante['archivo'] ?? ''}',
+                          'Justificante',
                           style: TextStyle(
                             color: WessexColors.darkGrape.withOpacity(0.7),
                             fontSize: 14,
@@ -1297,5 +1305,14 @@ class _GestionJustificantesScreenState
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
+  }
+
+  String _formatFecha(String fecha) {
+    try {
+      final dateTime = DateTime.parse(fecha);
+      return '${dateTime.day.toString().padLeft(2, '0')}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.year}';
+    } catch (e) {
+      return fecha;
+    }
   }
 }

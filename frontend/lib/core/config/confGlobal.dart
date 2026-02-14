@@ -1,29 +1,33 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 class confGlobal {
-  static const String _devHost = "http://localhost:3000";
+  // Configuración de hosts
+  static const String _androidDevHost = "http://10.0.2.2:3000";
+  static const String _webDevHost = "http://localhost:3000";
   static const String _prodHost = "https://wesrugby.site";
   static const String _basePath = "/api";
 
-  static bool get _runningOnLocalhost {
-    final host = Uri.base.host;
-    return host.isEmpty || host == "localhost" || host == "127.0.0.1";
-  }
-
-  static String get _baseHost {
-    if (_runningOnLocalhost) {
-      return _devHost;
+  // Retorna la URL base según la plataforma
+  static String get baseUrl {
+    String host;
+    
+    // En web siempre usar localhost
+    if (kIsWeb) {
+      host = _webDevHost;
+    } else {
+      // En móvil/desktop usar 10.0.2.2 para Android emulator
+      // Esto funciona para el emulador de Android
+      host = _androidDevHost;
     }
-    final scheme = Uri.base.scheme.isEmpty ? "https" : Uri.base.scheme;
-    final host = Uri.base.host;
-    final port =
-        Uri.base.hasPort && Uri.base.port != 80 && Uri.base.port != 443
-            ? ":${Uri.base.port}"
-            : "";
-    return "$scheme://$host$port";
+    
+    final url = "$host$_basePath";
+    if (kDebugMode) {
+      print('🔍 DEBUG confGlobal - kIsWeb: $kIsWeb');
+      print('🔍 DEBUG confGlobal - URL final: $url');
+    }
+    return url;
   }
-
-  static String get baseUrl => "$_baseHost$_basePath";
 }
 // Colores del Wessex Rugby Club
 class AppColors {

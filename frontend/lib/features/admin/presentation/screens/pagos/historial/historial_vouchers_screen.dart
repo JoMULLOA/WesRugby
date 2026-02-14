@@ -5,9 +5,9 @@ import 'dart:typed_data';
 import 'package:wesrugby/shared/widgets/layout/wessex_widgets.dart';
 import 'package:wesrugby/core/config/colors.dart';
 import 'package:wesrugby/data/services/voucher_service.dart'; // ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html show Blob, Url, AnchorElement, IFrameElement;
+import 'package:wesrugby/core/utils/html.dart' as html;
 // ignore: avoid_web_libraries_in_flutter
-import 'dart:ui_web' as ui_web;
+import 'package:wesrugby/core/utils/ui_web.dart' as ui_web;
 
 class HistorialVouchersScreen extends StatefulWidget {
   const HistorialVouchersScreen({super.key});
@@ -580,65 +580,56 @@ class _HistorialVouchersScreenState extends State<HistorialVouchersScreen> {
             ],
           ),
 
-          const SizedBox(height: 16),
-
-          // Detalles del voucher
-          Row(
-            children: [
-              Expanded(
-                child: _buildDetailItem(
-                  'Monto',
-                  '\$${voucher['monto'].toStringAsFixed(2)}',
-                  Icons.attach_money,
-                  WessexColors.leafGreen,
-                ),
-              ),
-              Expanded(
-                child: _buildDetailItem(
-                  'Método',
-                  voucher['metodoPago'],
-                  Icons.payment,
-                  WessexColors.deepRoyalBlue,
-                ),
-              ),
-            ],
-          ),
-
           const SizedBox(height: 12),
 
-          Row(
-            children: [
-              Expanded(
-                child: _buildDetailItem(
-                  'Fecha Envío',
-                  voucher['fechaEnvio'],
-                  Icons.schedule,
-                  WessexColors.crimsonAlert,
-                ),
-              ),
-              Expanded(
-                child: _buildDetailItem(
-                  'Archivo',
-                  voucher['archivo'],
-                  Icons.attachment,
-                  WessexColors.darkGrape,
-                ),
-              ),
-            ],
-          ),
-
-          if (voucher['descripcion'] != null &&
-              voucher['descripcion'].isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Text(
-              'Descripción: ${voucher['descripcion']}',
-              style: TextStyle(
-                color: WessexColors.darkGrape.withOpacity(0.7),
-                fontSize: 14,
-                fontStyle: FontStyle.italic,
-              ),
+          // Detalles simplificados del voucher
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: WessexColors.mistyRoseGray.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
             ),
-          ],
+            child: Row(
+              children: [
+                Icon(
+                  Icons.attach_money,
+                  size: 18,
+                  color: WessexColors.leafGreen,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '\$${voucher['monto'].toStringAsFixed(0)}',
+                  style: TextStyle(
+                    color: WessexColors.leafGreen,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Icon(
+                  Icons.payment,
+                  size: 16,
+                  color: WessexColors.deepRoyalBlue,
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    voucher['metodoPago'],
+                    style: TextStyle(
+                      color: WessexColors.darkGrape,
+                      fontSize: 13,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Icon(
+                  Icons.attachment,
+                  size: 16,
+                  color: WessexColors.darkGrape.withOpacity(0.5),
+                ),
+              ],
+            ),
+          ),
 
           // Mostrar motivo de rechazo si existe
           if (estado == 'Rechazado' && voucher['motivoRechazo'] != null) ...[
@@ -898,7 +889,7 @@ class _HistorialVouchersScreenState extends State<HistorialVouchersScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Archivo: ${voucher['archivo'] ?? ''}',
+                          'Voucher de Pago',
                           style: TextStyle(
                             color: WessexColors.darkGrape.withOpacity(0.7),
                             fontSize: 14,
@@ -1063,7 +1054,7 @@ class _HistorialVouchersScreenState extends State<HistorialVouchersScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Archivo: ${voucher['archivo']}',
+                              'Voucher de Pago',
                               style: TextStyle(
                                 color: WessexColors.darkGrape.withOpacity(0.7),
                                 fontSize: 14,
@@ -1216,7 +1207,7 @@ class _HistorialVouchersScreenState extends State<HistorialVouchersScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Archivo: ${voucher['archivo']}',
+                              'Voucher de Pago',
                               style: TextStyle(
                                 color: WessexColors.darkGrape.withOpacity(0.7),
                                 fontSize: 14,
@@ -1354,7 +1345,7 @@ class _HistorialVouchersScreenState extends State<HistorialVouchersScreen> {
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            'Archivo: ${voucher['archivo']}',
+                            'Voucher de Pago',
                             style: TextStyle(
                               color: WessexColors.darkGrape,
                               fontSize: 16,

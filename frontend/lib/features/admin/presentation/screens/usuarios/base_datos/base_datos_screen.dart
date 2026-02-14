@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:excel/excel.dart' as excel_lib;
+import 'package:intl/intl.dart';
 import 'package:wesrugby/core/config/colors.dart';
+import 'package:wesrugby/data/services/api_service.dart';
 import 'package:wesrugby/data/services/estudiante_service.dart';
 import 'package:wesrugby/shared/widgets/layout/wessex_widgets.dart';
+// ignore: avoid_web_libraries_in_flutter
+import 'package:wesrugby/core/utils/html.dart' as html;
 
 class BaseDatosScreen extends StatefulWidget {
   const BaseDatosScreen({super.key});
@@ -476,11 +481,12 @@ class _BaseDatosScreenState extends State<BaseDatosScreen> {
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: DataTable(
-              headingRowColor: MaterialStateProperty.all(
-                WessexColors.deepRoyalBlue.withOpacity(0.1),
-              ),
-              dataRowMaxHeight: 60,
-              columns: const [
+                headingRowColor: MaterialStateProperty.all(
+                  WessexColors.deepRoyalBlue.withOpacity(0.1),
+                ),
+                dataRowMaxHeight: 60,
+                columnSpacing: 20,
+                columns: const [
                 DataColumn(
                   label: Text(
                     'RUT',
@@ -849,31 +855,1155 @@ class _BaseDatosScreenState extends State<BaseDatosScreen> {
   }
 
   void _exportToExcel() {
-    // TODO: Implementar exportación a Excel
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Funcionalidad de exportación próximamente'),
-        backgroundColor: Colors.orange,
-      ),
-    );
+    if (_filteredEstudiantes.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('No hay estudiantes para exportar'),
+          backgroundColor: WessexColors.crimsonAlert,
+        ),
+      );
+      return;
+    }
+
+    try {
+      // Crear un nuevo libro de Excel
+      final excel = excel_lib.Excel.createExcel();
+      final sheet = excel['Estudiantes'];
+
+      // Definir los encabezados
+      final headers = [
+        'RUT',
+        'NOMBRE',
+        'CURSO',
+        'FECHA NACIMIENTO',
+        'DIRECCIÓN',
+        'TELÉFONO',
+        'EMAIL',
+        'RESPONSABLE',
+        'TELÉFONO RESPONSABLE',
+        'CORREO APODERADO',
+        'CONTACTO EMERGENCIA',
+        'TELÉFONO EMERGENCIA',
+        'OBSERVACIONES',
+      ];
+
+      // Agregar encabezados con estilo
+      for (var i = 0; i < headers.length; i++) {
+        final cell = sheet
+            .cell(excel_lib.CellIndex.indexByColumnRow(columnIndex: i, rowIndex: 0));
+        cell.value = excel_lib.TextCellValue(headers[i]);
+        cell.cellStyle = excel_lib.CellStyle(
+          bold: true,
+          backgroundColorHex: excel_lib.ExcelColor.fromHexString('#4A5568'),
+          fontColorHex: excel_lib.ExcelColor.white,
+        );
+      }
+
+      // Agregar los datos filtrados
+      for (var i = 0; i < _filteredEstudiantes.length; i++) {
+        final estudiante = _filteredEstudiantes[i];
+        final rowIndex = i + 1;
+
+        final rowData = [
+          estudiante['rut']?.toString() ?? '',
+          estudiante['nombre']?.toString() ?? '',
+          estudiante['curso']?.toString() ?? '',
+          estudiante['fechaNacimiento']?.toString() ?? '',
+          estudiante['direccion']?.toString() ?? '',
+          estudiante['telefono']?.toString() ?? '',
+          estudiante['email']?.toString() ?? '',
+          estudiante['nombreResponsable']?.toString() ?? '',
+          estudiante['telefonoResponsable']?.toString() ?? '',
+          estudiante['correoApoderadoGenerado']?.toString() ?? '',
+          estudiante['contactoEmergencia']?.toString() ?? '',
+          estudiante['telefonoEmergencia']?.toString() ?? '',
+          estudiante['observaciones']?.toString() ?? '',
+        ];
+
+        for (var j = 0; j < rowData.length; j++) {
+          final cell = sheet.cell(
+            excel_lib.CellIndex.indexByColumnRow(columnIndex: j, rowIndex: rowIndex),
+          );
+          cell.value = excel_lib.TextCellValue(rowData[j]);
+        }
+      }
+
+      // Ajustar ancho de columnas
+      for (var i = 0; i < headers.length; i++) {
+        sheet.setColumnWidth(i, 20);
+      }
+
+      // Generar el archivo Excel
+      final fileBytes = excel.encode();
+      if (fileBytes == null) {
+        throw Exception('Error al generar el archivo Excel');
+      }
+
+      // Generar nombre del archivo con fecha y filtros aplicados
+      final now = DateTime.now();
+      final dateStr = DateFormat('yyyyMMdd_HHmmss').format(now);
+      final cursoFilter = _selectedCurso != 'Todos' ? '_$_selectedCurso' : '';
+      final searchFilter =
+          _searchController.text.isNotEmpty ? '_busqueda' : '';
+      final fileName = 'estudiantes$cursoFilter$searchFilter\_$dateStr.xlsx';
+
+      // Descargar el archivo
+      final blob = html.Blob([fileBytes]);
+      final url = html.Url.createObjectUrlFromBlob(blob);
+      final anchor = html.AnchorElement(href: url)
+        ..setAttribute('download', fileName)
+        ..click();
+      html.Url.revokeObjectUrl(url);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Excel descargado: ${_filteredEstudiantes.length} estudiantes',
+          ),
+          backgroundColor: WessexColors.leafGreen,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al exportar: $e'),
+          backgroundColor: WessexColors.crimsonAlert,
+        ),
+      );
+    }
   }
 
   void _showAddStudentDialog() {
-    // TODO: Implementar diálogo de agregar estudiante
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Funcionalidad de creación manual próximamente'),
-        backgroundColor: Colors.orange,
+    _showStudentFormDialog(isEdit: false);
+  }
+
+  void _showEditStudentDialog(Map<String, dynamic> estudiante) {
+    _showStudentFormDialog(isEdit: true, estudiante: estudiante);
+  }
+
+  void _showStudentFormDialog({
+    required bool isEdit,
+    Map<String, dynamic>? estudiante,
+  }) async {
+    final formKey = GlobalKey<FormState>();
+    
+    // Cargar lista de usuarios apoderados
+    List<Map<String, dynamic>> apoderados = [];
+    try {
+      final response = await ApiService.getAllUsers();
+      if (response.statusCode == 200 && response.data != null) {
+        final usuarios = response.data is Map 
+            ? List<Map<String, dynamic>>.from(response.data['data'] ?? [])
+            : List<Map<String, dynamic>>.from(response.data ?? []);
+        apoderados = usuarios.where((u) => u['rol'] == 'apoderado').toList();
+      }
+    } catch (e) {
+      print('Error al cargar apoderados: $e');
+    }
+    
+    final rutController = TextEditingController(
+      text: isEdit ? (estudiante?['rut'] ?? '') : '',
+    );
+    final nombreController = TextEditingController(
+      text: isEdit ? (estudiante?['nombre'] ?? '') : '',
+    );
+    final cursoController = TextEditingController(
+      text: isEdit ? (estudiante?['curso'] ?? '') : '',
+    );
+    
+    // Parse fecha de nacimiento si existe
+    DateTime? selectedDate;
+    if (isEdit && estudiante?['fechaNacimiento'] != null) {
+      try {
+        selectedDate = DateTime.parse(estudiante!['fechaNacimiento'].toString());
+      } catch (e) {
+        selectedDate = null;
+      }
+    }
+    
+    final direccionController = TextEditingController(
+      text: isEdit ? (estudiante?['direccion'] ?? '') : '',
+    );
+    final telefonoController = TextEditingController(
+      text: isEdit ? (estudiante?['telefono'] ?? '') : '',
+    );
+    final emailController = TextEditingController(
+      text: isEdit ? (estudiante?['email'] ?? '') : '',
+    );
+    final nombreResponsableController = TextEditingController(
+      text: isEdit ? (estudiante?['nombreResponsable'] ?? '') : '',
+    );
+    final rutResponsableController = TextEditingController(
+      text: isEdit ? (estudiante?['rutResponsable'] ?? '') : '',
+    );
+    final telefonoResponsableController = TextEditingController(
+      text: isEdit ? (estudiante?['telefonoResponsable'] ?? '') : '',
+    );
+    final contactoEmergenciaController = TextEditingController(
+      text: isEdit ? (estudiante?['contactoEmergencia'] ?? '') : '',
+    );
+    final telefonoEmergenciaController = TextEditingController(
+      text: isEdit ? (estudiante?['telefonoEmergencia'] ?? '') : '',
+    );
+    final observacionesController = TextEditingController(
+      text: isEdit ? (estudiante?['observaciones'] ?? '') : '',
+    );
+    
+    // Variable para seleccionar apoderado existente
+    String? selectedApoderadoRut = isEdit && estudiante != null ? estudiante['rutResponsable'] : null;
+    bool useExistingApoderado = false;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.6,
+            constraints: const BoxConstraints(maxWidth: 800, maxHeight: 720),
+            padding: const EdgeInsets.all(24),
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: WessexColors.deepRoyalBlue.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          isEdit ? Icons.edit : Icons.person_add,
+                          color: WessexColors.deepRoyalBlue,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Text(
+                          isEdit ? 'Editar Estudiante' : 'Agregar Estudiante',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: WessexColors.darkGrape,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close),
+                        color: WessexColors.darkGrape.withOpacity(0.5),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildSectionTitle('Información Personal'),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildValidatedTextField(
+                                  controller: rutController,
+                                  label: 'RUT *',
+                                  icon: Icons.badge,
+                                  enabled: !isEdit,
+                                  hint: 'Ej: 12.345.678-9',
+                                  onChanged: (value) {
+                                    final formatted = _formatRut(value);
+                                    if (formatted != value) {
+                                      rutController.value = TextEditingValue(
+                                        text: formatted,
+                                        selection: TextSelection.collapsed(
+                                          offset: formatted.length,
+                                        ),
+                                      );
+                                    }
+                                  },
+                                  validator: (value) {
+                                    if (value == null || value.trim().isEmpty) {
+                                      return 'RUT es obligatorio';
+                                    }
+                                    if (!_isValidRut(value)) {
+                                      return 'RUT inválido';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                flex: 2,
+                                child: _buildValidatedTextField(
+                                  controller: nombreController,
+                                  label: 'Nombre Completo *',
+                                  icon: Icons.person,
+                                  hint: 'Ej: Juan Pérez González',
+                                  validator: (value) {
+                                    if (value == null || value.trim().isEmpty) {
+                                      return 'Nombre es obligatorio';
+                                    }
+                                    if (value.trim().length < 3) {
+                                      return 'Nombre muy corto';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildValidatedTextField(
+                                  controller: cursoController,
+                                  label: 'Curso (máx. 10 car.) *',
+                                  icon: Icons.class_,
+                                  hint: 'Ej: 1°A, Sub-14',
+                                  maxLength: 10,
+                                  validator: (value) {
+                                    if (value == null || value.trim().isEmpty) {
+                                      return 'Curso es obligatorio';
+                                    }
+                                    if (value.length > 10) {
+                                      return 'Máximo 10 caracteres';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () async {
+                                    final DateTime? picked = await showDatePicker(
+                                      context: context,
+                                      initialDate: selectedDate ?? DateTime(2010, 1, 1),
+                                      firstDate: DateTime(1990),
+                                      lastDate: DateTime.now(),
+                                      locale: const Locale('es', 'ES'),
+                                      builder: (context, child) {
+                                        return Theme(
+                                          data: Theme.of(context).copyWith(
+                                            colorScheme: ColorScheme.light(
+                                              primary: WessexColors.deepRoyalBlue,
+                                              onPrimary: Colors.white,
+                                              onSurface: WessexColors.darkGrape,
+                                            ),
+                                          ),
+                                          child: child!,
+                                        );
+                                      },
+                                    );
+                                    if (picked != null) {
+                                      setDialogState(() {
+                                        selectedDate = picked;
+                                      });
+                                    }
+                                  },
+                                  child: InputDecorator(
+                                    decoration: InputDecoration(
+                                      labelText: 'Fecha Nacimiento',
+                                      prefixIcon: const Icon(Icons.calendar_today, size: 20),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 12,
+                                      ),
+                                      helperText: 'Seleccione desde el calendario',
+                                      helperStyle: TextStyle(
+                                        fontSize: 11,
+                                        color: WessexColors.deepRoyalBlue.withOpacity(0.7),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      selectedDate != null
+                                          ? DateFormat('yyyy-MM-dd').format(selectedDate!)
+                                          : 'Seleccione una fecha',
+                                      style: TextStyle(
+                                        color: selectedDate != null
+                                            ? WessexColors.darkGrape
+                                            : WessexColors.darkGrape.withOpacity(0.5),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          _buildValidatedTextField(
+                            controller: direccionController,
+                            label: 'Dirección',
+                            icon: Icons.home,
+                            hint: 'Ej: Av. Principal 123, Viña del Mar',
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildValidatedTextField(
+                                  controller: telefonoController,
+                                  label: 'Teléfono',
+                                  icon: Icons.phone,
+                                  hint: '+56912345678 (solo números)',
+                                  validator: (value) {
+                                    if (value != null && value.isNotEmpty) {
+                                      if (!_isValidPhone(value)) {
+                                        return 'Solo números y + opcional';
+                                      }
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: _buildValidatedTextField(
+                                  controller: emailController,
+                                  label: 'Email',
+                                  icon: Icons.email,
+                                  hint: 'Ej: estudiante@email.com',
+                                  validator: (value) {
+                                    if (value != null && value.isNotEmpty) {
+                                      if (!_isValidEmail(value)) {
+                                        return 'Email inválido';
+                                      }
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                          _buildSectionTitle('Información del Apoderado (Obligatorio)'),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: WessexColors.deepRoyalBlue.withOpacity(0.05),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: WessexColors.deepRoyalBlue.withOpacity(0.2),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.info_outline,
+                                  color: WessexColors.deepRoyalBlue,
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Todo estudiante debe tener un apoderado asignado',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: WessexColors.deepRoyalBlue,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          
+                          // Selector de apoderado existente o crear nuevo
+                          if (!isEdit && apoderados.isNotEmpty) ...[
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: RadioListTile<bool>(
+                                    title: const Text('Seleccionar apoderado existente'),
+                                    value: true,
+                                    groupValue: useExistingApoderado,
+                                    onChanged: (value) {
+                                      setDialogState(() {
+                                        useExistingApoderado = value ?? false;
+                                        if (useExistingApoderado) {
+                                          nombreResponsableController.clear();
+                                          rutResponsableController.clear();
+                                          telefonoResponsableController.clear();
+                                        }
+                                      });
+                                    },
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: RadioListTile<bool>(
+                                    title: const Text('Crear nuevo apoderado'),
+                                    value: false,
+                                    groupValue: useExistingApoderado,
+                                    onChanged: (value) {
+                                      setDialogState(() {
+                                        useExistingApoderado = !(value ?? false);
+                                        if (!useExistingApoderado) {
+                                          selectedApoderadoRut = null;
+                                        }
+                                      });
+                                    },
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            
+                            if (useExistingApoderado) ...[
+                              DropdownButtonFormField<String>(
+                                value: selectedApoderadoRut,
+                                decoration: InputDecoration(
+                                  labelText: 'Seleccionar Apoderado *',
+                                  hintText: 'Buscar por nombre o RUT',
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.white,
+                                ),
+                                items: [
+                                  const DropdownMenuItem<String>(
+                                    value: null,
+                                    child: Text('-- Seleccione un apoderado --'),
+                                  ),
+                                  ...apoderados.map(
+                                    (apoderado) => DropdownMenuItem<String>(
+                                      value: apoderado['rut'],
+                                      child: Text(
+                                        '${apoderado['nombreCompleto']} (${apoderado['rut']})',
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                                onChanged: (value) {
+                                  setDialogState(() {
+                                    selectedApoderadoRut = value;
+                                    if (value != null) {
+                                      final apoderado = apoderados.firstWhere(
+                                        (a) => a['rut'] == value,
+                                      );
+                                      rutResponsableController.text = apoderado['rut'] ?? '';
+                                      nombreResponsableController.text = apoderado['nombreCompleto'] ?? '';
+                                    }
+                                  });
+                                },
+                                validator: (value) {
+                                  if (useExistingApoderado && value == null) {
+                                    return 'Debe seleccionar un apoderado';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 16),
+                              // Mostrar info del apoderado seleccionado (solo lectura)
+                              if (selectedApoderadoRut != null) ...[
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: TextFormField(
+                                        controller: nombreResponsableController,
+                                        decoration: InputDecoration(
+                                          labelText: 'Nombre Apoderado',
+                                          prefixIcon: const Icon(Icons.person_outline),
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          filled: true,
+                                          fillColor: Colors.grey[100],
+                                        ),
+                                        enabled: false,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: TextFormField(
+                                        controller: rutResponsableController,
+                                        decoration: InputDecoration(
+                                          labelText: 'RUT Apoderado',
+                                          prefixIcon: const Icon(Icons.badge_outlined),
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          filled: true,
+                                          fillColor: Colors.grey[100],
+                                        ),
+                                        enabled: false,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ] else ...[
+                              _buildValidatedTextField(
+                                controller: nombreResponsableController,
+                                label: 'Nombre Responsable *',
+                                icon: Icons.person_outline,
+                                hint: 'Ej: María González',
+                                validator: (value) {
+                                  if (!useExistingApoderado && (value == null || value.trim().isEmpty)) {
+                                    return 'Nombre del responsable es obligatorio';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildValidatedTextField(
+                                      controller: rutResponsableController,
+                                      label: 'RUT Responsable *',
+                                      icon: Icons.badge_outlined,
+                                      hint: 'Ej: 12.345.678-9',
+                                      onChanged: (value) {
+                                        if (!useExistingApoderado) {
+                                          final formatted = _formatRut(value);
+                                          if (formatted != value) {
+                                            rutResponsableController.value = TextEditingValue(
+                                              text: formatted,
+                                              selection: TextSelection.collapsed(
+                                                offset: formatted.length,
+                                              ),
+                                            );
+                                          }
+                                        }
+                                      },
+                                      validator: (value) {
+                                        if (!useExistingApoderado) {
+                                          if (value == null || value.trim().isEmpty) {
+                                            return 'RUT del responsable es obligatorio';
+                                          }
+                                          if (!_isValidRut(value)) {
+                                            return 'RUT inválido';
+                                          }
+                                        }
+                                        return null;
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: _buildValidatedTextField(
+                                      controller: telefonoResponsableController,
+                                      label: 'Teléfono Responsable',
+                                      icon: Icons.phone_outlined,
+                                      hint: '+56912345678 (solo números)',
+                                      validator: (value) {
+                                        if (value != null && value.isNotEmpty) {
+                                          if (!_isValidPhone(value)) {
+                                            return 'Solo números y + opcional';
+                                          }
+                                        }
+                                        return null;
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ] else if (!isEdit) ...[
+                            Text(
+                              'No hay apoderados registrados. Los datos se ingresarán manualmente.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: WessexColors.maximumGrayMint,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            _buildValidatedTextField(
+                              controller: nombreResponsableController,
+                              label: 'Nombre Responsable *',
+                              icon: Icons.person_outline,
+                              hint: 'Ej: María González',
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Nombre del responsable es obligatorio';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildValidatedTextField(
+                                    controller: rutResponsableController,
+                                    label: 'RUT Responsable *',
+                                    icon: Icons.badge_outlined,
+                                    hint: 'Ej: 12.345.678-9',
+                                    onChanged: (value) {
+                                      final formatted = _formatRut(value);
+                                      if (formatted != value) {
+                                        rutResponsableController.value = TextEditingValue(
+                                          text: formatted,
+                                          selection: TextSelection.collapsed(
+                                            offset: formatted.length,
+                                          ),
+                                        );
+                                      }
+                                    },
+                                    validator: (value) {
+                                      if (value == null || value.trim().isEmpty) {
+                                        return 'RUT del responsable es obligatorio';
+                                      }
+                                      if (!_isValidRut(value)) {
+                                        return 'RUT inválido';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: _buildValidatedTextField(
+                                    controller: telefonoResponsableController,
+                                    label: 'Teléfono Responsable',
+                                    icon: Icons.phone_outlined,
+                                    hint: '+56912345678 (solo números)',
+                                    validator: (value) {
+                                      if (value != null && value.isNotEmpty) {
+                                        if (!_isValidPhone(value)) {
+                                          return 'Solo números y + opcional';
+                                        }
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ] else ...[
+                            // Modo edición: mostrar campos normales
+                            _buildValidatedTextField(
+                              controller: nombreResponsableController,
+                              label: 'Nombre Responsable *',
+                              icon: Icons.person_outline,
+                              hint: 'Ej: María González',
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Nombre del responsable es obligatorio';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildValidatedTextField(
+                                    controller: rutResponsableController,
+                                    label: 'RUT Responsable *',
+                                    icon: Icons.badge_outlined,
+                                    hint: 'Ej: 12.345.678-9',
+                                    onChanged: (value) {
+                                      final formatted = _formatRut(value);
+                                      if (formatted != value) {
+                                        rutResponsableController.value = TextEditingValue(
+                                          text: formatted,
+                                          selection: TextSelection.collapsed(
+                                            offset: formatted.length,
+                                          ),
+                                        );
+                                      }
+                                    },
+                                    validator: (value) {
+                                      if (value == null || value.trim().isEmpty) {
+                                        return 'RUT del responsable es obligatorio';
+                                      }
+                                      if (!_isValidRut(value)) {
+                                        return 'RUT inválido';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: _buildValidatedTextField(
+                                    controller: telefonoResponsableController,
+                                    label: 'Teléfono Responsable',
+                                    icon: Icons.phone_outlined,
+                                    hint: '+56912345678 (solo números)',
+                                    validator: (value) {
+                                      if (value != null && value.isNotEmpty) {
+                                        if (!_isValidPhone(value)) {
+                                          return 'Solo números y + opcional';
+                                        }
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                          const SizedBox(height: 24),
+                          _buildSectionTitle('Información de Emergencia'),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildValidatedTextField(
+                                  controller: contactoEmergenciaController,
+                                  label: 'Contacto Emergencia',
+                                  icon: Icons.emergency,
+                                  hint: 'Nombre del contacto',
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: _buildValidatedTextField(
+                                  controller: telefonoEmergenciaController,
+                                  label: 'Teléfono Emergencia',
+                                  icon: Icons.phone_in_talk,
+                                  hint: '+56912345678 (solo números)',
+                                  validator: (value) {
+                                    if (value != null && value.isNotEmpty) {
+                                      if (!_isValidPhone(value)) {
+                                        return 'Solo números y + opcional';
+                                      }
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          _buildValidatedTextField(
+                            controller: observacionesController,
+                            label: 'Observaciones',
+                            icon: Icons.notes,
+                            hint: 'Notas adicionales sobre el estudiante',
+                            maxLines: 3,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Cancelar'),
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton(
+                        onPressed: () async {
+                          print('🔍 DEBUG - Validando formulario...');
+                          if (!formKey.currentState!.validate()) {
+                            print('❌ DEBUG - Validación falló');
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text(
+                                  'Por favor corrija los errores en el formulario',
+                                ),
+                                backgroundColor: WessexColors.crimsonAlert,
+                              ),
+                            );
+                            return;
+                          }
+
+                          print('✅ DEBUG - Validación exitosa');
+                          print('📝 DEBUG - useExistingApoderado: $useExistingApoderado');
+                          print('📝 DEBUG - selectedApoderadoRut: $selectedApoderadoRut');
+
+                          // Generar email del apoderado si se va a crear nuevo
+                          String? correoApoderadoGenerado;
+                          if (!isEdit && 
+                              !useExistingApoderado && 
+                              nombreResponsableController.text.trim().isNotEmpty) {
+                            
+                            // Normalizar nombre: quitar acentos, minúsculas, espacios por puntos
+                            final nombreNormalizado = nombreResponsableController.text.trim()
+                                .toLowerCase()
+                                .replaceAll(RegExp(r'[áàäâ]'), 'a')
+                                .replaceAll(RegExp(r'[éèëê]'), 'e')
+                                .replaceAll(RegExp(r'[íìïî]'), 'i')
+                                .replaceAll(RegExp(r'[óòöô]'), 'o')
+                                .replaceAll(RegExp(r'[úùüû]'), 'u')
+                                .replaceAll(RegExp(r'[ñ]'), 'n')
+                                .replaceAll(RegExp(r'\s+'), '.');
+                            
+                            correoApoderadoGenerado = '${nombreNormalizado}0@wessex.cl';
+                            print('📧 Email apoderado generado: $correoApoderadoGenerado');
+                          }
+
+                          final data = {
+                            'rut': rutController.text.trim(),
+                            'nombre': nombreController.text.trim(),
+                            'curso': cursoController.text.trim(),
+                            'fechaNacimiento': selectedDate != null
+                                ? DateFormat('yyyy-MM-dd').format(selectedDate!)
+                                : '',
+                            'direccion': direccionController.text.trim(),
+                            'telefono': telefonoController.text.trim(),
+                            'email': emailController.text.trim(),
+                            'nombreResponsable':
+                                nombreResponsableController.text.trim(),
+                            'rutResponsable': rutResponsableController.text.trim(),
+                            'telefonoResponsable':
+                                telefonoResponsableController.text.trim(),
+                            'contactoEmergencia':
+                                contactoEmergenciaController.text.trim(),
+                            'telefonoEmergencia':
+                                telefonoEmergenciaController.text.trim(),
+                            'observaciones': observacionesController.text.trim(),
+                            if (correoApoderadoGenerado != null)
+                              'correoApoderadoGenerado': correoApoderadoGenerado,
+                          };
+
+                          print('📤 DEBUG - Enviando datos: $data');
+
+                          try {
+                            print('🚀 DEBUG - Llamando API...');
+                            final response = isEdit
+                                ? await ApiService.updateEstudiante(
+                                    estudiante!['rut'],
+                                    data,
+                                  )
+                                : await ApiService.createEstudiante(data);
+                            
+                            print('📥 DEBUG - Respuesta recibida: ${response.statusCode}');
+
+                            if (response.statusCode == 200 ||
+                                response.statusCode == 201) {
+                              
+                              // Si no es edición y se proporcionó info del apoderado, crear usuario
+                              if (!isEdit && 
+                                  !useExistingApoderado && 
+                                  data['rutResponsable'] != null && 
+                                  data['rutResponsable'] != '' &&
+                                  data['nombreResponsable'] != null &&
+                                  data['nombreResponsable'] != '' &&
+                                  correoApoderadoGenerado != null) {
+                                
+                                print('🔵 Creando usuario apoderado...');
+                                
+                                final apoderadoData = {
+                                  'rut': data['rutResponsable'],
+                                  'nombreCompleto': data['nombreResponsable'],
+                                  'email': correoApoderadoGenerado,
+                                  'password': 'wessex123',
+                                  'rol': 'apoderado',
+                                };
+                                
+                                try {
+                                  final apoderadoResponse = await ApiService.createUserByDirectiva(apoderadoData);
+                                  if (apoderadoResponse.statusCode == 200 || 
+                                      apoderadoResponse.statusCode == 201) {
+                                    print('✅ Usuario apoderado creado: $correoApoderadoGenerado');
+                                  }
+                                } catch (apoderadoError) {
+                                  print('⚠️ Error al crear apoderado (puede que ya exista): $apoderadoError');
+                                  // No fallar si el apoderado ya existe
+                                }
+                              }
+                              
+                              Navigator.pop(context);
+                              await _loadEstudiantesFromAPI();
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      isEdit
+                                          ? 'Estudiante actualizado exitosamente'
+                                          : 'Estudiante creado exitosamente',
+                                    ),
+                                    backgroundColor: WessexColors.leafGreen,
+                                  ),
+                                );
+                              }
+                            } else {
+                              throw Exception(response.message ?? 'Error desconocido');
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error: $e'),
+                                  backgroundColor: WessexColors.crimsonAlert,
+                                  duration: const Duration(seconds: 5),
+                                ),
+                              );
+                            }
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: WessexColors.leafGreen,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: Text(isEdit ? 'Guardar Cambios' : 'Crear Estudiante'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
 
-  void _showEditStudentDialog(Map<String, dynamic> estudiante) {
-    // TODO: Implementar diálogo de edición
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Editar: ${estudiante['nombre']}'),
-        backgroundColor: WessexColors.deepRoyalBlue,
+  String _formatRut(String rut) {
+    // Remover todo excepto números y K
+    String cleaned = rut.replaceAll(RegExp(r'[^0-9Kk]'), '');
+    if (cleaned.isEmpty) return '';
+    
+    // Si termina en K, convertir a mayúscula
+    if (cleaned.toLowerCase().endsWith('k')) {
+      cleaned = cleaned.substring(0, cleaned.length - 1) + 'K';
+    }
+    
+    // Separar número y dígito verificador
+    if (cleaned.length < 2) return cleaned;
+    
+    String dv = cleaned.substring(cleaned.length - 1);
+    String numbers = cleaned.substring(0, cleaned.length - 1);
+    
+    // Formatear con puntos
+    String formatted = '';
+    int count = 0;
+    for (int i = numbers.length - 1; i >= 0; i--) {
+      if (count == 3) {
+        formatted = '.$formatted';
+        count = 0;
+      }
+      formatted = numbers[i] + formatted;
+      count++;
+    }
+    
+    return '$formatted-$dv';
+  }
+
+  bool _isValidRut(String rut) {
+    // Remover puntos y guión
+    String cleanRut = rut.replaceAll('.', '').replaceAll('-', '');
+    if (cleanRut.length < 2) return false;
+    
+    // Validar formato básico (números y puede terminar en K)
+    final rutPattern = RegExp(r'^\d{7,8}[0-9Kk]$');
+    return rutPattern.hasMatch(cleanRut);
+  }
+
+  bool _isValidPhone(String phone) {
+    // Solo números y opcionalmente + al principio
+    final phonePattern = RegExp(r'^\+?\d+$');
+    if (!phonePattern.hasMatch(phone.replaceAll(' ', ''))) {
+      return false;
+    }
+    // Si tiene +, debe tener al menos 10 dígitos
+    if (phone.startsWith('+')) {
+      final digits = phone.replaceAll(RegExp(r'[^\d]'), '');
+      return digits.length >= 10;
+    }
+    // Sin +, debe tener al menos 9 dígitos
+    return phone.length >= 9;
+  }
+
+  bool _isValidEmail(String email) {
+    final emailPattern = RegExp(
+      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+    );
+    return emailPattern.hasMatch(email);
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+        color: WessexColors.deepRoyalBlue,
+      ),
+    );
+  }
+
+  Widget _buildValidatedTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    bool enabled = true,
+    int maxLines = 1,
+    int? maxLength,
+    String? hint,
+    String? Function(String?)? validator,
+    void Function(String)? onChanged,
+  }) {
+    return TextFormField(
+      controller: controller,
+      enabled: enabled,
+      maxLines: maxLines,
+      maxLength: maxLength,
+      validator: validator,
+      onChanged: onChanged,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        prefixIcon: Icon(icon, size: 20),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        filled: !enabled,
+        fillColor: enabled ? null : WessexColors.mistyRoseGray.withOpacity(0.3),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
+        helperText: hint != null ? 'Formato: $hint' : null,
+        helperStyle: TextStyle(
+          fontSize: 11,
+          color: WessexColors.deepRoyalBlue.withOpacity(0.7),
+        ),
+        counterText: maxLength != null ? '' : null,
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    bool enabled = true,
+    int maxLines = 1,
+  }) {
+    return TextField(
+      controller: controller,
+      enabled: enabled,
+      maxLines: maxLines,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon, size: 20),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        filled: !enabled,
+        fillColor: enabled ? null : WessexColors.mistyRoseGray.withOpacity(0.3),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
       ),
     );
   }

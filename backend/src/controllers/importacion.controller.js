@@ -5,6 +5,7 @@ import User from "../entity/user.entity.js";
 import {
   createEstudianteService,
   updateEstudianteService,
+  calcularCategoria,
 } from "../services/estudiante.service.js";
 import {
   handleErrorClient,
@@ -1674,6 +1675,14 @@ export async function importFormulariosRegistro(req, res) {
         delete data.uniforme;
         if (Object.keys(equipamiento).length > 0) {
           data.equipamiento = equipamiento;
+        }
+
+        // Calcular y asignar categoría automáticamente si tiene fecha de nacimiento
+        if (data.fechaNacimiento && !data.categoria) {
+          data.categoria = calcularCategoria(data.fechaNacimiento);
+          if (data.categoria) {
+            console.log(`📊 Categoría asignada automáticamente: ${data.categoria} para ${data.nombre} (edad desde ${data.fechaNacimiento})`);
+          }
         }
 
         let saved;

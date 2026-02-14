@@ -52,7 +52,7 @@ const EntrenadorPublicoSchema = new EntitySchema({
       type: "varchar",
       length: 500,
       nullable: true,
-      comment: "CategorÃ­as que entrena (ej: sub-8, sub-10)",
+      comment: "CategorÃ­as que entrena",
     },
     visible: {
       type: "boolean",
@@ -70,13 +70,13 @@ const EntrenadorPublicoSchema = new EntitySchema({
       type: "varchar",
       length: 500,
       nullable: true,
-      comment: "Ruta del archivo de foto pública del entrenador",
+      comment: "Ruta del archivo de foto pÃºblica del entrenador",
     },
     fotoVersion: {
       type: "int",
       default: 0,
       nullable: false,
-      comment: "Versión de la foto pública para control de caché",
+      comment: "VersiÃ³n de la foto pÃºblica para control de cachÃ©",
     },
     createdAt: {
       type: "timestamp with time zone",

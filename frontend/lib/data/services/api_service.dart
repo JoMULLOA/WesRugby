@@ -372,6 +372,12 @@ class ApiService {
     return get('/estudiantes/$rut');
   }
 
+  static Future<ApiResponse> createEstudiante(
+    Map<String, dynamic> data,
+  ) async {
+    return post('/estudiantes', data);
+  }
+
   static Future<ApiResponse> updateEstudiante(
     String rut,
     Map<String, dynamic> data,

@@ -11,6 +11,7 @@ import {
   updateEstudiante,
   deleteEstudiante,
   updateEstudianteFoto,
+  recalcularCategorias,
 } from "../controllers/estudiante.controller.js";
 
 const router = express.Router();
@@ -34,6 +35,7 @@ router.get("/mis-estudiantes", isApoderado, getMisEstudiantes); // GET /estudian
 router.get("/por-apoderado", isApoderado, getEstudiantesByApoderado); // GET /estudiantes/por-apoderado?rut=xxx - obtener estudiantes por apoderado
 router.get("/:rut", isAuthenticated, getEstudiante); // GET /estudiantes/:rut - obtener estudiante por RUT
 router.post("/", isAdmin, createEstudiante); // POST /estudiantes - crear estudiante (solo admin)
+router.post("/recalcular-categorias", isAdmin, recalcularCategorias); // POST /estudiantes/recalcular-categorias - recalcular categorías de todos los estudiantes
 router.put("/:rut", isApoderado, updateEstudiante); // PUT /estudiantes/:rut - actualizar estudiante (apoderado responsable, tesorera o directiva)
 router.put("/:rut/foto", isApoderado, updateEstudianteFoto); // PUT /estudiantes/:rut/foto - actualizar foto de estudiante
 router.delete("/:rut", isAdmin, deleteEstudiante); // DELETE /estudiantes/:rut - eliminar estudiante (solo admin)

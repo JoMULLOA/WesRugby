@@ -5,9 +5,9 @@ import 'package:wesrugby/core/config/colors.dart';
 import 'package:wesrugby/data/services/voucher_service.dart';
 import 'package:http/http.dart' as http;
 // ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html show Blob, Url, AnchorElement, IFrameElement;
+import 'package:wesrugby/core/utils/html.dart' as html;
 // ignore: avoid_web_libraries_in_flutter
-import 'dart:ui_web' as ui_web;
+import 'package:wesrugby/core/utils/ui_web.dart' as ui_web;
 
 class GestionVouchersScreen extends StatefulWidget {
   const GestionVouchersScreen({super.key});
@@ -526,7 +526,9 @@ class _GestionVouchersScreenState extends State<GestionVouchersScreen> {
               Expanded(
                 child: _buildVoucherDetailItem(
                   'ID Voucher',
-                  voucher['id'],
+                  voucher['id'].toString().length > 5 
+                      ? voucher['id'].toString().substring(0, 5) 
+                      : voucher['id'],
                   Icons.receipt,
                   WessexColors.darkGrape,
                 ),
@@ -572,7 +574,7 @@ class _GestionVouchersScreenState extends State<GestionVouchersScreen> {
               Expanded(
                 child: _buildVoucherDetailItem(
                   'Fecha Envío',
-                  voucher['fechaEnvio'],
+                  _formatFecha(voucher['fechaEnvio']),
                   Icons.schedule,
                   WessexColors.darkGrape,
                 ),
@@ -580,7 +582,7 @@ class _GestionVouchersScreenState extends State<GestionVouchersScreen> {
               Expanded(
                 child: _buildVoucherDetailItem(
                   'Archivo',
-                  voucher['archivo'],
+                  'Adjunto',
                   Icons.attachment,
                   WessexColors.deepRoyalBlue,
                 ),
@@ -769,7 +771,7 @@ class _GestionVouchersScreenState extends State<GestionVouchersScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Archivo: ${voucher['archivo'] ?? ''}',
+                          'Voucher de Pago',
                           style: TextStyle(
                             color: WessexColors.darkGrape.withOpacity(0.7),
                             fontSize: 14,
@@ -940,7 +942,7 @@ class _GestionVouchersScreenState extends State<GestionVouchersScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Archivo: ${voucher['archivo']}',
+                              'Voucher de Pago',
                               style: TextStyle(
                                 color: WessexColors.darkGrape.withOpacity(0.7),
                                 fontSize: 14,
@@ -1122,7 +1124,7 @@ class _GestionVouchersScreenState extends State<GestionVouchersScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Archivo: ${voucher['archivo']}',
+                              'Voucher de Pago',
                               style: TextStyle(
                                 color: WessexColors.darkGrape.withOpacity(0.7),
                                 fontSize: 14,
@@ -1271,7 +1273,7 @@ class _GestionVouchersScreenState extends State<GestionVouchersScreen> {
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            'Archivo: ${voucher['archivo']}',
+                            'Voucher de Pago',
                             style: TextStyle(
                               color: WessexColors.darkGrape,
                               fontSize: 16,
@@ -1484,5 +1486,14 @@ class _GestionVouchersScreenState extends State<GestionVouchersScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
+  }
+
+  String _formatFecha(String fecha) {
+    try {
+      final dateTime = DateTime.parse(fecha);
+      return '${dateTime.day.toString().padLeft(2, '0')}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.year}';
+    } catch (e) {
+      return fecha;
+    }
   }
 }

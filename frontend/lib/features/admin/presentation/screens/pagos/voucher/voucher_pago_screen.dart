@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'dart:html' as html;
+import 'package:file_picker/file_picker.dart';
+import 'package:wesrugby/core/utils/html.dart' as html;
 import 'package:wesrugby/shared/widgets/layout/wessex_widgets.dart';
 import 'package:wesrugby/core/config/colors.dart';
 import 'package:wesrugby/data/services/estudiante_service.dart';
 import 'package:wesrugby/data/services/api_service.dart';
 import 'package:wesrugby/data/services/pagos_service.dart';
 import 'package:wesrugby/data/services/configuracion_precio_service.dart';
+import 'dart:typed_data';
+import 'dart:io' show File;
 
 class VoucherPagoScreen extends StatefulWidget {
   const VoucherPagoScreen({super.key});
@@ -1529,7 +1532,8 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
                         child: OutlinedButton(
                           onPressed: () => Navigator.pop(context),
                           style: OutlinedButton.styleFrom(
-                            side: BorderSide(color: WessexColors.darkGrape),
+                            side: BorderSide(color: WessexColors.darkGrape.withOpacity(0.3)),
+                            backgroundColor: WessexColors.white,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
@@ -1604,33 +1608,42 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
 
   Future<void> _pickFile() async {
     try {
-      if (kIsWeb) {
-        // Para Web: usar html input file
-        final html.FileUploadInputElement uploadInput =
-            html.FileUploadInputElement();
-        uploadInput.accept = 'image/*,.pdf';
-        uploadInput.click();
+      // Usar file_picker que funciona en todas las plataformas
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+        allowMultiple: false,
+      );
 
-        uploadInput.onChange.listen((event) async {
-          final files = uploadInput.files;
-          if (files!.isNotEmpty) {
-            final file = files[0];
-            final reader = html.FileReader();
-
-            reader.readAsArrayBuffer(file);
-            reader.onLoadEnd.listen((event) {
-              setState(() {
-                _webFile = reader.result as Uint8List;
-                _archivoNombre = file.name;
-              });
-
-              _showSuccessSnackBar('Archivo seleccionado: ${file.name}');
-            });
+      if (result != null && result.files.isNotEmpty) {
+        final file = result.files.first;
+        
+        // Obtener los bytes del archivo
+        Uint8List? fileBytes;
+        if (kIsWeb) {
+          fileBytes = file.bytes;
+        } else {
+          // En móvil, leer desde el path
+          if (file.path != null) {
+            try {
+              final ioFile = File(file.path!);
+              fileBytes = await ioFile.readAsBytes();
+            } catch (e) {
+              print('❌ Error leyendo archivo: $e');
+              fileBytes = null;
+            }
           }
-        });
-      } else {
-        // Para móvil: implementación básica
-        _showErrorSnackBar('Funcionalidad disponible solo en web por ahora');
+        }
+
+        if (fileBytes != null) {
+          setState(() {
+            _webFile = fileBytes;
+            _archivoNombre = file.name;
+          });
+          _showSuccessSnackBar('Archivo seleccionado: ${file.name}');
+        } else {
+          _showErrorSnackBar('No se pudo leer el archivo');
+        }
       }
     } catch (e) {
       print('Error al seleccionar archivo: $e');

@@ -7,8 +7,8 @@ import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:typed_data';
 // ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
-import 'dart:ui_web' as ui_web;
+import 'package:wesrugby/core/utils/html.dart' as html;
+import 'package:wesrugby/core/utils/ui_web.dart' as ui_web;
 
 class HistorialJustificantesScreen extends StatefulWidget {
   const HistorialJustificantesScreen({super.key});
@@ -587,101 +587,38 @@ class _HistorialJustificantesScreenState
 
                   const SizedBox(height: 16),
 
-                  // Información del justificante
+                  // Información simplificada del justificante
                   Container(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: WessexColors.mistyRoseGray.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
                       children: [
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.calendar_today,
-                              size: 16,
-                              color: WessexColors.deepRoyalBlue,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Fecha de Inasistencia: ${_formatDate(justificante['fechaInasistencia'])}',
-                              style: TextStyle(
-                                color: WessexColors.darkGrape,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
+                        Icon(
+                          Icons.calendar_today,
+                          size: 18,
+                          color: WessexColors.deepRoyalBlue,
                         ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.edit_note,
-                              size: 16,
-                              color: WessexColors.deepRoyalBlue,
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '${_formatDate(justificante['fechaInasistencia'])} • ${justificante['motivo']}',
+                            style: TextStyle(
+                              color: WessexColors.darkGrape,
+                              fontSize: 14,
                             ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'Motivo: ${justificante['motivo']}',
-                                style: TextStyle(
-                                  color: WessexColors.darkGrape,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ),
-                          ],
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                        if (justificante['descripcion'] != null &&
-                            justificante['descripcion'].isNotEmpty) ...[
-                          const SizedBox(height: 8),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Icon(
-                                Icons.description,
-                                size: 16,
-                                color: WessexColors.deepRoyalBlue,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'Descripción: ${justificante['descripcion']}',
-                                  style: TextStyle(
-                                    color: WessexColors.darkGrape.withOpacity(
-                                      0.7,
-                                    ),
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ),
-                            ],
+                        if (justificante['archivo'] != null)
+                          Icon(
+                            Icons.attachment,
+                            size: 18,
+                            color: WessexColors.deepRoyalBlue,
                           ),
-                        ],
-                        if (justificante['archivo'] != null) ...[
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.attachment,
-                                size: 16,
-                                color: WessexColors.deepRoyalBlue,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Archivo adjunto: ${justificante['archivo']}',
-                                style: TextStyle(
-                                  color: WessexColors.deepRoyalBlue,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
                       ],
                     ),
                   ),
@@ -948,7 +885,7 @@ class _HistorialJustificantesScreenState
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Archivo: ${justificante['archivo'] ?? ''}',
+                          'Justificante',
                           style: TextStyle(
                             color: WessexColors.darkGrape.withOpacity(0.7),
                             fontSize: 14,

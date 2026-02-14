@@ -7,8 +7,7 @@ import 'package:wesrugby/shared/widgets/layout/wessex_widgets.dart';
 import 'package:wesrugby/core/config/colors.dart';
 import 'package:wesrugby/data/services/estudiante_service.dart';
 import 'package:wesrugby/data/services/refresh_service.dart';
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
+import 'package:wesrugby/core/utils/html.dart' as html;
 
 class RegistroDatosScreen extends StatefulWidget {
   const RegistroDatosScreen({super.key});

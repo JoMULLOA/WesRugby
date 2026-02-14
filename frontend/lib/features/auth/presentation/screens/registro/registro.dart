@@ -153,12 +153,12 @@ class _RegistroPageState extends State<RegistroPage> {
         errorMessage = response.body;
       }
 
-      print('❌ Error de registro: $errorMessage');
-      print('📄 Estructura completa del error: $data');
+      print(' Error de registro: $errorMessage');
+      print(' Estructura completa del error: $data');
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("❌ $errorMessage"),
+          content: Text(" $errorMessage"),
           duration: const Duration(seconds: 4),
           backgroundColor: Colors.red,
         ),
