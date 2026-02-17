@@ -2415,7 +2415,7 @@ class _RamaExternaScreenState extends State<RamaExternaScreen>
                                     controller: participacion['cantidad'],
                                     keyboardType: TextInputType.number,
                                     decoration: InputDecoration(
-                                      labelText: 'Cantidad de Ninos',
+                                      labelText: 'Cantidad de Niños',
                                       border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(8),
                                       ),
