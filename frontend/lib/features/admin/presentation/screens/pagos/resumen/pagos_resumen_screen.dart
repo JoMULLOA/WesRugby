@@ -72,6 +72,9 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
   // Estados de expansión para cada estudiante
   final Map<String, bool> _pagosExpandidos = {};
   final Map<String, bool> _equipamientoExpandido = {};
+  
+  // Año seleccionado por cada estudiante (RUT -> año)
+  final Map<String, int> _aniosPorEstudiante = {};
 
   @override
   void initState() {
@@ -324,6 +327,7 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
   String _notificacionCategoria = 'Pagos'; // Pagos, Equipamiento
   String _notificacionSubcategoria = 'Matrícula'; // Matrícula, Mensualidad (solo si es Pagos)
   String _notificacionMes = 'marzo'; // Solo si es Mensualidad
+  int _notificacionAnio = 2025; // Año de la deuda (2025-2030)
   bool _enviandoNotificaciones = false;
 
   Widget _buildNotificacionesTab() {
@@ -419,6 +423,22 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
                   const SizedBox(height: 16),
                 ],
 
+                // Selector de Año (Para Pagos: Matrícula y Mensualidad)
+                if (_notificacionCategoria == 'Pagos') ...[
+                  DropdownButtonFormField<int>(
+                    value: _notificacionAnio,
+                    decoration: InputDecoration(
+                      labelText: 'Año',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    items: List.generate(6, (index) => 2025 + index)
+                        .map((year) => DropdownMenuItem(value: year, child: Text('$year')))
+                        .toList(),
+                    onChanged: (val) => setState(() => _notificacionAnio = val!),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
                 const Divider(),
                 const SizedBox(height: 16),
 
@@ -505,7 +525,8 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
-                            'Debe ${_notificacionSubcategoria == 'Mensualidad' ? _mesTitulo(_notificacionMes) : 'Matrícula'}',
+                            'Debe ${_notificacionSubcategoria == 'Mensualidad' ? '${_mesTitulo(_notificacionMes)} $_notificacionAnio' : 'Matrícula $_notificacionAnio'}',
+
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
@@ -613,11 +634,11 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
 
       if (_notificacionCategoria == 'Pagos') {
         if (_notificacionSubcategoria == 'Matrícula') {
-          mensaje = 'Estimado apoderado, le recordamos que tiene pendiente el pago de la Matrícula.';
-          datos = {'tipoDeuda': 'matricula'};
+          mensaje = 'Estimado apoderado, le recordamos que tiene pendiente el pago de la Matrícula $_notificacionAnio.';
+          datos = {'tipoDeuda': 'matricula', 'anio': _notificacionAnio};
         } else {
-          mensaje = 'Estimado apoderado, le recordamos que tiene pendiente el pago de la mensualidad de ${_mesTitulo(_notificacionMes)}.';
-          datos = {'tipoDeuda': 'mes', 'mes': _notificacionMes};
+          mensaje = 'Estimado apoderado, le recordamos que tiene pendiente el pago de la mensualidad de ${_mesTitulo(_notificacionMes)} $_notificacionAnio.';
+          datos = {'tipoDeuda': 'mes', 'mes': _notificacionMes, 'anio': _notificacionAnio};
         }
       } else {
         mensaje = 'Estimado apoderado, le recordamos regularizar su situación de equipamiento.';
@@ -987,13 +1008,29 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
     final pagosMeses = (pagos['meses'] as Map<String, dynamic>?) ?? const {};
     final equipamiento =
         (estudiante['equipamiento'] as Map<String, dynamic>?) ?? const {};
-    final matricula = _formatearValor(pagos['matricula']);
-    final totalAnio = _formatearValor(pagos['totalAnio']);
     
     // Usar RUT como clave única para el estado de expansión
     final rutKey = estudiante['rut']?.toString() ?? estudiante['nombre']?.toString() ?? '';
     final pagosExpanded = _pagosExpandidos[rutKey] ?? false;
     final equipamientoExpanded = _equipamientoExpandido[rutKey] ?? false;
+    
+    // Obtener año seleccionado para este estudiante
+    final anioEstudiante = _aniosPorEstudiante[rutKey] ?? 2025;
+    
+    // Obtener pagos por año (nueva estructura)
+    final pagosPorAnio = (estudiante['pagosPorAnio'] as Map<String, dynamic>?) ?? {};
+    final pagosDelAnio = (pagosPorAnio[anioEstudiante.toString()] as Map<String, dynamic>?) ?? {};
+    
+    // Si el año es 2025, usar datos del Excel (estructura legacy), sino usar pagosPorAnio
+    final matricula = anioEstudiante == 2025 
+        ? _formatearValor(pagos['matricula']) 
+        : _formatearValor(pagosDelAnio['matricula']);
+    final totalAnio = anioEstudiante == 2025 
+        ? _formatearValor(pagos['totalAnio']) 
+        : 'Sin información';
+    final mesesAMostrar = anioEstudiante == 2025 
+        ? pagosMeses 
+        : (pagosDelAnio['meses'] as Map<String, dynamic>?) ?? {};
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -1163,6 +1200,32 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
             // Contenido de Pagos (desplegable)
             if (pagosExpanded) ...[
               const SizedBox(height: 16),
+              
+              // Selector de año individual
+              DropdownButtonFormField<int>(
+                value: _aniosPorEstudiante[rutKey] ?? 2025,
+                onChanged: (int? value) {
+                  if (value != null) {
+                    setState(() {
+                      _aniosPorEstudiante[rutKey] = value;
+                    });
+                  }
+                },
+                decoration: InputDecoration(
+                  labelText: 'Año',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  prefixIcon: Icon(Icons.calendar_today, color: WessexColors.deepRoyalBlue),
+                ),
+                items: List.generate(6, (index) => 2025 + index)
+                    .map((year) => DropdownMenuItem(value: year, child: Text('$year')))
+                    .toList(),
+              ),
+              
+              const SizedBox(height: 16),
               Wrap(
                 spacing: 12,
                 runSpacing: 12,
@@ -1172,7 +1235,7 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              _buildMesesGrid(pagosMeses),
+              _buildMesesGrid(mesesAMostrar, anioEstudiante),
             ],
             
             // Contenido de Equipamiento (desplegable)
@@ -1240,7 +1303,7 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
     );
   }
 
-  Widget _buildMesesGrid(Map<String, dynamic> meses) {
+  Widget _buildMesesGrid(Map<String, dynamic> meses, int anioSeleccionado) {
     return WessexCard(
       padding: const EdgeInsets.all(16),
       backgroundColor: Colors.white,

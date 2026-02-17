@@ -255,6 +255,7 @@ class PagosService {
     required double montoTotal,
     required DateTime fechaPago,
     String? mesCorrespondiente, // Opcional: null para matrículas
+    int? anioMatricula, // Año de la matrícula (solo para tipo matrícula)
     required List<String> estudiantesSeleccionados,
     required bool aplicarATodos,
     String? bancoOrigen,
@@ -273,6 +274,7 @@ class PagosService {
       print('  - montoTotal: $montoTotal');
       print('  - fechaPago: ${fechaPago.toIso8601String()}');
       print('  - mesCorrespondiente: $mesCorrespondiente');
+      print('  - anioMatricula: $anioMatricula');
       print('  - estudiantesSeleccionados: $estudiantesSeleccionados');
       print('  - aplicarATodos: $aplicarATodos');
       print('  - nombreArchivo: $nombreArchivo');
@@ -390,13 +392,34 @@ class PagosService {
   }
 
   /// Obtener meses no pagados de 2025 para los estudiantes del apoderado
+  /// (LEGACY - mantener para compatibilidad)
   static Future<ApiResponse> obtenerMesesNoPagados2025({List<String>? rutEstudiantes}) async {
-    String endpoint = '/comprobantes-pago/apoderado/meses-no-pagados-2025';
+    return obtenerMesesNoPagados(rutEstudiantes: rutEstudiantes);
+  }
+
+  /// Obtener meses no pagados para los estudiantes del apoderado
+  /// Si no se especifica año, devuelve TODOS los meses de TODOS los años (2025-2030)
+  static Future<ApiResponse> obtenerMesesNoPagados({
+    int? anio, // Opcional: si se omite, devuelve todos los años
+    List<String>? rutEstudiantes,
+  }) async {
+    String endpoint = '/comprobantes-pago/apoderado/meses-no-pagados';
+    
+    List<String> params = [];
+    
+    // Si se especifica año, agregarlo como query param
+    if (anio != null) {
+      params.add('anio=$anio');
+    }
     
     // Si se especifican RUTs, agregarlos como query param
     if (rutEstudiantes != null && rutEstudiantes.isNotEmpty) {
       final rutsParam = rutEstudiantes.join(',');
-      endpoint += '?rutEstudiantes=$rutsParam';
+      params.add('rutEstudiantes=$rutsParam');
+    }
+    
+    if (params.isNotEmpty) {
+      endpoint += '?${params.join('&')}';
     }
     
     return ApiService.get(endpoint);
