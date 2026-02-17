@@ -33,6 +33,8 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
   bool _isLoadingMeses = true;
   bool _isLoadingPrecios = true;
   bool _aplicarATodos = true;
+  int _anioSeleccionado = 2025;
+  int _anioMatricula = 2025; // Año para matrícula
   Map<String, dynamic>? _userData;
   final EstudianteService _estudianteService = EstudianteService();
   List<Map<String, dynamic>> _misEstudiantes = [];
@@ -129,7 +131,7 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
   }
   
   void _verificarMatriculaPagada() {
-    // Verificar en los estudiantes seleccionados si alguno ya tiene matrícula pagada
+    // Verificar en los estudiantes seleccionados si alguno ya tiene matrícula pagada para el año seleccionado
     bool algunaMatriculaPagada = false;
     
     for (final rut in _estudiantesSeleccionados) {
@@ -140,7 +142,17 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
       
       if (estudiante.isNotEmpty) {
         final pagos = estudiante['pagos'] as Map<String, dynamic>?;
-        final matricula = pagos?['matricula']?.toString().toLowerCase() ?? '';
+        final pagosPorAnio = estudiante['pagosPorAnio'] as Map<String, dynamic>?;
+        
+        String? matricula;
+        
+        // Si es 2025, usar estructura legacy, sino usar pagosPorAnio
+        if (_anioMatricula == 2025) {
+          matricula = pagos?['matricula']?.toString().toLowerCase() ?? '';
+        } else {
+          final pagosAnio = pagosPorAnio?[_anioMatricula.toString()] as Map<String, dynamic>?;
+          matricula = pagosAnio?['matricula']?.toString().toLowerCase() ?? '';
+        }
         
         // Considerar pagada si no es "no pagado" o vacío
         if (matricula.isNotEmpty && 
@@ -159,10 +171,10 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
             children: [
               const Icon(Icons.info_outline, color: Colors.white),
               const SizedBox(width: 8),
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Uno o más estudiantes ya tienen la matrícula pagada',
-                  style: TextStyle(color: Colors.white),
+                  'Uno o más estudiantes ya tienen la matrícula $_anioMatricula pagada',
+                  style: const TextStyle(color: Colors.white),
                 ),
               ),
             ],
@@ -357,7 +369,7 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
     try {
       // Pasar los RUTs de estudiantes seleccionados
       final rutSeleccionados = _estudiantesSeleccionados.toList();
-      final response = await PagosService.obtenerMesesNoPagados2025(
+      final response = await PagosService.obtenerMesesNoPagados(
         rutEstudiantes: rutSeleccionados.isNotEmpty ? rutSeleccionados : null,
       );
       print('📡 [VOUCHER] Respuesta completa: $response');
@@ -404,7 +416,7 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
               print('⚠️ [VOUCHER] estudiantes: ${backendData['estudiantes']}');
               setState(() {
                 _mesesDisponibles = [];
-                _errorMeses = 'Todos los meses de 2025 están pagados';
+                _errorMeses = 'Todos los meses de $_anioSeleccionado están pagados';
                 _isLoadingMeses = false;
               });
             }
@@ -1064,6 +1076,72 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
 
                         const SizedBox(height: 16),
 
+                        // Selector de año para Mensualidad
+                        if (_selectedTipoPago == 'Mensualidad')
+                          DropdownButtonFormField<int>(
+                            value: _anioSeleccionado,
+                            decoration: InputDecoration(
+                              labelText: 'Año',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              prefixIcon: Icon(
+                                Icons.calendar_today,
+                                color: WessexColors.deepRoyalBlue,
+                              ),
+                            ),
+                            items: List.generate(6, (index) => 2025 + index)
+                                .map((year) {
+                              return DropdownMenuItem<int>(
+                                value: year,
+                                child: Text('$year'),
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              if (value != null && value != _anioSeleccionado) {
+                                setState(() {
+                                  _anioSeleccionado = value;
+                                  _selectedMonth = null;
+                                  _mesesDisponibles = [];
+                                });
+                                _cargarMesesNoPagados();
+                              }
+                            },
+                          ),
+
+                        // Selector de año para Matrícula
+                        if (_selectedTipoPago == 'Matrícula')
+                          DropdownButtonFormField<int>(
+                            value: _anioMatricula,
+                            decoration: InputDecoration(
+                              labelText: 'Año de Matrícula',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              prefixIcon: Icon(
+                                Icons.calendar_today,
+                                color: WessexColors.deepRoyalBlue,
+                              ),
+                            ),
+                            items: List.generate(6, (index) => 2025 + index)
+                                .map((year) {
+                              return DropdownMenuItem<int>(
+                                value: year,
+                                child: Text('$year'),
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              if (value != null) {
+                                setState(() {
+                                  _anioMatricula = value;
+                                });
+                                _verificarMatriculaPagada();
+                              }
+                            },
+                          ),
+
+                        const SizedBox(height: 16),
+
                         // Mes de pago (solo visible para Mensualidad)
                         if (_selectedTipoPago == 'Mensualidad') ...[
                         
@@ -1088,7 +1166,7 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Text(
-                                    'Pagar todos los meses restantes del año',
+                                    'Pagar todos los meses disponibles',
                                     style: TextStyle(
                                       color: WessexColors.darkGrape,
                                       fontWeight: FontWeight.w600,
@@ -1767,6 +1845,7 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
           montoTotal: montoTotalComprobante,
           fechaPago: DateTime.now(),
           mesCorrespondiente: 'Multiple', // Indicador de múltiples meses
+          anioMatricula: _selectedTipoPago == 'Matrícula' ? _anioMatricula : null,
           estudiantesSeleccionados: estudiantesRuts,
           aplicarATodos: false,
           bancoOrigen: null,
@@ -1804,6 +1883,7 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
           fechaPago: DateTime.now(),
           // Solo enviar mes si es Mensualidad
           mesCorrespondiente: _selectedTipoPago == 'Mensualidad' ? _selectedMonth! : null,
+          anioMatricula: _selectedTipoPago == 'Matrícula' ? _anioMatricula : null,
           estudiantesSeleccionados: estudiantesRuts,
           aplicarATodos: _aplicarATodos,
           bancoOrigen: null,

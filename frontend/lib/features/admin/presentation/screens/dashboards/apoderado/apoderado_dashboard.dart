@@ -124,10 +124,12 @@ class _ApoderadoDashboardState extends State<ApoderadoDashboard> {
                     ..._notificaciones.where((n) => !n.leida).map((n) {
                       String mensaje = n.mensaje;
                       if (n.datos != null && n.datos!['tipoDeuda'] != null) {
+                        final anio = n.datos!['anio'] ?? 2025; // Año por defecto si no está especificado
                         if (n.datos!['tipoDeuda'] == 'matricula') {
-                          mensaje = 'Debes matrícula';
+                          mensaje = 'Debes matrícula $anio';
                         } else if (n.datos!['tipoDeuda'] == 'mes') {
-                          mensaje = 'Debes mes ${n.datos!['mes']}';
+                          final mes = n.datos!['mes'] ?? '';
+                          mensaje = 'Debes mes $mes $anio';
                         }
                       }
                       

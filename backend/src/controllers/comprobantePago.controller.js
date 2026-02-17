@@ -586,36 +586,36 @@ export async function validarComprobante(req, res) {
       try {
         console.log(`💰 Procesando aprobación de comprobante ${actualizado.numeroComprobante}`);
         
-        // Mapeo de meses YYYY-MM a nombres
-        const mapeoMeses = {
-          "2025-01": "enero",
-          "2025-02": "febrero",
-          "2025-03": "marzo",
-          "2025-04": "abril",
-          "2025-05": "mayo",
-          "2025-06": "junio",
-          "2025-07": "julio",
-          "2025-08": "agosto",
-          "2025-09": "septiembre",
-          "2025-10": "octubre",
-          "2025-11": "noviembre",
-          "2025-12": "diciembre",
-        };
-        
-        // Función auxiliar para extraer mes de un label como "Agosto 2025"
-        const extraerMesDeLabel = (label) => {
+        // Función para extraer año y mes de formato "YYYY-MM" o "Nombre Año"
+        const extraerAnioYMes = (mesValue) => {
+          // Formato YYYY-MM (ej: "2026-03")
+          const matchYYYYMM = mesValue.match(/^(\d{4})-(\d{2})$/);
+          if (matchYYYYMM) {
+            const anio = parseInt(matchYYYYMM[1]);
+            const mesNum = parseInt(matchYYYYMM[2]);
+            const nombresMeses = ["enero", "febrero", "marzo", "abril", "mayo", "junio",
+                                 "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+            return { anio, nombreMes: nombresMeses[mesNum - 1] };
+          }
+          
+          // Formato "Nombre Año" (ej: "Marzo 2026")
           const mesesNombres = {
             "enero": "enero", "febrero": "febrero", "marzo": "marzo",
             "abril": "abril", "mayo": "mayo", "junio": "junio",
             "julio": "julio", "agosto": "agosto", "septiembre": "septiembre",
             "octubre": "octubre", "noviembre": "noviembre", "diciembre": "diciembre",
           };
-          const labelLower = label.toLowerCase();
+          
+          const mesValueLower = mesValue.toLowerCase();
           for (const [nombre, key] of Object.entries(mesesNombres)) {
-            if (labelLower.includes(nombre)) {
-              return key;
+            if (mesValueLower.includes(nombre)) {
+              // Extraer año del formato "Marzo 2026"
+              const matchAnio = mesValue.match(/\d{4}/);
+              const anio = matchAnio ? parseInt(matchAnio[0]) : 2025;
+              return { anio, nombreMes: key };
             }
           }
+          
           return null;
         };
         
@@ -637,12 +637,11 @@ export async function validarComprobante(req, res) {
             if (!estudiante.pagos) {
               estudiante.pagos = {};
             }
+            if (!estudiante.pagosPorAnio) {
+              estudiante.pagosPorAnio = {};
+            }
             
             if (actualizado.tipoPago === "mensualidad") {
-              if (!estudiante.pagos.meses) {
-                estudiante.pagos.meses = {};
-              }
-              
               const meses = detalles.meses || [];
               const montoTotalEstudiante = detalles.monto || 0;
               
@@ -653,19 +652,29 @@ export async function validarComprobante(req, res) {
               console.log(`   Estudiante ${estudianteRut}: ${cantidadMeses} meses, monto total $${montoTotalEstudiante}, por mes $${montoPorMes.toFixed(0)}`);
               
               for (const mesValue of meses) {
-                let nombreMes = null;
+                const resultado = extraerAnioYMes(mesValue);
                 
-                // Intentar mapeo directo YYYY-MM
-                if (mapeoMeses[mesValue]) {
-                  nombreMes = mapeoMeses[mesValue];
-                } else {
-                  // Intentar extraer de label "Agosto 2025"
-                  nombreMes = extraerMesDeLabel(mesValue);
-                }
-                
-                if (nombreMes) {
-                  estudiante.pagos.meses[nombreMes] = Math.round(montoPorMes).toString();
-                  console.log(`      ✓ ${nombreMes}: $${Math.round(montoPorMes)}`);
+                if (resultado) {
+                  const { anio, nombreMes } = resultado;
+                  
+                  // Inicializar estructura por año si no existe
+                  if (!estudiante.pagosPorAnio[anio]) {
+                    estudiante.pagosPorAnio[anio] = { meses: {} };
+                  }
+                  if (!estudiante.pagosPorAnio[anio].meses) {
+                    estudiante.pagosPorAnio[anio].meses = {};
+                  }
+                  
+                  estudiante.pagosPorAnio[anio].meses[nombreMes] = Math.round(montoPorMes).toString();
+                  console.log(`      ✓ ${nombreMes} ${anio}: $${Math.round(montoPorMes)}`);
+                  
+                  // También guardar en estructura legacy para 2025
+                  if (anio === 2025) {
+                    if (!estudiante.pagos.meses) {
+                      estudiante.pagos.meses = {};
+                    }
+                    estudiante.pagos.meses[nombreMes] = Math.round(montoPorMes).toString();
+                  }
                 } else {
                   console.warn(`⚠️ No se pudo mapear mes: ${mesValue}`);
                 }
@@ -674,9 +683,22 @@ export async function validarComprobante(req, res) {
               await estudianteRepository.save(estudiante);
             } else if (actualizado.tipoPago === "matricula") {
               const montoPorEstudiante = detalles.monto || 0;
-              estudiante.pagos.matricula = montoPorEstudiante.toString();
+              
+              // Extraer año del comprobante (debería venir en anioMatricula)
+              const anio = actualizado.anioMatricula || 2025;
+              
+              if (!estudiante.pagosPorAnio[anio]) {
+                estudiante.pagosPorAnio[anio] = {};
+              }
+              estudiante.pagosPorAnio[anio].matricula = montoPorEstudiante.toString();
+              
+              // También guardar en estructura legacy para 2025
+              if (anio === 2025) {
+                estudiante.pagos.matricula = montoPorEstudiante.toString();
+              }
+              
               await estudianteRepository.save(estudiante);
-              console.log(`✅ ${estudianteRut}: Matrícula = ${montoPorEstudiante}`);
+              console.log(`✅ ${estudianteRut}: Matrícula ${anio} = ${montoPorEstudiante}`);
             }
           }
         } else {
@@ -691,30 +713,54 @@ export async function validarComprobante(req, res) {
             if (!estudiante.pagos) {
               estudiante.pagos = {};
             }
+            if (!estudiante.pagosPorAnio) {
+              estudiante.pagosPorAnio = {};
+            }
             
             if (actualizado.tipoPago === "mensualidad") {
-              let nombreMes = null;
+              const resultado = extraerAnioYMes(actualizado.mesCorrespondiente);
               
-              if (mapeoMeses[actualizado.mesCorrespondiente]) {
-                nombreMes = mapeoMeses[actualizado.mesCorrespondiente];
-              } else {
-                nombreMes = extraerMesDeLabel(actualizado.mesCorrespondiente);
-              }
-              
-              if (nombreMes) {
-                if (!estudiante.pagos.meses) {
-                  estudiante.pagos.meses = {};
+              if (resultado) {
+                const { anio, nombreMes } = resultado;
+                
+                // Inicializar estructura por año si no existe
+                if (!estudiante.pagosPorAnio[anio]) {
+                  estudiante.pagosPorAnio[anio] = { meses: {} };
                 }
-                estudiante.pagos.meses[nombreMes] = actualizado.montoTotal.toString();
+                if (!estudiante.pagosPorAnio[anio].meses) {
+                  estudiante.pagosPorAnio[anio].meses = {};
+                }
+                
+                estudiante.pagosPorAnio[anio].meses[nombreMes] = actualizado.montoTotal.toString();
+                
+                // También guardar en estructura legacy para 2025
+                if (anio === 2025) {
+                  if (!estudiante.pagos.meses) {
+                    estudiante.pagos.meses = {};
+                  }
+                  estudiante.pagos.meses[nombreMes] = actualizado.montoTotal.toString();
+                }
+                
                 await estudianteRepository.save(estudiante);
-                console.log(`✅ Mensualidad registrada: ${nombreMes} = ${actualizado.montoTotal}`);
+                console.log(`✅ Mensualidad registrada: ${nombreMes} ${anio} = ${actualizado.montoTotal}`);
               } else {
                 console.warn(`⚠️ Mes no reconocido: ${actualizado.mesCorrespondiente}`);
               }
             } else if (actualizado.tipoPago === "matricula") {
-              estudiante.pagos.matricula = actualizado.montoTotal.toString();
+              const anio = actualizado.anioMatricula || 2025;
+              
+              if (!estudiante.pagosPorAnio[anio]) {
+                estudiante.pagosPorAnio[anio] = {};
+              }
+              estudiante.pagosPorAnio[anio].matricula = actualizado.montoTotal.toString();
+              
+              // También guardar en estructura legacy para 2025
+              if (anio === 2025) {
+                estudiante.pagos.matricula = actualizado.montoTotal.toString();
+              }
+              
               await estudianteRepository.save(estudiante);
-              console.log(`✅ Matrícula registrada: ${actualizado.montoTotal}`);
+              console.log(`✅ Matrícula ${anio} registrada: ${actualizado.montoTotal}`);
             }
           } else {
             console.warn(`⚠️ Estudiante no encontrado: ${actualizado.estudianteRut}`);
@@ -1330,10 +1376,10 @@ export async function subirVoucherMatriculaApoderado(req, res) {
     }
 
     const anio = parseInt(String(anioMatricula), 10);
-    const currentYear = new Date().getFullYear();
-    if (!anio || anio < currentYear - 1 || anio > currentYear + 1) {
+    // Permitir años desde 2025 (datos históricos del Excel) hasta 2030
+    if (!anio || anio < 2025 || anio > 2030) {
       await cleanupUploadedAsset(file);
-      return handleErrorClient(res, 400, "Año de matrícula inválido");
+      return handleErrorClient(res, 400, "Año de matrícula inválido (debe estar entre 2025 y 2030)");
     }
 
     const [estudianteSeleccionado, errorEstudiante] = await ensureEstudiantePropietario(
@@ -1531,14 +1577,25 @@ export async function reenviarComprobanteApoderado(req, res) {
 }
 
 /**
- * Obtiene los meses no pagados de 2025 para los estudiantes de un apoderado
+ * Obtiene TODOS los meses no pagados de TODOS los años (2025-2030) para los estudiantes de un apoderado
  * Si tiene múltiples estudiantes, devuelve solo los meses que NINGUNO ha pagado
  * NOTA: Solo incluye marzo-diciembre (enero y febrero son vacaciones)
  */
 export async function obtenerMesesNoPagados2025(req, res) {
   try {
     const apoderadoRut = req.user.rut;
-    const { rutEstudiantes } = req.query; // Puede ser un string con RUTs separados por coma
+    const { rutEstudiantes, anio } = req.query;
+    
+    // Si se especifica un año, devolver solo ese año (compatibilidad)
+    // Si no, devolver TODOS los años con meses pendientes
+    const consultarTodosLosAnios = !anio;
+    const aniosAConsultar = consultarTodosLosAnios 
+      ? [2025, 2026, 2027, 2028, 2029, 2030] 
+      : [parseInt(anio, 10)];
+    
+    if (!consultarTodosLosAnios && (aniosAConsultar[0] < 2025 || aniosAConsultar[0] > 2030)) {
+      return handleErrorClient(res, 400, "Año debe estar entre 2025 y 2030");
+    }
     
     let dependientes = await getDependientes(apoderadoRut);
 
@@ -1546,6 +1603,7 @@ export async function obtenerMesesNoPagados2025(req, res) {
       return handleSuccess(res, 200, "No hay estudiantes asociados", {
         estudiantes: [],
         mesesComunes: [],
+        anios: aniosAConsultar,
       });
     }
     
@@ -1559,28 +1617,30 @@ export async function obtenerMesesNoPagados2025(req, res) {
         return handleSuccess(res, 200, "No se encontraron estudiantes con los RUTs especificados", {
           estudiantes: [],
           mesesComunes: [],
+          anios: aniosAConsultar,
         });
       }
     }
 
-    // Solo marzo-diciembre (enero y febrero son vacaciones)
-    const MESES_2025 = [
-      { value: "2025-03", label: "Marzo 2025", mes: "marzo" },
-      { value: "2025-04", label: "Abril 2025", mes: "abril" },
-      { value: "2025-05", label: "Mayo 2025", mes: "mayo" },
-      { value: "2025-06", label: "Junio 2025", mes: "junio" },
-      { value: "2025-07", label: "Julio 2025", mes: "julio" },
-      { value: "2025-08", label: "Agosto 2025", mes: "agosto" },
-      { value: "2025-09", label: "Septiembre 2025", mes: "septiembre" },
-      { value: "2025-10", label: "Octubre 2025", mes: "octubre" },
-      { value: "2025-11", label: "Noviembre 2025", mes: "noviembre" },
-      { value: "2025-12", label: "Diciembre 2025", mes: "diciembre" },
+    // Definición de meses (marzo-diciembre)
+    const MESES_NOMBRES = [
+      { num: "03", nombre: "Marzo", key: "marzo" },
+      { num: "04", nombre: "Abril", key: "abril" },
+      { num: "05", nombre: "Mayo", key: "mayo" },
+      { num: "06", nombre: "Junio", key: "junio" },
+      { num: "07", nombre: "Julio", key: "julio" },
+      { num: "08", nombre: "Agosto", key: "agosto" },
+      { num: "09", nombre: "Septiembre", key: "septiembre" },
+      { num: "10", nombre: "Octubre", key: "octubre" },
+      { num: "11", nombre: "Noviembre", key: "noviembre" },
+      { num: "12", nombre: "Diciembre", key: "diciembre" },
     ];
 
     console.log(`🔍 Obteniendo meses no pagados para apoderado: ${apoderadoRut}`);
+    console.log(`📅 Años a consultar: ${aniosAConsultar.join(', ')}`);
     console.log(`📊 Total de estudiantes: ${dependientes.length}`);
 
-    // Obtener justificantes aprobados con meses de exención para todos los estudiantes dependientes en un solo query
+    // Obtener justificantes aprobados
     const rutsDependientes = dependientes.map((d) => d.rut);
     const justificantesAprobados = await justificanteRepository.find({
       where: {
@@ -1589,14 +1649,14 @@ export async function obtenerMesesNoPagados2025(req, res) {
       },
     });
 
-    // Agrupar meses de exención por estudiante
+    // Agrupar meses de exención por estudiante (para todos los años)
     const mesesExencionPorRut = new Map();
     justificantesAprobados.forEach((j) => {
       if (Array.isArray(j.mesesExencion)) {
         const actuales = mesesExencionPorRut.get(j.estudianteRut) || new Set();
         j.mesesExencion.forEach((m) => {
-          // Solo considerar formato canonical YYYY-MM y año 2025 (evita mezclar otros años)
-          if (typeof m === "string" && /^2025-(0[1-9]|1[0-2])$/u.test(m)) {
+          // Considerar formato canonical YYYY-MM de cualquier año
+          if (typeof m === "string" && /^(202[5-9]|2030)-(0[1-9]|1[0-2])$/u.test(m)) {
             actuales.add(m);
           }
         });
@@ -1604,7 +1664,20 @@ export async function obtenerMesesNoPagados2025(req, res) {
       }
     });
 
-    // Obtener meses no pagados por cada estudiante, excluyendo meses exentos
+    // Generar todos los meses de todos los años
+    const todosMesesTodosAnios = [];
+    aniosAConsultar.forEach(anio => {
+      MESES_NOMBRES.forEach(m => {
+        todosMesesTodosAnios.push({
+          value: `${anio}-${m.num}`,
+          label: `${m.nombre} ${anio}`,
+          mes: m.key,
+          anio: anio
+        });
+      });
+    });
+
+    // Obtener meses no pagados por cada estudiante para TODOS los años
     const estudiantesConMeses = dependientes.map((estudiante) => {
       const mesesNoPagados = [];
       const mesesExentos = [];
@@ -1612,31 +1685,43 @@ export async function obtenerMesesNoPagados2025(req, res) {
       const mesesPagos = pagos.meses || {};
 
       console.log(`\n👤 Estudiante: ${estudiante.nombre} (${estudiante.rut})`);
-      console.log(`   Pagos:`, mesesPagos);
+      console.log(`   Pagos en base de datos:`, mesesPagos);
 
       const mesesExentosSet = mesesExencionPorRut.get(estudiante.rut) || new Set();
 
-      MESES_2025.forEach((mesInfo) => {
-        // Si el mes está marcado como exento por justificante aprobado, lo registramos y lo saltamos como "no pagado"
+      todosMesesTodosAnios.forEach((mesInfo) => {
+        // Si el mes está marcado como exento por justificante aprobado
         if (mesesExentosSet.has(mesInfo.value)) {
           mesesExentos.push(mesInfo.value);
-          console.log(`   ${mesInfo.mes}: EXENTO (justificante aprobado) 🟡`);
-          return; // no se evalúa pago
+          console.log(`   ${mesInfo.label}: EXENTO (justificante aprobado) 🟡`);
+          return;
         }
-        const estadoPago = mesesPagos[mesInfo.mes];
-        // Solo está no pagado si el valor es exactamente "no pagado" (case insensitive)
-        // Cualquier otro valor (número, texto, etc.) significa que está pagado
-        const estaNoPagado = !estadoPago || 
-                            estadoPago.toString().trim().toLowerCase() === "no pagado";
         
-        console.log(`   ${mesInfo.mes}: "${estadoPago}" → ${estaNoPagado ? 'NO PAGADO ❌' : 'PAGADO ✅'}`);
+        // IMPORTANTE: Los pagos del Excel (mesesPagos) solo aplican al año 2025
+        // Para años 2026-2030, todos los meses están disponibles (no pagados aún)
+        let estaNoPagado;
+        
+        if (mesInfo.anio === 2025) {
+          // Para 2025: verificar contra los pagos del Excel
+          const estadoPago = mesesPagos[mesInfo.mes];
+          // Solo está no pagado si el valor es exactamente "no pagado" (case insensitive)
+          // Cualquier otro valor (número, texto, etc.) significa que está pagado
+          estaNoPagado = !estadoPago || 
+                        estadoPago.toString().trim().toLowerCase() === "no pagado";
+        } else {
+          // Para 2026-2030: todos los meses están disponibles (no hay pagos registrados)
+          estaNoPagado = true;
+        }
         
         if (estaNoPagado) {
           mesesNoPagados.push(mesInfo.value);
+          console.log(`   ${mesInfo.label}: NO PAGADO ❌`);
+        } else {
+          console.log(`   ${mesInfo.label}: PAGADO ✅ (${mesesPagos[mesInfo.mes]})`);
         }
       });
 
-      console.log(`   Meses no pagados: ${mesesNoPagados.join(', ') || 'Ninguno'}`);
+      console.log(`   Total meses no pagados: ${mesesNoPagados.length}`);
 
       return {
         rut: estudiante.rut,
@@ -1655,21 +1740,27 @@ export async function obtenerMesesNoPagados2025(req, res) {
       mesesComunes = estudiantesConMeses[0].mesesNoPagados.filter((mes) =>
         estudiantesConMeses.every((est) => est.mesesNoPagados.includes(mes))
       );
-      console.log(`\n🔄 Intersección (meses que TODOS no han pagado): ${mesesComunes.join(', ') || 'Ninguno'}`);
+      console.log(`\n🔄 Intersección (meses que TODOS no han pagado): ${mesesComunes.length} meses`);
     }
 
     // Convertir de vuelta a objetos con label
-    const mesesComunesDetalle = MESES_2025.filter((mesInfo) =>
+    const mesesComunesDetalle = todosMesesTodosAnios.filter((mesInfo) =>
       mesesComunes.includes(mesInfo.value)
     );
 
-    console.log(`\n✅ Meses finales a mostrar en dropdown:`, mesesComunesDetalle);
+    console.log(`\n✅ Total de meses disponibles para pagar: ${mesesComunesDetalle.length}`);
+    console.log(`   Por año:`, aniosAConsultar.map(a => {
+      const count = mesesComunesDetalle.filter(m => m.anio === a).length;
+      return `${a}: ${count} meses`;
+    }).join(', '));
 
     handleSuccess(res, 200, "Meses no pagados obtenidos exitosamente", {
       estudiantes: estudiantesConMeses,
       mesesComunes: mesesComunesDetalle,
       totalEstudiantes: dependientes.length,
-      // Para facilitar UI: listado de meses exentos por estudiante y union global
+      anios: aniosAConsultar,
+      totalMesesDisponibles: mesesComunesDetalle.length,
+      // Para facilitar UI: listado de meses exentos por estudiante
       mesesExentosGlobal: Array.from(new Set(
         estudiantesConMeses.flatMap((e) => e.mesesExentos)
       )),

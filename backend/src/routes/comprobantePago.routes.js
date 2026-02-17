@@ -50,6 +50,14 @@ router.get(
   obtenerMesesNoPagados2025,
 );
 
+// Ruta genérica para obtener meses no pagados (acepta parámetro anio)
+router.get(
+  "/apoderado/meses-no-pagados",
+  authenticateJwt,
+  isApoderado,
+  obtenerMesesNoPagados2025,
+);
+
 router.get(
   "/apoderado/historial",
   authenticateJwt,

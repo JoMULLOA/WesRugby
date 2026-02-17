@@ -31,6 +31,7 @@ class _SubirVoucherPageState extends State<SubirVoucherPage> {
   String _metodoPago = 'transferencia';
   DateTime _fechaPago = DateTime.now();
   String _mesCorrespondiente = '';
+  int _anioSeleccionado = 2025;
   File? _archivoVoucher;
   bool _aplicarATodos = true;
   final Set<String> _seleccionManual = <String>{};
@@ -134,26 +135,27 @@ class _SubirVoucherPageState extends State<SubirVoucherPage> {
   }
 
   Future<void> _cargarMesesNoPagados() async {
-    print('🔄 Iniciando carga de meses no pagados...');
+    print('🔄 Iniciando carga de meses no pagados (Año: $_anioSeleccionado)...');
     setState(() {
       _isLoadingMeses = true;
       _errorMeses = null;
     });
 
     try {
-      final response = await PagosService.obtenerMesesNoPagados2025();
+      final response = await PagosService.obtenerMesesNoPagados(anio: _anioSeleccionado);
       print('📡 Respuesta del servidor:');
       print('   Status: ${response.statusCode}');
       print('   Data: ${response.data}');
 
       if (response.statusCode == 200 && response.data != null && mounted) {
-        final mesesComunes = response.data['mesesComunes'] as List?;
+        final data = response.data['data'] ?? response.data;
+        final mesesComunes = data['mesesComunes'] as List?;
         print('📅 Meses comunes recibidos: $mesesComunes');
         
         if (mesesComunes != null && mesesComunes.isNotEmpty) {
           setState(() {
             _mesesDisponibles = List<Map<String, dynamic>>.from(mesesComunes);
-            print('✅ Meses disponibles establecidos: $_mesesDisponibles');
+            print('✅ Meses disponibles establecidos: ${_mesesDisponibles.length} meses');
             // Establecer el primer mes disponible como seleccionado
             if (_mesesDisponibles.isNotEmpty) {
               _mesCorrespondiente = _mesesDisponibles.first['value'];
@@ -165,7 +167,7 @@ class _SubirVoucherPageState extends State<SubirVoucherPage> {
           print('⚠️ No hay meses disponibles');
           setState(() {
             _mesesDisponibles = [];
-            _errorMeses = 'No hay meses pendientes de pago para el año 2025';
+            _errorMeses = 'No hay meses pendientes de pago';
             _isLoadingMeses = false;
           });
         }
@@ -807,7 +809,7 @@ class _SubirVoucherPageState extends State<SubirVoucherPage> {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                '¡Todos los meses de 2025 están pagados!',
+                '¡Todos los meses de $_anioSeleccionado están pagados!',
                 style: TextStyle(
                   color: Colors.green[700],
                   fontWeight: FontWeight.bold,
@@ -822,35 +824,69 @@ class _SubirVoucherPageState extends State<SubirVoucherPage> {
     print('   → Mostrando dropdown con ${_mesesDisponibles.length} opciones');
     print('   Valor actual: $_mesCorrespondiente');
 
-    return DropdownButtonFormField<String>(
-      value: _mesesDisponibles.any((m) => m['value'] == _mesCorrespondiente)
-          ? _mesCorrespondiente
-          : (_mesesDisponibles.isNotEmpty ? _mesesDisponibles.first['value'] : null),
-      decoration: InputDecoration(
-        labelText: 'Mes Correspondiente (2025) *',
-        prefixIcon: const Icon(Icons.calendar_month),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        hintText: 'Seleccione el mes a pagar',
-      ),
-      items: _mesesDisponibles.map((mes) {
-        return DropdownMenuItem<String>(
-          value: mes['value'],
-          child: Text(mes['label']),
-        );
-      }).toList(),
-      onChanged: (value) {
-        if (value != null) {
-          setState(() {
-            _mesCorrespondiente = value;
-          });
-        }
-      },
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Debe seleccionar un mes';
-        }
-        return null;
-      },
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Selector de año
+        DropdownButtonFormField<int>(
+          value: _anioSeleccionado,
+          decoration: InputDecoration(
+            labelText: 'Año *',
+            prefixIcon: const Icon(Icons.calendar_today),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            hintText: 'Seleccione el año',
+          ),
+          items: List.generate(6, (index) => 2025 + index)
+              .map((year) {
+            return DropdownMenuItem<int>(
+              value: year,
+              child: Text('$year'),
+            );
+          }).toList(),
+          onChanged: (value) {
+            if (value != null && value != _anioSeleccionado) {
+              setState(() {
+                _anioSeleccionado = value;
+                _mesCorrespondiente = '';
+                _mesesDisponibles = [];
+              });
+              _cargarMesesNoPagados();
+            }
+          },
+        ),
+        const SizedBox(height: 16),
+        // Selector de mes
+        DropdownButtonFormField<String>(
+          value: _mesesDisponibles.any((m) => m['value'] == _mesCorrespondiente)
+              ? _mesCorrespondiente
+              : (_mesesDisponibles.isNotEmpty ? _mesesDisponibles.first['value'] : null),
+          decoration: InputDecoration(
+            labelText: 'Mes Correspondiente *',
+            prefixIcon: const Icon(Icons.calendar_month),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            hintText: 'Seleccione el mes a pagar',
+          ),
+          items: _mesesDisponibles.map((mes) {
+            return DropdownMenuItem<String>(
+              value: mes['value'],
+              child: Text(mes['label']),
+            );
+          }).toList(),
+          onChanged: (value) {
+            if (value != null) {
+              setState(() {
+                _mesCorrespondiente = value;
+              });
+            }
+          },
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Debe seleccionar un mes';
+            }
+            return null;
+          },
+        ),
+      ],
     );
   }
 
