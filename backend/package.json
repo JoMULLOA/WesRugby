@@ -32,6 +32,7 @@
     "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",
     "moment-timezone": "^0.6.0",
+    "morgan": "^1.10.0",
     "multer": "^2.0.0",
     "multer-s3": "^3.0.1",
     "node-cron": "^3.0.3",
@@ -52,7 +53,6 @@
     "eslint-config-google": "^0.14.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.2.1",
-    "morgan": "^1.10.0",
     "nodemon": "^3.1.4",
     "prettier": "^3.3.3"
   },

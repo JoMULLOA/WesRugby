@@ -1,0 +1,132 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/ci-backend.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: wesrugby_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+    - name: 📥 Checkout código
+      uses: actions/checkout@v4
+    
+    - name: 🟢 Configurar Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: backend/package-lock.json
+    
+    - name: 📦 Instalar dependencias
+      working-directory: ./backend
+      run: npm ci
+    
+    - name: 🔍 Lint
+      working-directory: ./backend
+      run: npm run lint --if-present
+    
+    - name: 🧪 Tests
+      working-directory: ./backend
+      run: npm test --if-present
+      env:
+        NODE_ENV: test
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_USERNAME: postgres
+        PASSWORD: postgres
+        DATABASE: wesrugby_test
+        ACCESS_TOKEN_SECRET: test_secret_key_for_ci
+        cookieKey: test_cookie_key
+    
+    - name: 📊 Generar reporte de cobertura
+      if: matrix.node-version == '20.x'
+      working-directory: ./backend
+      run: npm run test:coverage --if-present
+    
+    - name: 📤 Subir cobertura a Codecov (opcional)
+      if: matrix.node-version == '20.x'
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./backend/coverage/lcov.info
+        flags: backend
+        fail_ci_if_error: false
+
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout código
+      uses: actions/checkout@v4
+    
+    - name: 🟢 Configurar Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        cache-dependency-path: backend/package-lock.json
+    
+    - name: 📦 Instalar dependencias
+      working-directory: ./backend
+      run: npm ci
+    
+    - name: 🔍 ESLint
+      working-directory: ./backend
+      run: npm run lint --if-present
+    
+    - name: 🎨 Prettier
+      working-directory: ./backend
+      run: npm run format --if-present || echo "Prettier no configurado"
+
+  security:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout código
+      uses: actions/checkout@v4
+    
+    - name: 🟢 Configurar Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        cache-dependency-path: backend/package-lock.json
+    
+    - name: 🔒 Audit de seguridad
+      working-directory: ./backend
+      run: npm audit --audit-level=moderate || true
+    
+    - name: 🔍 Buscar secretos en el código
+      uses: trufflesecurity/trufflehog@main
+      with:
+        path: ./
+        base: ${{ github.event.repository.default_branch }}
+        head: HEAD
+        extra_args: --only-verified

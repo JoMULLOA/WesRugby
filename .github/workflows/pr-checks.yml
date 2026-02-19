@@ -1,0 +1,88 @@
+name: Pull Request Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  check-pr:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout código
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: 🔍 Verificar título del PR
+      uses: amannn/action-semantic-pull-request@v5
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        types: |
+          feat
+          fix
+          docs
+          style
+          refactor
+          perf
+          test
+          chore
+          ci
+        requireScope: false
+    
+    - name: 📝 Verificar tamaño del PR
+      run: |
+        CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | wc -l)
+        ADDITIONS=$(git diff --numstat origin/${{ github.base_ref }}...HEAD | awk '{sum+=$1}END{print sum}')
+        
+        echo "Archivos cambiados: $CHANGED_FILES"
+        echo "Líneas agregadas: $ADDITIONS"
+        
+        if [ $CHANGED_FILES -gt 50 ] || [ $ADDITIONS -gt 1000 ]; then
+          echo "⚠️ PR muy grande. Considera dividirlo en PRs más pequeños."
+          echo "::warning::Este PR modifica $CHANGED_FILES archivos y agrega $ADDITIONS líneas. Considera dividirlo."
+        fi
+    
+    - name: 🔒 Verificar archivos sensibles
+      run: |
+        SENSITIVE_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.env$|\.pem$|\.key$|config/\.env|configEnv\.js|configDb\.js' || true)
+        
+        if [ ! -z "$SENSITIVE_FILES" ]; then
+          echo "❌ Se detectaron cambios en archivos sensibles:"
+          echo "$SENSITIVE_FILES"
+          echo "::error::No se deben modificar archivos de configuración sensibles"
+          exit 1
+        fi
+    
+    - name: 📊 Resumen del PR
+      run: |
+        echo "### 📊 Resumen del Pull Request" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "- **Rama base:** ${{ github.base_ref }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Rama head:** ${{ github.head_ref }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Autor:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Commits:** $(git rev-list --count origin/${{ github.base_ref }}..HEAD)" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "#### Archivos modificados:" >> $GITHUB_STEP_SUMMARY
+        git diff --name-status origin/${{ github.base_ref }}...HEAD >> $GITHUB_STEP_SUMMARY
+
+  auto-assign:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 👥 Auto-asignar reviewers
+      uses: kentaro-m/auto-assign-action@v1.2.5
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+  label:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 🏷️ Auto-etiquetar PR
+      uses: actions/labeler@v5
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+        configuration-path: .github/labeler.yml
+        sync-labels: true

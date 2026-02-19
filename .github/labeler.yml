@@ -1,0 +1,43 @@
+# Configuración de auto-etiquetado para PRs
+
+backend:
+  - backend/**/*
+  - backend/**
+
+frontend:
+  - frontend/**/*
+  - frontend/**
+
+docker:
+  - docker-compose*.yml
+  - '**/Dockerfile'
+  - .dockerignore
+
+ci/cd:
+  - .github/workflows/**/*
+  - .github/**
+
+documentation:
+  - '**/*.md'
+  - docs/**/*
+
+dependencies:
+  - '**/package.json'
+  - '**/package-lock.json'
+  - '**/pubspec.yaml'
+
+configuration:
+  - '**/*.yml'
+  - '**/*.yaml'
+  - '**/*.json'
+  - '**/*.conf'
+  - nginx/**/*
+
+database:
+  - backend/migrations/**/*
+  - '**/configDb.js'
+
+security:
+  - '**/auth*.js'
+  - '**/passport*.js'
+  - .github/workflows/security*.yml

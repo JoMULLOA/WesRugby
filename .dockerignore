@@ -1,0 +1,62 @@
+# Docker & System files
+.git
+.gitignore
+.gitattributes
+.dockerignore
+Dockerfile
+docker-compose*.yml
+.env*
+!.env.example
+
+# IDE and Editor
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+
+# Dependencies
+node_modules/
+
+# Testing
+coverage/
+.nyc_output/
+test/
+*.test.js
+*.spec.js
+
+# Documentation
+README.md
+docs/
+*.md
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Build outputs
+dist/
+build/
+
+# Frontend (Flutter - se compila por separado)
+frontend/
+
+# Database
+*.sql
+*.sqlite
+*.db
+
+# VM test files
+diff.txt
+tmp_*.py
+test_*.sh

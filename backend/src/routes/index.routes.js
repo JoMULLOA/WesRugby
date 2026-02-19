@@ -61,4 +61,14 @@ router
     .use("/terminos", terminosCondicionesRoutes)
     .use("/upload", uploadRoutes);
 
+// Health check endpoint para Docker y monitoring
+router.get("/health", (req, res) => {
+    res.status(200).json({ 
+        status: "ok", 
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        environment: process.env.NODE_ENV || "development"
+    });
+});
+
 export default router;

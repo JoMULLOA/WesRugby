@@ -1,0 +1,87 @@
+name: Scheduled Backup
+
+on:
+  schedule:
+    # Ejecutar backup diario a las 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:  # Permitir ejecución manual
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 🔐 Configurar SSH
+      uses: webfactory/ssh-agent@v0.9.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+    
+    - name: 📝 Agregar host a known_hosts
+      run: |
+        mkdir -p ~/.ssh
+        ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+    
+    - name: 💾 Ejecutar backup en el servidor
+      env:
+        SERVER_USER: ${{ secrets.SERVER_USER }}
+        SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        APP_DIR: ${{ secrets.APP_DIR }}
+      run: |
+        ssh $SERVER_USER@$SERVER_HOST << 'ENDSSH'
+          set -e
+          
+          echo "💾 Ejecutando backup automático..."
+          cd ${{ secrets.APP_DIR }}
+          ./backup.sh
+          
+          echo "📊 Estado de los backups:"
+          ls -lah backups/ | tail -10
+          
+          echo "✅ Backup completado"
+        ENDSSH
+    
+    - name: 🔔 Notificar resultado
+      if: always()
+      run: |
+        if [ ${{ job.status }} == 'success' ]; then
+          echo "✅ Backup automático completado exitosamente"
+        else
+          echo "❌ Backup automático falló"
+        fi
+
+  cleanup-old-backups:
+    runs-on: ubuntu-latest
+    needs: backup
+    
+    steps:
+    - name: 🔐 Configurar SSH
+      uses: webfactory/ssh-agent@v0.9.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+    
+    - name: 📝 Agregar host a known_hosts
+      run: |
+        mkdir -p ~/.ssh
+        ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+    
+    - name: 🧹 Limpiar backups antiguos (>30 días)
+      env:
+        SERVER_USER: ${{ secrets.SERVER_USER }}
+        SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        APP_DIR: ${{ secrets.APP_DIR }}
+      run: |
+        ssh $SERVER_USER@$SERVER_HOST << 'ENDSSH'
+          echo "🧹 Limpiando backups antiguos..."
+          cd ${{ secrets.APP_DIR }}/backups
+          
+          # Mantener solo los últimos 30 días
+          find . -type f -mtime +30 -delete
+          
+          echo "📊 Backups restantes:"
+          ls -lah | wc -l
+          
+          echo "💾 Espacio usado:"
+          du -sh .
+          
+          echo "✅ Limpieza completada"
+        ENDSSH

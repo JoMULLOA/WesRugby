@@ -1,0 +1,43 @@
+# Auto-asignación de reviewers y assignees para PRs
+
+# Agregar tus usuarios de GitHub aquí
+# Cambia 'tu-usuario-github' por tu nombre de usuario real
+
+addReviewers: true
+addAssignees: false
+
+reviewers:
+  - tu-usuario-github
+  # - otro-reviewer
+  # - tercer-reviewer
+
+numberOfReviewers: 1
+
+# Configuración por ruta (opcional)
+# Asignar diferentes reviewers según qué archivos se modifiquen
+
+reviewers:
+  groups:
+    backend:
+      - tu-usuario-github
+      # - backend-expert
+    frontend:
+      - tu-usuario-github
+      # - flutter-expert
+    infrastructure:
+      - tu-usuario-github
+      # - devops-expert
+
+  per_file:
+    - pattern: 'backend/**'
+      reviewers:
+        - backend
+    - pattern: 'frontend/**'
+      reviewers:
+        - frontend
+    - pattern: 'docker-compose*.yml'
+      reviewers:
+        - infrastructure
+    - pattern: '.github/**'
+      reviewers:
+        - infrastructure

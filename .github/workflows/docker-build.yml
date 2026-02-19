@@ -1,0 +1,124 @@
+name: Docker Build & Push
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+    - name: 📥 Checkout código
+      uses: actions/checkout@v4
+    
+    - name: 🐳 Configurar Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: 🔐 Login a GitHub Container Registry
+      if: github.event_name != 'pull_request'
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: 📝 Extraer metadata para Docker
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=sha
+    
+    - name: 🔨 Build y Push imagen Docker
+      uses: docker/build-push-action@v5
+      with:
+        context: ./backend
+        file: ./backend/Dockerfile
+        push: ${{ github.event_name != 'pull_request' }}
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        platforms: linux/amd64,linux/arm64
+    
+    - name: 📊 Escanear vulnerabilidades
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:${{ github.sha }}
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        severity: 'CRITICAL,HIGH'
+      continue-on-error: true
+    
+    - name: 📤 Subir resultados de Trivy
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  test-docker-compose:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout código
+      uses: actions/checkout@v4
+    
+    - name: 📝 Crear .env de prueba
+      run: |
+        cat > .env << EOF
+        NODE_ENV=production
+        HOST=0.0.0.0
+        PORT=3000
+        DB_USERNAME=postgres
+        PASSWORD=test_password
+        DATABASE=wesrugby_test
+        ACCESS_TOKEN_SECRET=test_secret_key_for_docker_compose
+        cookieKey=test_cookie_key_for_docker_compose
+        EOF
+    
+    - name: 🐳 Iniciar servicios con Docker Compose
+      run: docker-compose up -d
+    
+    - name: ⏳ Esperar a que los servicios estén listos
+      run: |
+        echo "Esperando 30 segundos..."
+        sleep 30
+    
+    - name: 🧪 Verificar health checks
+      run: |
+        echo "Verificando backend..."
+        curl --fail --retry 5 --retry-delay 5 http://localhost:3000/api/health || exit 1
+        
+        echo "Verificando nginx..."
+        curl --fail --retry 5 --retry-delay 5 http://localhost/health || exit 1
+    
+    - name: 📋 Mostrar logs si falla
+      if: failure()
+      run: |
+        echo "=== Logs de Backend ==="
+        docker-compose logs backend
+        echo "=== Logs de PostgreSQL ==="
+        docker-compose logs postgres
+        echo "=== Logs de Nginx ==="
+        docker-compose logs nginx
+    
+    - name: 🛑 Detener servicios
+      if: always()
+      run: docker-compose down -v

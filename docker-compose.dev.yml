@@ -1,0 +1,74 @@
+version: '3.8'
+
+# Docker Compose para DESARROLLO
+# Incluye hot-reload y herramientas de debugging
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: wesrugby-postgres-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${PASSWORD:-postgres}
+      POSTGRES_DB: ${DATABASE:-wesrugby_dev}
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - wesrugby-dev-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: builder  # Usar etapa de build para desarrollo
+    container_name: wesrugby-backend-dev
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    environment:
+      NODE_ENV: development
+      HOST: 0.0.0.0
+      PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      PASSWORD: ${PASSWORD:-postgres}
+      DATABASE: ${DATABASE:-wesrugby_dev}
+      ACCESS_TOKEN_SECRET: ${ACCESS_TOKEN_SECRET:-dev_secret_key}
+      cookieKey: ${COOKIE_KEY:-dev_cookie_key}
+    volumes:
+      # Montar código fuente para hot-reload
+      - ./backend/src:/app/src
+      - ./backend/uploads:/app/uploads
+      - /app/node_modules  # Evitar sobreescribir node_modules
+    ports:
+      - "3000:3000"
+      - "9229:9229"  # Puerto para debugging de Node.js
+    networks:
+      - wesrugby-dev-network
+    command: npm run dev  # Usar nodemon para hot-reload
+
+  # Adminer - Herramienta de administración de base de datos
+  adminer:
+    image: adminer:latest
+    container_name: wesrugby-adminer
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    ports:
+      - "8081:8080"
+    networks:
+      - wesrugby-dev-network
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+
+networks:
+  wesrugby-dev-network:
+    driver: bridge
+
+volumes:
+  postgres_dev_data:
+    driver: local

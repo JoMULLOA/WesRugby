@@ -1,0 +1,137 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Entorno de deployment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: 
+      name: ${{ github.event.inputs.environment || 'production' }}
+      url: ${{ secrets.APP_URL }}
+    
+    steps:
+    - name: 📥 Checkout código
+      uses: actions/checkout@v4
+    
+    - name: 🔐 Configurar SSH
+      uses: webfactory/ssh-agent@v0.9.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+    
+    - name: 📝 Agregar host a known_hosts
+      run: |
+        mkdir -p ~/.ssh
+        ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+    
+    - name: 🚀 Deploy al servidor
+      env:
+        SERVER_USER: ${{ secrets.SERVER_USER }}
+        SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        APP_DIR: ${{ secrets.APP_DIR }}
+      run: |
+        ssh $SERVER_USER@$SERVER_HOST << 'ENDSSH'
+          set -e
+          
+          echo "📁 Navegando al directorio de la aplicación..."
+          cd ${{ secrets.APP_DIR }}
+          
+          echo "🔄 Haciendo pull de los últimos cambios..."
+          git fetch --all
+          git checkout main
+          git pull origin main
+          
+          echo "💾 Realizando backup antes del deployment..."
+          ./backup.sh || echo "Backup script no encontrado, continuando..."
+          
+          echo "🐳 Reconstruyendo imágenes Docker..."
+          docker-compose build --no-cache
+          
+          echo "🔄 Reiniciando servicios..."
+          docker-compose up -d
+          
+          echo "⏳ Esperando a que los servicios estén listos..."
+          sleep 30
+          
+          echo "🧪 Verificando health checks..."
+          curl --fail http://localhost:3000/api/health || exit 1
+          
+          echo "🧹 Limpiando recursos Docker antiguos..."
+          docker system prune -f
+          
+          echo "✅ Deployment completado exitosamente!"
+        ENDSSH
+    
+    - name: 📊 Verificar estado de los servicios
+      if: success()
+      env:
+        SERVER_USER: ${{ secrets.SERVER_USER }}
+        SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        APP_DIR: ${{ secrets.APP_DIR }}
+      run: |
+        ssh $SERVER_USER@$SERVER_HOST << 'ENDSSH'
+          cd ${{ secrets.APP_DIR }}
+          echo "=== Estado de los servicios ==="
+          docker-compose ps
+          
+          echo "=== Últimos logs del backend ==="
+          docker-compose logs --tail=20 backend
+        ENDSSH
+    
+    - name: 🔔 Notificar éxito
+      if: success()
+      run: |
+        echo "✅ Deployment exitoso en ${{ github.event.inputs.environment || 'production' }}"
+    
+    - name: 🔔 Notificar fallo
+      if: failure()
+      run: |
+        echo "❌ Deployment falló en ${{ github.event.inputs.environment || 'production' }}"
+        echo "Revisa los logs de GitHub Actions para más detalles"
+    
+    - name: 🔄 Rollback en caso de fallo
+      if: failure()
+      env:
+        SERVER_USER: ${{ secrets.SERVER_USER }}
+        SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        APP_DIR: ${{ secrets.APP_DIR }}
+      run: |
+        ssh $SERVER_USER@$SERVER_HOST << 'ENDSSH'
+          set -e
+          cd ${{ secrets.APP_DIR }}
+          
+          echo "🔄 Iniciando rollback..."
+          git reset --hard HEAD~1
+          docker-compose down
+          docker-compose up -d
+          
+          echo "⚠️ Rollback completado"
+        ENDSSH
+
+  notify:
+    needs: deploy
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - name: 📧 Enviar notificación (opcional)
+      run: |
+        echo "Estado del deployment: ${{ needs.deploy.result }}"
+        # Aquí puedes agregar integración con Slack, Discord, Email, etc.
+        # Ejemplo con webhook (descomentar y configurar):
+        # curl -X POST ${{ secrets.WEBHOOK_URL }} \
+        #   -H 'Content-Type: application/json' \
+        #   -d '{"text":"Deployment ${{ needs.deploy.result }}"}'

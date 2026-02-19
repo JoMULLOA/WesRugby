@@ -87,3 +87,28 @@ __pycache__/
 # ============================
 .idea/
 .vscode/
+
+# ============================
+# DOCKER & DEPLOYMENT
+# ============================
+# Environment files (except examples)
+.env
+.env.local
+.env.production
+!.env.production.example
+
+# Backups
+backups/
+*.sql
+*.tar.gz
+*.zip
+backup_*
+
+# Docker volumes and data
+postgres_data/
+backend_logs/
+nginx_logs/
+
+# Uploads (keep structure, not content)
+backend/uploads/*
+!backend/uploads/.gitkeep
