@@ -96,7 +96,32 @@ jobs:
         EMAIL_USER: test@test.com
         EMAIL_PASS: test_pass
 
-    - name: 📤 Publicar resumen de cobertura
+    - name: � Ejecutar tests de integración (Supertest + BD real)
+      working-directory: ./backend
+      run: npm run test:integration
+      env:
+        # Las variables son idénticas a los unit tests:
+        # TypeORM hereda IS_DOCKER=false y los datos de conexión para
+        # conectar al Service Container de postgres que ya está corriendo.
+        # dropSchema:true en configDb.js recrea el schema en cada archivo,
+        # garantizando aislamiento entre suites de integración.
+        IS_DOCKER: "false"
+        NODE_ENV: test
+        HOST: 0.0.0.0
+        PORT: 3000
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_USERNAME: postgres
+        PASSWORD: postgres
+        DATABASE: wesrugby_test
+        ACCESS_TOKEN_SECRET: ci_secret_key_solo_para_tests_no_usar_en_prod
+        COOKIE_KEY: ci_cookie_key_solo_para_tests
+        EMAIL_HOST: localhost
+        EMAIL_PORT: 587
+        EMAIL_USER: test@test.com
+        EMAIL_PASS: test_pass
+
+    - name: �📤 Publicar resumen de cobertura
       if: always()
       uses: actions/upload-artifact@v4
       with:

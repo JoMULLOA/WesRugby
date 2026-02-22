@@ -165,6 +165,13 @@ export async function upsertProduct(payload) {
   }
 
   if (!data.id) {
+    // Verificar duplicado de barcode antes de intentar guardar
+    if (data.barcode) {
+      const collision = await repo.findOne({ where: { barcode: data.barcode } });
+      if (collision) {
+        throw new Error("BARCODE_IN_USE");
+      }
+    }
     const entity = repo.create({
       name: data.name,
       category: data.category,
