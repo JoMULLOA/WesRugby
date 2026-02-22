@@ -26,9 +26,7 @@ backend/dist/
 backend/*.log
 backend/logs/
 
-# Sensitive backend configs - DO NOT TRACK
-backend/src/config/configEnv.js
-backend/src/config/configDb.js
+
 
 # Uploads (avatars, documentos, fotos)
 backend/uploads/
