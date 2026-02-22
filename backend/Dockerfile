@@ -6,7 +6,7 @@ WORKDIR /app
 # Copiar archivos de dependencias
 COPY package*.json ./
 
-# Instalar dependencias
+# Instalar dependencias mas efectivo que npm install, solo lo necesario para producción
 RUN npm ci --only=production && npm cache clean --force
 
 # Etapa 2: Production

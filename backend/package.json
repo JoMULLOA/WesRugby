@@ -12,7 +12,10 @@
     "format": "prettier --write \"**/*.{js,jsx,json,md}\"",
     "print:sheet": "node src/scripts/printInventorySheet.js",
     "migration:run": "node runMigrations.js",
-    "migration:show": "node showMigrations.js"
+    "migration:show": "node showMigrations.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "author": "José Manríquez Ulloa",
   "license": "ISC",
@@ -49,12 +52,14 @@
     "uuid": "^9.0.1"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^4.0.18",
     "eslint": "^9.9.1",
     "eslint-config-google": "^0.14.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.2.1",
     "nodemon": "^3.1.4",
-    "prettier": "^3.3.3"
+    "prettier": "^3.3.3",
+    "vitest": "^4.0.18"
   },
   "keywords": []
 }

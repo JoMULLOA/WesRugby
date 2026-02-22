@@ -5,16 +5,23 @@ class confGlobal {
   // Configuración de hosts
   static const String _androidDevHost = "http://10.0.2.2:3000";
   static const String _webDevHost = "http://localhost:3000";
-  static const String _prodHost = "https://wesrugby.site";
+  
+  // 🔧 CAMBIAR SEGÚN ENTORNO:
+  // Para pruebas locales: "http://localhost"
+  // Para producción: "https://wesrugby.site"
+  static const String _prodHost = "http://localhost"; // 👈 CAMBIAR ANTES DE DESPLEGAR
+  
   static const String _basePath = "/api";
 
   // Retorna la URL base según la plataforma
   static String get baseUrl {
     String host;
     
-    // En web siempre usar localhost
+    // En web usar el servidor de producción en release mode
     if (kIsWeb) {
-      host = _webDevHost;
+      // Si estás en release mode (compilado), usa prod
+      // Si estás en debug mode (flutter run), usa localhost con puerto
+      host = kReleaseMode ? _prodHost : _webDevHost;
     } else {
       // En móvil/desktop usar 10.0.2.2 para Android emulator
       // Esto funciona para el emulador de Android
@@ -23,7 +30,7 @@ class confGlobal {
     
     final url = "$host$_basePath";
     if (kDebugMode) {
-      print('🔍 DEBUG confGlobal - kIsWeb: $kIsWeb');
+      print('🔍 DEBUG confGlobal - kIsWeb: $kIsWeb, kReleaseMode: $kReleaseMode');
       print('🔍 DEBUG confGlobal - URL final: $url');
     }
     return url;

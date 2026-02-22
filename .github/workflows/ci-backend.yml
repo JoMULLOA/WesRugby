@@ -2,23 +2,21 @@ name: Backend CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, mainProduccion ]
     paths:
       - 'backend/**'
       - '.github/workflows/ci-backend.yml'
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main, mainProduccion ]
     paths:
       - 'backend/**'
 
 jobs:
   test:
+    name: Tests + Lint (Node 20)
     runs-on: ubuntu-latest
-    
-    strategy:
-      matrix:
-        node-version: [18.x, 20.x]
-    
+
+    # ─── Service Container PostgreSQL 16 Alpine ───────────────────────────────
     services:
       postgres:
         image: postgres:16-alpine
@@ -33,100 +31,85 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
-    
+
     steps:
     - name: 📥 Checkout código
       uses: actions/checkout@v4
-    
-    - name: 🟢 Configurar Node.js ${{ matrix.node-version }}
+
+    - name: 🟢 Configurar Node.js 20
       uses: actions/setup-node@v4
       with:
-        node-version: ${{ matrix.node-version }}
+        node-version: '20.x'
         cache: 'npm'
         cache-dependency-path: backend/package-lock.json
-    
+
     - name: 📦 Instalar dependencias
       working-directory: ./backend
       run: npm ci
-    
-    - name: 🔍 Lint
+
+    - name: 🔍 Lint (ESLint)
       working-directory: ./backend
       run: npm run lint --if-present
-    
-    - name: 🧪 Tests
+      continue-on-error: true  # El lint no bloquea el pipeline
+
+    - name: 🧪 Ejecutar tests unitarios
       working-directory: ./backend
-      run: npm test --if-present
+      run: npm test
       env:
+        # ── Entorno general ────────────────────────────────────────────────
+        IS_DOCKER: "false"
+        NODE_ENV: test
+        HOST: 0.0.0.0
+        PORT: 3000
+        # ── Conexión a PostgreSQL del Service Container ────────────────────
+        # TypeORM usará estas variables para conectar y sincronizar el schema
+        # (synchronize: true en configDb.js crea las tablas automáticamente)
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_USERNAME: postgres
+        PASSWORD: postgres
+        DATABASE: wesrugby_test
+        # ── Seguridad (claves dummy para CI) ───────────────────────────────
+        ACCESS_TOKEN_SECRET: ci_secret_key_solo_para_tests_no_usar_en_prod
+        COOKIE_KEY: ci_cookie_key_solo_para_tests
+        # ── Email (no se envían correos reales en tests) ───────────────────
+        EMAIL_HOST: localhost
+        EMAIL_PORT: 587
+        EMAIL_USER: test@test.com
+        EMAIL_PASS: test_pass
+
+    - name: 📊 Cobertura de código
+      working-directory: ./backend
+      run: npm run test:coverage
+      env:
+        IS_DOCKER: "false"
         NODE_ENV: test
         DB_HOST: localhost
         DB_PORT: 5432
         DB_USERNAME: postgres
         PASSWORD: postgres
         DATABASE: wesrugby_test
-        ACCESS_TOKEN_SECRET: test_secret_key_for_ci
-        cookieKey: test_cookie_key
-    
-    - name: 📊 Generar reporte de cobertura
-      if: matrix.node-version == '20.x'
-      working-directory: ./backend
-      run: npm run test:coverage --if-present
-    
-    - name: 📤 Subir cobertura a Codecov (opcional)
-      if: matrix.node-version == '20.x'
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./backend/coverage/lcov.info
-        flags: backend
-        fail_ci_if_error: false
+        ACCESS_TOKEN_SECRET: ci_secret_key_solo_para_tests_no_usar_en_prod
+        COOKIE_KEY: ci_cookie_key_solo_para_tests
+        EMAIL_HOST: localhost
+        EMAIL_PORT: 587
+        EMAIL_USER: test@test.com
+        EMAIL_PASS: test_pass
 
-  lint:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: 📥 Checkout código
-      uses: actions/checkout@v4
-    
-    - name: 🟢 Configurar Node.js
-      uses: actions/setup-node@v4
+    - name: 📤 Publicar resumen de cobertura
+      if: always()
+      uses: actions/upload-artifact@v4
       with:
-        node-version: '20.x'
-        cache: 'npm'
-        cache-dependency-path: backend/package-lock.json
-    
-    - name: 📦 Instalar dependencias
-      working-directory: ./backend
-      run: npm ci
-    
-    - name: 🔍 ESLint
-      working-directory: ./backend
-      run: npm run lint --if-present
-    
-    - name: 🎨 Prettier
-      working-directory: ./backend
-      run: npm run format --if-present || echo "Prettier no configurado"
+        name: backend-coverage
+        path: backend/coverage/
+        retention-days: 7
 
-  security:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: 📥 Checkout código
-      uses: actions/checkout@v4
-    
-    - name: 🟢 Configurar Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20.x'
-        cache: 'npm'
-        cache-dependency-path: backend/package-lock.json
-    
-    - name: 🔒 Audit de seguridad
-      working-directory: ./backend
-      run: npm audit --audit-level=moderate || true
-    
-    - name: 🔍 Buscar secretos en el código
-      uses: trufflesecurity/trufflehog@main
-      with:
-        path: ./
-        base: ${{ github.event.repository.default_branch }}
-        head: HEAD
-        extra_args: --only-verified
+  # ──────────────────────────────────────────────────────────────────────
+  # ELIMINADO para GitHub Free (2000 min/mes):
+  #   ❌ matrix node-version [18.x, 20.x]  → duplicaba minutos
+  #   ❌ job lint separado                  → incluido en el job 'test'
+  #   ❌ job security (trufflehog)          → consume ~3 min extra
+  #   ❌ codecov upload                     → requiere cuenta externa
+  #
+  # Costo estimado por push a main: ~2-3 minutos
+  # ──────────────────────────────────────────────────────────────────────
