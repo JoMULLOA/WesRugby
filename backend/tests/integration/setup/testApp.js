@@ -40,12 +40,14 @@ import indexRoutes from "../../../src/routes/index.routes.js";
  * @returns {Promise<import("express").Express>}
  */
 export async function buildTestApp() {
-  // Conectar solo si el DataSource no está ya inicializado
-  // (resguardo para evitar "Already initialized" si el mismo worker
-  //  reutiliza el módulo entre archivos con fileParallelism:false)
-  if (!AppDataSource.isInitialized) {
-    await connectDB();
+  // Si ya está inicializado (reutilización del módulo entre archivos con
+  // fileParallelism:false), destruir primero para obtener un schema limpio.
+  // dropSchema:true en configDb.js recrea las tablas en cada initialize().
+  if (AppDataSource.isInitialized) {
+    await AppDataSource.destroy();
   }
+
+  await connectDB();
 
   // Registrar estrategia JWT en Passport (idempotente)
   passportJwtSetup();
