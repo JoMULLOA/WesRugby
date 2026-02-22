@@ -18,9 +18,9 @@
  *   entrenador@wessex.cl / Entrenador2024  (rol: entrenador)
  */
 
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import request from "supertest";
-import { buildTestApp, AppDataSource } from "./setup/testApp.js";
+import { buildTestApp } from "./setup/testApp.js";
 
 let app;
 
@@ -31,11 +31,8 @@ beforeAll(async () => {
   app = await buildTestApp();
 }, 60_000);
 
-afterAll(async () => {
-  if (AppDataSource.isInitialized) {
-    await AppDataSource.destroy();
-  }
-});
+// La conexión la gestiona globalSetup.js (se destruye al terminar toda la suite)
+// No cerramos el DataSource aquí para que inventory.integration.test.js lo reutilice.
 
 // ─── POST /api/auth/login ─────────────────────────────────────────────────────
 
