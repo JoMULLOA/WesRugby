@@ -1,31 +1,22 @@
 import { Router } from "express";
-import { 
+import {
   createSesionAsistencia,
   getMisSesiones,
   getSesionDetalle,
   getEstadisticasAsistencia,
   getCategorias,
-  getAllSesiones
+  getAllSesiones,
 } from "../controllers/sesionAsistencia.controller.js";
 import { authenticateJwt } from "../middlewares/authentication.middleware.js";
-import { isEntrenador, isDirectiva } from "../middlewares/authorization.middleware.js";
+import { isEntrenador } from "../middlewares/authorization.middleware.js";
 
 const router = Router();
 
 // Obtener categorías disponibles
-router.get(
-  "/categorias",
-  authenticateJwt,
-  getCategorias
-);
+router.get("/categorias", authenticateJwt, getCategorias);
 
 // Crear nueva sesión de asistencia (solo entrenadores)
-router.post(
-  "/",
-  authenticateJwt,
-  isEntrenador,
-  createSesionAsistencia
-);
+router.post("/", authenticateJwt, isEntrenador, createSesionAsistencia);
 
 // Obtener TODAS las sesiones (para directiva, entrenador y apoderado)
 router.get(
@@ -33,33 +24,27 @@ router.get(
   authenticateJwt,
   (req, res, next) => {
     // Permitir entrenadores, directiva y apoderados
-    if (req.user.rol === 'entrenador' || req.user.rol === 'directiva' || req.user.rol === 'apoderado') {
+    if (
+      req.user.rol === "entrenador" ||
+      req.user.rol === "directiva" ||
+      req.user.rol === "apoderado"
+    ) {
       next();
     } else {
       res.status(403).json({
         success: false,
-        message: 'No tienes permisos para acceder a este recurso'
+        message: "No tienes permisos para acceder a este recurso",
       });
     }
   },
-  getAllSesiones
+  getAllSesiones,
 );
 
 // Obtener sesiones del entrenador autenticado
-router.get(
-  "/mis-sesiones",
-  authenticateJwt,
-  isEntrenador,
-  getMisSesiones
-);
+router.get("/mis-sesiones", authenticateJwt, isEntrenador, getMisSesiones);
 
 // Obtener detalles de una sesión específica
-router.get(
-  "/:sesionId",
-  authenticateJwt,
-  isEntrenador,
-  getSesionDetalle
-);
+router.get("/:sesionId", authenticateJwt, isEntrenador, getSesionDetalle);
 
 // Obtener estadísticas de asistencia (entrenadores y directiva)
 router.get(
@@ -67,16 +52,16 @@ router.get(
   authenticateJwt,
   (req, res, next) => {
     // Permitir tanto entrenadores como directiva
-    if (req.user.rol === 'entrenador' || req.user.rol === 'directiva') {
+    if (req.user.rol === "entrenador" || req.user.rol === "directiva") {
       next();
     } else {
       res.status(403).json({
         success: false,
-        message: 'No tienes permisos para acceder a las estadísticas'
+        message: "No tienes permisos para acceder a las estadísticas",
       });
     }
   },
-  getEstadisticasAsistencia
+  getEstadisticasAsistencia,
 );
 
 export default router;

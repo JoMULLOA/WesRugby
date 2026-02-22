@@ -21,8 +21,14 @@ export function authenticateJwt(req, res, next) {
   // --- Â¡LOGS CRUCIALES AQUÃ! ---
   console.log("BACKEND DEBUG: authenticateJwt middleware llamado.");
   console.log("BACKEND DEBUG: URL solicitada:", req.method, req.originalUrl);
-  console.log("BACKEND DEBUG: Todos los headers:", Object.keys(req.headers).join(', '));
-  console.log("BACKEND DEBUG: Header Authorization COMPLETO recibido por authenticateJwt:", req.headers.authorization);
+  console.log(
+    "BACKEND DEBUG: Todos los headers:",
+    Object.keys(req.headers).join(", "),
+  );
+  console.log(
+    "BACKEND DEBUG: Header Authorization COMPLETO recibido por authenticateJwt:",
+    req.headers.authorization,
+  );
 
   // Passport.js se encarga de la extracciÃ³n y verificaciÃ³n del token
   passport.authenticate("jwt", { session: false }, (err, user, info) => {
@@ -31,7 +37,7 @@ export function authenticateJwt(req, res, next) {
       return handleErrorServer(
         res,
         500,
-        "Error de autenticaciÃ³n en el servidor"
+        "Error de autenticaciÃ³n en el servidor",
       );
     }
 
@@ -41,32 +47,35 @@ export function authenticateJwt(req, res, next) {
       console.log("BACKEND DEBUG: Info de fallo de Passport:", info); // AquÃ­ veremos el "jwt malformed" si viene de Passport
 
       let errorMessage = "No tienes permiso para acceder a este recurso";
-      let details = {};
+      const details = {};
 
       if (info) {
         if (info.message === "No auth token") {
-            errorMessage = "No se proporcionÃ³ token de autenticaciÃ³n.";
-            details.info = info.message;
-        } else if (info.message === "jwt malformed" || info.message === "invalid token" || info.message === "jwt expired") {
-            errorMessage = "Token invÃ¡lido o caducado.";
-            details.info = info.message;
+          errorMessage = "No se proporcionÃ³ token de autenticaciÃ³n.";
+          details.info = info.message;
+        } else if (
+          info.message === "jwt malformed" ||
+          info.message === "invalid token" ||
+          info.message === "jwt expired"
+        ) {
+          errorMessage = "Token invÃ¡lido o caducado.";
+          details.info = info.message;
         } else {
-            details.info = info.message;
+          details.info = info.message;
         }
       } else {
-          details.info = "No se encontrÃ³ el usuario o la informaciÃ³n del error es nula.";
+        details.info =
+          "No se encontrÃ³ el usuario o la informaciÃ³n del error es nula.";
       }
 
-      return handleErrorClient(
-        res,
-        401,
-        errorMessage,
-        details
-      );
+      return handleErrorClient(res, 401, errorMessage, details);
     }
 
     // BACKEND DEBUG: Usuario autenticado exitosamente
-    console.log("BACKEND DEBUG: Usuario autenticado por Passport:", user.email || user.rut); // Log el email o rut del usuario
+    console.log(
+      "BACKEND DEBUG: Usuario autenticado por Passport:",
+      user.email || user.rut,
+    ); // Log el email o rut del usuario
     req.user = user;
     req.rut = user.rut; // Asignar el RUT directamente para facilitar su uso en controladores
     next();
@@ -87,7 +96,7 @@ export function verificarToken(req, res, next) {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
     req.usuario = payload;
     next();
-  } catch (error) {
-    return res.status(403).json({ mensaje: "Token invÃ¡lido o expirado" });
+  } catch {
+    return res.status(403).json({ mensaje: "Token inválido o expirado" });
   }
 }

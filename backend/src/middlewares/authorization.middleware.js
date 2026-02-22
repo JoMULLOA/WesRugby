@@ -1,272 +1,274 @@
 import User from "../entity/user.entity.js";
 import { AppDataSource } from "../config/configDb.js";
 import {
-handleErrorClient,
-handleErrorServer,
+  handleErrorClient,
+  handleErrorServer,
 } from "../handlers/responseHandlers.js";
 
 // Middleware para verificar rol de directiva (máximo nivel de acceso)
 export async function isDirectiva(req, res, next) {
-try {
+  try {
     const userRepository = AppDataSource.getRepository(User);
     const userFound = await userRepository.findOneBy({ email: req.user.email });
 
     if (!userFound) {
-        return handleErrorClient(
-            res,
-            404,
-            "Usuario no encontrado en la base de datos",
-        );
+      return handleErrorClient(
+        res,
+        404,
+        "Usuario no encontrado en la base de datos",
+      );
     }
 
     if (userFound.rol !== "directiva") {
-        return handleErrorClient(
-            res,
-            403,
-            "Error al acceder al recurso",
-            "Se requiere rol de directiva para realizar esta acción."
-        );
+      return handleErrorClient(
+        res,
+        403,
+        "Error al acceder al recurso",
+        "Se requiere rol de directiva para realizar esta acción.",
+      );
     }
     next();
-} catch (error) {
+  } catch (error) {
     handleErrorServer(res, 500, error.message);
-}
+  }
 }
 
 // Middleware para verificar rol de tesorera o directiva
 export async function isTesorera(req, res, next) {
-try {
+  try {
     const userRepository = AppDataSource.getRepository(User);
     const userFound = await userRepository.findOneBy({ email: req.user.email });
 
     if (!userFound) {
-        return handleErrorClient(
-            res,
-            404,
-            "Usuario no encontrado en la base de datos",
-        );
+      return handleErrorClient(
+        res,
+        404,
+        "Usuario no encontrado en la base de datos",
+      );
     }
 
     const allowedRoles = ["directiva", "tesorera"];
     if (!allowedRoles.includes(userFound.rol)) {
-        return handleErrorClient(
-            res,
-            403,
-            "Error al acceder al recurso",
-            "Se requiere rol de tesorera o directiva para realizar esta acción."
-        );
+      return handleErrorClient(
+        res,
+        403,
+        "Error al acceder al recurso",
+        "Se requiere rol de tesorera o directiva para realizar esta acción.",
+      );
     }
     next();
-} catch (error) {
+  } catch (error) {
     handleErrorServer(res, 500, error.message);
-}
+  }
 }
 
 // Middleware para verificar rol de entrenador, tesorera o directiva
 export async function isEntrenador(req, res, next) {
-try {
+  try {
     const userRepository = AppDataSource.getRepository(User);
     const userFound = await userRepository.findOneBy({ email: req.user.email });
 
     if (!userFound) {
-        return handleErrorClient(
-            res,
-            404,
-            "Usuario no encontrado en la base de datos",
-        );
+      return handleErrorClient(
+        res,
+        404,
+        "Usuario no encontrado en la base de datos",
+      );
     }
 
     const allowedRoles = ["directiva", "tesorera", "entrenador"];
     if (!allowedRoles.includes(userFound.rol)) {
-        return handleErrorClient(
-            res,
-            403,
-            "Error al acceder al recurso",
-            "Se requiere rol de entrenador, tesorera o directiva para realizar esta acción."
-        );
+      return handleErrorClient(
+        res,
+        403,
+        "Error al acceder al recurso",
+        "Se requiere rol de entrenador, tesorera o directiva para realizar esta acción.",
+      );
     }
     next();
-} catch (error) {
+  } catch (error) {
     handleErrorServer(res, 500, error.message);
-}
+  }
 }
 
 // Middleware para verificar cualquier rol autenticado
 export async function isAuthenticated(req, res, next) {
-try {
+  try {
     const userRepository = AppDataSource.getRepository(User);
     const userFound = await userRepository.findOneBy({ email: req.user.email });
 
     if (!userFound) {
-        return handleErrorClient(
-            res,
-            404,
-            "Usuario no encontrado en la base de datos",
-        );
+      return handleErrorClient(
+        res,
+        404,
+        "Usuario no encontrado en la base de datos",
+      );
     }
 
-    const validRoles = ["directiva", "tesorera", "apoderado", "entrenador", "RamaExterna"];
+    const validRoles = [
+      "directiva",
+      "tesorera",
+      "apoderado",
+      "entrenador",
+      "RamaExterna",
+    ];
     if (!validRoles.includes(userFound.rol)) {
-        return handleErrorClient(
-            res,
-            403,
-            "Error al acceder al recurso",
-            "Rol de usuario no válido."
-        );
+      return handleErrorClient(
+        res,
+        403,
+        "Error al acceder al recurso",
+        "Rol de usuario no válido.",
+      );
     }
     next();
-} catch (error) {
+  } catch (error) {
     handleErrorServer(res, 500, error.message);
-}
+  }
 }
 
 // Middleware legacy para compatibilidad (mapea a directiva)
 export async function isAdmin(req, res, next) {
-try {
+  try {
     const userRepository = AppDataSource.getRepository(User);
     const userFound = await userRepository.findOneBy({ email: req.user.email });
 
     if (!userFound) {
-    return handleErrorClient(
+      return handleErrorClient(
         res,
         404,
         "Usuario no encontrado en la base de datos",
-    );
+      );
     }
 
     const rolUser = userFound.rol;
 
     // Mantiene compatibilidad con "administrador" y mapea a "directiva"
     if (rolUser !== "administrador" && rolUser !== "directiva") {
-        return handleErrorClient(
-            res,
-            403,
-            "Error al acceder al recurso",
-            "Se requiere un rol de administrador o directiva para realizar esta acción."
-        );
+      return handleErrorClient(
+        res,
+        403,
+        "Error al acceder al recurso",
+        "Se requiere un rol de administrador o directiva para realizar esta acción.",
+      );
     }
     next();
-} catch (error) {
-    handleErrorServer(
-    res,
-    500,
-    error.message,
-    );
-}
+  } catch (error) {
+    handleErrorServer(res, 500, error.message);
+  }
 }
 
 // Middleware para verificar rol de apoderado
 export async function isApoderado(req, res, next) {
-try {
+  try {
     const userRepository = AppDataSource.getRepository(User);
     const userFound = await userRepository.findOneBy({ email: req.user.email });
 
     if (!userFound) {
-        return handleErrorClient(
-            res,
-            404,
-            "Usuario no encontrado en la base de datos",
-        );
+      return handleErrorClient(
+        res,
+        404,
+        "Usuario no encontrado en la base de datos",
+      );
     }
 
     const allowedRoles = ["directiva", "tesorera", "apoderado"];
     if (!allowedRoles.includes(userFound.rol)) {
-        return handleErrorClient(
-            res,
-            403,
-            "Error al acceder al recurso",
-            "Se requiere rol de apoderado, tesorera o directiva para realizar esta acción."
-        );
+      return handleErrorClient(
+        res,
+        403,
+        "Error al acceder al recurso",
+        "Se requiere rol de apoderado, tesorera o directiva para realizar esta acción.",
+      );
     }
     next();
-} catch (error) {
+  } catch (error) {
     handleErrorServer(res, 500, error.message);
-}
+  }
 }
 
 // Middleware para verificar rol de RamaExterna
 export async function isRamaExterna(req, res, next) {
-try {
+  try {
     const userRepository = AppDataSource.getRepository(User);
     const userFound = await userRepository.findOneBy({ email: req.user.email });
 
     if (!userFound) {
-        return handleErrorClient(
-            res,
-            404,
-            "Usuario no encontrado en la base de datos",
-        );
+      return handleErrorClient(
+        res,
+        404,
+        "Usuario no encontrado en la base de datos",
+      );
     }
 
     const allowedRoles = ["directiva", "RamaExterna"];
     if (!allowedRoles.includes(userFound.rol)) {
-        return handleErrorClient(
-            res,
-            403,
-            "Error al acceder al recurso",
-            "Se requiere rol de RamaExterna o directiva para realizar esta acción."
-        );
+      return handleErrorClient(
+        res,
+        403,
+        "Error al acceder al recurso",
+        "Se requiere rol de RamaExterna o directiva para realizar esta acción.",
+      );
     }
     next();
-} catch (error) {
+  } catch (error) {
     handleErrorServer(res, 500, error.message);
-}
+  }
 }
 
 // Middleware para verificar rol de directiva o tesorera
 export async function isDirectivaOrTesorera(req, res, next) {
-try {
+  try {
     const userRepository = AppDataSource.getRepository(User);
     const userFound = await userRepository.findOneBy({ email: req.user.email });
 
     if (!userFound) {
-        return handleErrorClient(
-            res,
-            404,
-            "Usuario no encontrado en la base de datos",
-        );
+      return handleErrorClient(
+        res,
+        404,
+        "Usuario no encontrado en la base de datos",
+      );
     }
 
     const allowedRoles = ["directiva", "tesorera"];
     if (!allowedRoles.includes(userFound.rol)) {
-        return handleErrorClient(
-            res,
-            403,
-            "Error al acceder al recurso",
-            "Se requiere rol de directiva o tesorera para realizar esta acción."
-        );
+      return handleErrorClient(
+        res,
+        403,
+        "Error al acceder al recurso",
+        "Se requiere rol de directiva o tesorera para realizar esta acción.",
+      );
     }
     next();
-} catch (error) {
+  } catch (error) {
     handleErrorServer(res, 500, error.message);
-}
+  }
 }
 
 // Middleware para verificar rol de directiva, tesorera o apoderado
 export async function isDirectivaOrTesoreraOrApoderado(req, res, next) {
-try {
+  try {
     const userRepository = AppDataSource.getRepository(User);
     const userFound = await userRepository.findOneBy({ email: req.user.email });
 
     if (!userFound) {
-        return handleErrorClient(
-            res,
-            404,
-            "Usuario no encontrado en la base de datos",
-        );
+      return handleErrorClient(
+        res,
+        404,
+        "Usuario no encontrado en la base de datos",
+      );
     }
 
     const allowedRoles = ["directiva", "tesorera", "apoderado"];
     if (!allowedRoles.includes(userFound.rol)) {
-        return handleErrorClient(
-            res,
-            403,
-            "Error al acceder al recurso",
-            "Se requiere rol de directiva, tesorera o apoderado para realizar esta acción."
-        );
+      return handleErrorClient(
+        res,
+        403,
+        "Error al acceder al recurso",
+        "Se requiere rol de directiva, tesorera o apoderado para realizar esta acción.",
+      );
     }
     next();
-} catch (error) {
+  } catch (error) {
     handleErrorServer(res, 500, error.message);
-}
+  }
 }

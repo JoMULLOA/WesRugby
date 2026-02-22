@@ -20,7 +20,7 @@ function hasTimezoneInfo(value) {
   if (typeof value !== "string") {
     return false;
   }
-  return /([zZ]|[+\-]\d\d:?\d\d)$/.test(value.trim());
+  return /([zZ]|[+-]\d\d:?\d\d)$/.test(value.trim());
 }
 
 function buildMoment(value) {
@@ -68,8 +68,12 @@ export async function crearEventoDeportivo(req, res) {
     const userRole = req.user.rol;
 
     if (!["entrenador", "directiva"].includes(userRole)) {
-      return handleErrorClient(res, 403, "No autorizado", 
-        "Solo entrenadores y directiva pueden crear eventos deportivos");
+      return handleErrorClient(
+        res,
+        403,
+        "No autorizado",
+        "Solo entrenadores y directiva pueden crear eventos deportivos",
+      );
     }
 
     const {
@@ -89,7 +93,7 @@ export async function crearEventoDeportivo(req, res) {
       fechaLimiteInscripcion,
       costo,
       observaciones,
-      estado = "programado"
+      estado = "programado",
     } = req.body;
 
     const fechaInicioUtc = toUtcDate(fechaInicio);
@@ -99,31 +103,48 @@ export async function crearEventoDeportivo(req, res) {
       : null;
 
     if (!fechaInicioUtc) {
-      return handleErrorClient(res, 400, "Fecha inv\u00e1lida", "La fecha de inicio del evento es obligatoria.");
+      return handleErrorClient(
+        res,
+        400,
+        "Fecha inv\u00e1lida",
+        "La fecha de inicio del evento es obligatoria.",
+      );
     }
 
     // Validar que el tipo de evento existe
     if (tipoEventoId) {
       const tipoEvento = await tipoEventoRepository.findOne({
-        where: { id: tipoEventoId, activo: true }
+        where: { id: tipoEventoId, activo: true },
       });
 
       if (!tipoEvento) {
-        return handleErrorClient(res, 400, "Tipo de evento inválido", 
-          "El tipo de evento especificado no existe o no está activo");
+        return handleErrorClient(
+          res,
+          400,
+          "Tipo de evento inválido",
+          "El tipo de evento especificado no existe o no está activo",
+        );
       }
     }
 
     // Validaciones básicas
     if (fechaFinUtc && fechaInicioUtc > fechaFinUtc) {
-      return handleErrorClient(res, 400, "Fecha inválida", 
-        "La fecha de inicio no puede ser posterior a la fecha de fin");
+      return handleErrorClient(
+        res,
+        400,
+        "Fecha inválida",
+        "La fecha de inicio no puede ser posterior a la fecha de fin",
+      );
     }
 
     if (requiereInscripcion && fechaLimiteUtc) {
       if (fechaLimiteUtc > fechaInicioUtc) {
-        return handleErrorClient(res, 400, "Fecha límite inválida", 
-          "La fecha límite de inscripción debe ser anterior al evento");
+        return handleErrorClient(
+          res,
+          400,
+          "Fecha límite inválida",
+          "La fecha límite de inscripción debe ser anterior al evento",
+        );
       }
     }
 
@@ -134,13 +155,17 @@ export async function crearEventoDeportivo(req, res) {
         fechaInicio: fechaInicioUtc,
         lugar,
         tipoEventoId,
-        estado: In(["programado", "confirmado", "en_curso"])
-      }
+        estado: In(["programado", "confirmado", "en_curso"]),
+      },
     });
 
     if (eventoExistente) {
-      return handleErrorClient(res, 400, "Evento duplicado", 
-        "Ya existe un evento con el mismo título, fecha, lugar y tipo. Por favor, modifica alguno de estos campos.");
+      return handleErrorClient(
+        res,
+        400,
+        "Evento duplicado",
+        "Ya existe un evento con el mismo título, fecha, lugar y tipo. Por favor, modifica alguno de estos campos.",
+      );
     }
 
     const nuevoEvento = eventoRepository.create({
@@ -161,18 +186,22 @@ export async function crearEventoDeportivo(req, res) {
       costo: costo || 0,
       observaciones,
       estado,
-      organizadoPorRut: req.user.rut
+      organizadoPorRut: req.user.rut,
     });
 
     const eventoGuardado = await eventoRepository.save(nuevoEvento);
 
     const eventoCompleto = await eventoRepository.findOne({
       where: { id: eventoGuardado.id },
-      relations: ["organizadoPor", "tipoEvento"]
+      relations: ["organizadoPor", "tipoEvento"],
     });
 
-    handleSuccess(res, 201, "Evento deportivo creado exitosamente", eventoCompleto);
-
+    handleSuccess(
+      res,
+      201,
+      "Evento deportivo creado exitosamente",
+      eventoCompleto,
+    );
   } catch (error) {
     console.error("Error creando evento:", error);
     handleErrorServer(res, 500, "Error interno del servidor", error.message);
@@ -190,10 +219,10 @@ export async function obtenerEventosDeportivos(req, res) {
       fechaFin,
       soloProximos = false,
       limite = 50,
-      pagina = 1
+      pagina = 1,
     } = req.query;
 
-    let whereCondition = {};
+    const whereCondition = {};
 
     // Aplicar filtros
     if (tipoEventoId) {
@@ -211,29 +240,29 @@ export async function obtenerEventosDeportivos(req, res) {
     if (fechaInicio && fechaFin) {
       whereCondition.fechaInicio = {
         $gte: fechaInicio,
-        $lte: fechaFin
+        $lte: fechaFin,
       };
     }
 
     // Solo eventos futuros
-    if (soloProximos === 'true') {
+    if (soloProximos === "true") {
       whereCondition.fechaInicio = {
-        $gte: new Date().toISOString().split('T')[0]
+        $gte: new Date().toISOString().split("T")[0],
       };
     }
 
     const skip = (parseInt(pagina) - 1) * parseInt(limite);
 
-    const [eventos, total] = await eventoRepository.findAndCount({
+    const [eventos] = await eventoRepository.findAndCount({
       where: whereCondition,
       relations: ["organizadoPor", "tipoEvento"],
       order: { fechaInicio: "DESC" },
       take: parseInt(limite),
-      skip: skip
+      skip: skip,
     });
 
     // Simplificar la respuesta para evitar problemas de serialización
-    const eventosSimplificados = eventos.map(evento => ({
+    const eventosSimplificados = eventos.map((evento) => ({
       id: evento.id,
       titulo: evento.titulo,
       descripcion: evento.descripcion,
@@ -248,11 +277,15 @@ export async function obtenerEventosDeportivos(req, res) {
       costo: evento.costo,
       observaciones: evento.observaciones,
       createdAt: evento.createdAt,
-      updatedAt: evento.updatedAt
+      updatedAt: evento.updatedAt,
     }));
 
-    handleSuccess(res, 200, "Eventos deportivos obtenidos exitosamente", eventosSimplificados);
-
+    handleSuccess(
+      res,
+      200,
+      "Eventos deportivos obtenidos exitosamente",
+      eventosSimplificados,
+    );
   } catch (error) {
     console.error("Error obteniendo eventos:", error);
     handleErrorServer(res, 500, "Error interno del servidor", error.message);
@@ -266,7 +299,7 @@ export async function obtenerEventoPorId(req, res) {
 
     const evento = await eventoRepository.findOne({
       where: { id },
-      relations: ["creadoPor"]
+      relations: ["creadoPor"],
     });
 
     if (!evento) {
@@ -274,7 +307,6 @@ export async function obtenerEventoPorId(req, res) {
     }
 
     handleSuccess(res, 200, "Evento deportivo obtenido exitosamente", evento);
-
   } catch (error) {
     console.error("Error obteniendo evento:", error);
     handleErrorServer(res, 500, "Error interno del servidor", error.message);
@@ -288,8 +320,12 @@ export async function actualizarEventoDeportivo(req, res) {
     const userRole = req.user.rol;
 
     if (!["entrenador", "directiva"].includes(userRole)) {
-      return handleErrorClient(res, 403, "No autorizado", 
-        "Solo entrenadores y directiva pueden actualizar eventos");
+      return handleErrorClient(
+        res,
+        403,
+        "No autorizado",
+        "Solo entrenadores y directiva pueden actualizar eventos",
+      );
     }
 
     const evento = await eventoRepository.findOneBy({ id });
@@ -300,11 +336,17 @@ export async function actualizarEventoDeportivo(req, res) {
     // Verificar si el evento ya finalizó (solo si tiene fecha de fin)
     if (evento.fechaFin && evento.estado === "finalizado") {
       const ahora = new Date();
-      const fechaFinEvento = new Date(`${evento.fechaFin}T${evento.horaFin || '23:59'}`);
-      
+      const fechaFinEvento = new Date(
+        `${evento.fechaFin}T${evento.horaFin || "23:59"}`,
+      );
+
       if (fechaFinEvento < ahora) {
-        return handleErrorClient(res, 400, "Evento finalizado", 
-          "No se puede modificar un evento que ya finalizó");
+        return handleErrorClient(
+          res,
+          400,
+          "Evento finalizado",
+          "No se puede modificar un evento que ya finalizó",
+        );
       }
     }
 
@@ -315,14 +357,24 @@ export async function actualizarEventoDeportivo(req, res) {
       ? toUtcDate(datosActualizacion.fechaInicio)
       : null;
     if (datosActualizacion.fechaInicio && !nuevaFechaInicio) {
-      return handleErrorClient(res, 400, "Fecha inválida", "La nueva fecha de inicio no es válida.");
+      return handleErrorClient(
+        res,
+        400,
+        "Fecha inválida",
+        "La nueva fecha de inicio no es válida.",
+      );
     }
 
     const nuevaFechaFin = datosActualizacion.fechaFin
       ? toUtcDate(datosActualizacion.fechaFin)
       : null;
     if (datosActualizacion.fechaFin && !nuevaFechaFin) {
-      return handleErrorClient(res, 400, "Fecha inválida", "La nueva fecha de término no es válida.");
+      return handleErrorClient(
+        res,
+        400,
+        "Fecha inválida",
+        "La nueva fecha de término no es válida.",
+      );
     }
 
     if (nuevaFechaInicio) {
@@ -335,43 +387,76 @@ export async function actualizarEventoDeportivo(req, res) {
     if (datosActualizacion.fechaLimiteInscripcion) {
       const limite = toChileDateOnly(datosActualizacion.fechaLimiteInscripcion);
       if (!limite) {
-        return handleErrorClient(res, 400, "Fecha inválida", "La nueva fecha límite no es válida.");
+        return handleErrorClient(
+          res,
+          400,
+          "Fecha inválida",
+          "La nueva fecha límite no es válida.",
+        );
       }
       datosActualizacion.fechaLimiteInscripcion = limite;
     }
 
-    const fechaInicioComparar = datosActualizacion.fechaInicio || evento.fechaInicio;
+    const fechaInicioComparar =
+      datosActualizacion.fechaInicio || evento.fechaInicio;
     const fechaFinComparar = datosActualizacion.fechaFin || evento.fechaFin;
-    if (fechaInicioComparar && fechaFinComparar && fechaInicioComparar > fechaFinComparar) {
-      return handleErrorClient(res, 400, "Fecha inválida", 
-        "La fecha de inicio no puede ser posterior a la fecha de fin");
+    if (
+      fechaInicioComparar &&
+      fechaFinComparar &&
+      fechaInicioComparar > fechaFinComparar
+    ) {
+      return handleErrorClient(
+        res,
+        400,
+        "Fecha inválida",
+        "La fecha de inicio no puede ser posterior a la fecha de fin",
+      );
     }
 
     // Campos permitidos para actualización
     const camposPermitidos = [
-      'titulo', 'descripcion', 'tipoEventoId', 'categoria', 'fechaInicio', 'fechaFin',
-      'horaInicio', 'horaFin', 'lugar', 'equipoLocal', 'equipoVisitante',
-      'requiereInscripcion', 'cupoMaximo', 'fechaLimiteInscripcion', 'costo',
-      'observaciones', 'estado', 'resultadoLocal', 'resultadoVisitante'
+      "titulo",
+      "descripcion",
+      "tipoEventoId",
+      "categoria",
+      "fechaInicio",
+      "fechaFin",
+      "horaInicio",
+      "horaFin",
+      "lugar",
+      "equipoLocal",
+      "equipoVisitante",
+      "requiereInscripcion",
+      "cupoMaximo",
+      "fechaLimiteInscripcion",
+      "costo",
+      "observaciones",
+      "estado",
+      "resultadoLocal",
+      "resultadoVisitante",
     ];
 
-    camposPermitidos.forEach(campo => {
+    camposPermitidos.forEach((campo) => {
       if (datosActualizacion[campo] !== undefined) {
         evento[campo] = datosActualizacion[campo];
       }
     });
 
     evento.updatedAt = new Date();
-    
+
     const eventoActualizado = await eventoRepository.save(evento);
 
     const eventoCompleto = await eventoRepository.findOne({
       where: { id: eventoActualizado.id },
-      relations: ["organizadoPor", "tipoEvento"]
+      relations: ["organizadoPor", "tipoEvento"],
     });
 
-    handleSuccess(res, 200, "Evento deportivo actualizado exitosamente", eventoCompleto);
-
+    handleSuccess(
+      res,
+      200,
+      "Evento deportivo actualizado exitosamente",
+      eventoCompleto,
+    );
   } catch (error) {
     console.error("Error actualizando evento:", error);
     handleErrorServer(res, 500, "Error interno del servidor", error.message);
@@ -393,41 +478,64 @@ export async function inscribirseEvento(req, res) {
 
     // Verificar si el evento requiere inscripción
     if (!evento.requiereInscripcion) {
-      return handleErrorClient(res, 400, "Evento sin inscripción", 
-        "Este evento no requiere inscripción previa");
+      return handleErrorClient(
+        res,
+        400,
+        "Evento sin inscripción",
+        "Este evento no requiere inscripción previa",
+      );
     }
 
     // Verificar estado del evento
     if (evento.estado !== "programado") {
-      return handleErrorClient(res, 400, "Evento no disponible", 
-        "Solo se puede inscribir a eventos programados");
+      return handleErrorClient(
+        res,
+        400,
+        "Evento no disponible",
+        "Solo se puede inscribir a eventos programados",
+      );
     }
 
     // Verificar fecha límite
-    if (evento.fechaLimiteInscripcion && new Date() > new Date(evento.fechaLimiteInscripcion)) {
-      return handleErrorClient(res, 400, "Inscripción cerrada", 
-        "La fecha límite de inscripción ha pasado");
+    if (
+      evento.fechaLimiteInscripcion &&
+      new Date() > new Date(evento.fechaLimiteInscripcion)
+    ) {
+      return handleErrorClient(
+        res,
+        400,
+        "Inscripción cerrada",
+        "La fecha límite de inscripción ha pasado",
+      );
     }
 
     // Verificar cupo máximo
     if (evento.cupoMaximo && evento.inscritos >= evento.cupoMaximo) {
-      return handleErrorClient(res, 400, "Cupo agotado", 
-        "El evento ha alcanzado el cupo máximo");
+      return handleErrorClient(
+        res,
+        400,
+        "Cupo agotado",
+        "El evento ha alcanzado el cupo máximo",
+      );
     }
 
     // Determinar RUT del participante
-    let rutFinal = rutParticipante || userRut;
+    const rutFinal = rutParticipante || userRut;
 
     // Verificar autorización para inscribir a otros
     if (rutParticipante && rutParticipante !== userRut) {
       if (userRole === "apoderado") {
         // Verificar que sea su hijo
         const hijo = await userRepository.findOne({
-          where: { rut: rutParticipante, rutApoderado: userRut }
+          where: { rut: rutParticipante, rutApoderado: userRut },
         });
         if (!hijo) {
-          return handleErrorClient(res, 403, "No autorizado", 
-            "Solo puede inscribir a sus hijos");
+          return handleErrorClient(
+            res,
+            403,
+            "No autorizado",
+            "Solo puede inscribir a sus hijos",
+          );
         }
       } else if (!["entrenador", "directiva"].includes(userRole)) {
         return handleErrorClient(res, 403, "No autorizado");
@@ -441,10 +549,16 @@ export async function inscribirseEvento(req, res) {
     }
 
     // Verificar si ya está inscrito
-    const inscripcionExistente = evento.participantes?.find(p => p.rut === rutFinal);
+    const inscripcionExistente = evento.participantes?.find(
+      (p) => p.rut === rutFinal,
+    );
     if (inscripcionExistente) {
-      return handleErrorClient(res, 400, "Ya inscrito", 
-        "El participante ya está inscrito en este evento");
+      return handleErrorClient(
+        res,
+        400,
+        "Ya inscrito",
+        "El participante ya está inscrito en este evento",
+      );
     }
 
     // Agregar participante
@@ -459,11 +573,11 @@ export async function inscribirseEvento(req, res) {
       fechaInscripcion: new Date(),
       inscritoPorRut: userRut,
       observaciones,
-      confirmado: false
+      confirmado: false,
     });
 
     evento.inscritos = evento.participantes.length;
-    
+
     const eventoActualizado = await eventoRepository.save(evento);
 
     handleSuccess(res, 200, "Inscripción realizada exitosamente", {
@@ -471,10 +585,9 @@ export async function inscribirseEvento(req, res) {
       participante: {
         rut: rutFinal,
         nombres: participante.nombres,
-        apellidos: participante.apellidos
-      }
+        apellidos: participante.apellidos,
+      },
     });
-
   } catch (error) {
     console.error("Error en inscripción:", error);
     handleErrorServer(res, 500, "Error interno del servidor", error.message);
@@ -498,20 +611,31 @@ export async function confirmarParticipacion(req, res) {
     }
 
     // Buscar participante
-    const participanteIndex = evento.participantes?.findIndex(p => p.rut === rutParticipante);
+    const participanteIndex = evento.participantes?.findIndex(
+      (p) => p.rut === rutParticipante,
+    );
     if (participanteIndex === -1) {
-      return handleErrorClient(res, 404, "Participante no encontrado en el evento");
+      return handleErrorClient(
+        res,
+        404,
+        "Participante no encontrado en el evento",
+      );
     }
 
     // Actualizar confirmación
     evento.participantes[participanteIndex].confirmado = confirmado;
-    evento.participantes[participanteIndex].fechaConfirmacion = confirmado ? new Date() : null;
+    evento.participantes[participanteIndex].fechaConfirmacion = confirmado
+      ? new Date()
+      : null;
 
     const eventoActualizado = await eventoRepository.save(evento);
 
-    handleSuccess(res, 200, `Participación ${confirmado ? 'confirmada' : 'no confirmada'} exitosamente`, 
-      eventoActualizado);
-
+    handleSuccess(
+      res,
+      200,
+      `Participación ${confirmado ? "confirmada" : "no confirmada"} exitosamente`,
+      eventoActualizado,
+    );
   } catch (error) {
     console.error("Error confirmando participación:", error);
     handleErrorServer(res, 500, "Error interno del servidor", error.message);
@@ -524,8 +648,12 @@ export async function obtenerCalendarioEventos(req, res) {
     const { mes, año } = req.query;
 
     if (!mes || !año) {
-      return handleErrorClient(res, 400, "Parámetros requeridos", 
-        "Mes y año son requeridos");
+      return handleErrorClient(
+        res,
+        400,
+        "Parámetros requeridos",
+        "Mes y año son requeridos",
+      );
     }
 
     const fechaInicio = new Date(año, mes - 1, 1);
@@ -534,12 +662,12 @@ export async function obtenerCalendarioEventos(req, res) {
     const eventos = await eventoRepository.find({
       where: {
         fechaInicio: {
-          $gte: fechaInicio.toISOString().split('T')[0],
-          $lte: fechaFin.toISOString().split('T')[0]
-        }
+          $gte: fechaInicio.toISOString().split("T")[0],
+          $lte: fechaFin.toISOString().split("T")[0],
+        },
       },
       relations: ["creadoPor"],
-      order: { fechaInicio: "ASC", horaInicio: "ASC" }
+      order: { fechaInicio: "ASC", horaInicio: "ASC" },
     });
 
     // Agrupar eventos por día
@@ -556,9 +684,8 @@ export async function obtenerCalendarioEventos(req, res) {
       mes: parseInt(mes),
       año: parseInt(año),
       totalEventos: eventos.length,
-      eventosPorDia
+      eventosPorDia,
     });
-
   } catch (error) {
     console.error("Error obteniendo calendario:", error);
     handleErrorServer(res, 500, "Error interno del servidor", error.message);
@@ -572,8 +699,12 @@ export async function eliminarEventoDeportivo(req, res) {
     const userRole = req.user.rol;
 
     if (userRole !== "directiva") {
-      return handleErrorClient(res, 403, "No autorizado", 
-        "Solo directiva puede eliminar eventos deportivos");
+      return handleErrorClient(
+        res,
+        403,
+        "No autorizado",
+        "Solo directiva puede eliminar eventos deportivos",
+      );
     }
 
     const evento = await eventoRepository.findOneBy({ id });
@@ -585,14 +716,17 @@ export async function eliminarEventoDeportivo(req, res) {
     const ahora = new Date();
     const fechaInicioEvento = getEventStartDate(evento);
     if (fechaInicioEvento && fechaInicioEvento <= ahora) {
-      return handleErrorClient(res, 400, "Evento iniciado", 
-        "No se puede eliminar un evento que ya comenzó");
+      return handleErrorClient(
+        res,
+        400,
+        "Evento iniciado",
+        "No se puede eliminar un evento que ya comenzó",
+      );
     }
 
     await eventoRepository.remove(evento);
 
     handleSuccess(res, 200, "Evento deportivo eliminado exitosamente");
-
   } catch (error) {
     console.error("Error eliminando evento:", error);
     handleErrorServer(res, 500, "Error interno del servidor", error.message);

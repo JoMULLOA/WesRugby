@@ -15,7 +15,8 @@ const EventoDeportivoSchema = new EntitySchema({
       type: "varchar",
       length: 200,
       nullable: false,
-      comment: "Título del evento (ej: Entrenamiento Juvenil, Partido vs Club XYZ)",
+      comment:
+        "Título del evento (ej: Entrenamiento Juvenil, Partido vs Club XYZ)",
     },
     descripcion: {
       type: "text",
@@ -31,7 +32,8 @@ const EventoDeportivoSchema = new EntitySchema({
       type: "varchar",
       length: 255,
       nullable: true,
-      comment: "Categoría participante (puede ser múltiples separadas por comas)",
+      comment:
+        "Categoría participante (puede ser múltiples separadas por comas)",
     },
     // Fechas y Horarios
     fechaInicio: {
@@ -102,7 +104,14 @@ const EventoDeportivoSchema = new EntitySchema({
     // Estado y Gestión
     estado: {
       type: "enum",
-      enum: ["programado", "confirmado", "en_curso", "finalizado", "cancelado", "pospuesto"],
+      enum: [
+        "programado",
+        "confirmado",
+        "en_curso",
+        "finalizado",
+        "cancelado",
+        "pospuesto",
+      ],
       default: "programado",
       nullable: false,
       comment: "Estado del evento",
@@ -205,7 +214,10 @@ const EventoDeportivoSchema = new EntitySchema({
     responsableEquipo: {
       type: "many-to-one",
       target: "User",
-      joinColumn: { name: "responsableEquipamiento", referencedColumnName: "rut" },
+      joinColumn: {
+        name: "responsableEquipamiento",
+        referencedColumnName: "rut",
+      },
       nullable: true,
     },
     tipoEvento: {

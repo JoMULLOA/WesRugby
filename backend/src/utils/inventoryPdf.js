@@ -16,7 +16,8 @@ function renderBarcode(text) {
 export async function generateBarcodeSheet(labels, options = {}) {
   const columns = Number.isInteger(options.columns) ? options.columns : 3;
   const rows = Number.isInteger(options.rows) ? options.rows : 8;
-  const perPage = options.perPage && options.perPage > 0 ? options.perPage : columns * rows;
+  const perPage =
+    options.perPage && options.perPage > 0 ? options.perPage : columns * rows;
 
   const doc = new PDFDocument({
     size: "A4",
@@ -27,8 +28,10 @@ export async function generateBarcodeSheet(labels, options = {}) {
   const chunks = [];
   doc.on("data", (chunk) => chunks.push(chunk));
 
-  const usableWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
-  const usableHeight = doc.page.height - doc.page.margins.top - doc.page.margins.bottom;
+  const usableWidth =
+    doc.page.width - doc.page.margins.left - doc.page.margins.right;
+  const usableHeight =
+    doc.page.height - doc.page.margins.top - doc.page.margins.bottom;
   const cellWidth = usableWidth / columns;
   const cellHeight = usableHeight / rows;
   const bottomMargin = 18; // Margen inferior adicional
@@ -48,7 +51,11 @@ export async function generateBarcodeSheet(labels, options = {}) {
 
     // Draw cell guide
     doc.save();
-    doc.rect(originX, originY, cellWidth, cellHeight).dash(1, { space: 3 }).strokeColor("#dddddd").stroke();
+    doc
+      .rect(originX, originY, cellWidth, cellHeight)
+      .dash(1, { space: 3 })
+      .strokeColor("#dddddd")
+      .stroke();
 
     const imageBuffer = await renderBarcode(label.barcode);
     const horizontalPadding = 24;
@@ -64,10 +71,13 @@ export async function generateBarcodeSheet(labels, options = {}) {
       console.warn(`Warning: Content may overflow cell at index ${index}`);
     }
 
-    doc.fillColor("#000000").fontSize(11).text(label.name, originX + horizontalPadding / 2, nameTop, {
-      width: cellWidth - horizontalPadding,
-      align: "center",
-    });
+    doc
+      .fillColor("#000000")
+      .fontSize(11)
+      .text(label.name, originX + horizontalPadding / 2, nameTop, {
+        width: cellWidth - horizontalPadding,
+        align: "center",
+      });
 
     doc.image(imageBuffer, imageX, barcodeTop, {
       width: imageWidth,
@@ -75,10 +85,12 @@ export async function generateBarcodeSheet(labels, options = {}) {
     });
 
     const codeY = barcodeTop + imageHeight + 10;
-    doc.fontSize(10).text(label.barcode, originX + horizontalPadding / 2, codeY, {
-      width: cellWidth - horizontalPadding,
-      align: "center",
-    });
+    doc
+      .fontSize(10)
+      .text(label.barcode, originX + horizontalPadding / 2, codeY, {
+        width: cellWidth - horizontalPadding,
+        align: "center",
+      });
 
     doc.restore();
   }

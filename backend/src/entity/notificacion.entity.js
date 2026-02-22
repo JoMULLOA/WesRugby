@@ -39,7 +39,7 @@ const Notificacion = new EntitySchema({
     viajeId: {
       type: "varchar",
       nullable: true,
-      comment: "ID del viaje en MongoDB"
+      comment: "ID del viaje en MongoDB",
     },
     datos: {
       type: "json",

@@ -5,7 +5,7 @@ import {
   obtenerNotificaciones,
   contarNotificacionesPendientes,
   eliminarNotificacion,
-  crearNotificacionMasiva
+  crearNotificacionMasiva,
 } from "../controllers/notificacion.controller.js";
 
 const router = express.Router();

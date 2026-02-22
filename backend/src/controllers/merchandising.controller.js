@@ -19,13 +19,25 @@ export async function createMerchandising(req, res) {
     const { rut, nombreCompleto } = req.user;
 
     // Validaciones básicas
-    if (!merchandisingData.titulo || !merchandisingData.imagen || !merchandisingData.precio) {
-      return handleErrorClient(res, 400, "Título, imagen y precio son obligatorios");
+    if (
+      !merchandisingData.titulo ||
+      !merchandisingData.imagen ||
+      !merchandisingData.precio
+    ) {
+      return handleErrorClient(
+        res,
+        400,
+        "Título, imagen y precio son obligatorios",
+      );
     }
 
     // Validar que el precio sea un número positivo
     if (isNaN(merchandisingData.precio) || merchandisingData.precio <= 0) {
-      return handleErrorClient(res, 400, "El precio debe ser un número positivo");
+      return handleErrorClient(
+        res,
+        400,
+        "El precio debe ser un número positivo",
+      );
     }
 
     // Agregar información del creador
@@ -35,7 +47,8 @@ export async function createMerchandising(req, res) {
       nombreCreador: nombreCompleto,
     };
 
-    const [merchandising, error] = await createMerchandisingService(dataWithCreator);
+    const [merchandising, error] =
+      await createMerchandisingService(dataWithCreator);
 
     if (error) {
       return handleErrorClient(res, 400, error);
@@ -54,15 +67,15 @@ export async function getMerchandising(req, res) {
 
     // Filtros según el rol (si hay usuario autenticado)
     const filters = {};
-    
+
     if (estado) {
       filters.estado = estado;
     }
-    
+
     if (precioMinimo && !isNaN(parseFloat(precioMinimo))) {
       filters.precioMinimo = parseFloat(precioMinimo);
     }
-    
+
     if (precioMaximo && !isNaN(parseFloat(precioMaximo))) {
       filters.precioMaximo = parseFloat(precioMaximo);
     }
@@ -92,11 +105,11 @@ export async function getMerchandisingPublico(req, res) {
     const filters = {
       estado: "activo", // Solo merchandising activo
     };
-    
+
     if (precioMinimo && !isNaN(parseFloat(precioMinimo))) {
       filters.precioMinimo = parseFloat(precioMinimo);
     }
-    
+
     if (precioMaximo && !isNaN(parseFloat(precioMaximo))) {
       filters.precioMaximo = parseFloat(precioMaximo);
     }
@@ -113,7 +126,12 @@ export async function getMerchandisingPublico(req, res) {
       merchandisingResult = merchandising.slice(0, parseInt(limite));
     }
 
-    handleSuccess(res, 200, "Merchandising público encontrado", merchandisingResult);
+    handleSuccess(
+      res,
+      200,
+      "Merchandising público encontrado",
+      merchandisingResult,
+    );
   } catch (error) {
     handleErrorServer(res, 500, error.message);
   }
@@ -136,7 +154,11 @@ export async function getMerchandisingItem(req, res) {
 
     // Si no es directiva, solo puede ver merchandising activo
     if (rol && rol !== "directiva" && merchandising.estado !== "activo") {
-      return handleErrorClient(res, 403, "No tienes permisos para ver este merchandising");
+      return handleErrorClient(
+        res,
+        403,
+        "No tienes permisos para ver este merchandising",
+      );
     }
 
     handleSuccess(res, 200, "Merchandising encontrado", merchandising);
@@ -157,17 +179,29 @@ export async function updateMerchandising(req, res) {
     // Validar precio si se está actualizando
     if (updateData.precio !== undefined) {
       if (isNaN(updateData.precio) || updateData.precio <= 0) {
-        return handleErrorClient(res, 400, "El precio debe ser un número positivo");
+        return handleErrorClient(
+          res,
+          400,
+          "El precio debe ser un número positivo",
+        );
       }
     }
 
-    const [merchandising, error] = await updateMerchandisingService(id, updateData);
+    const [merchandising, error] = await updateMerchandisingService(
+      id,
+      updateData,
+    );
 
     if (error) {
       return handleErrorClient(res, 404, error);
     }
 
-    handleSuccess(res, 200, "Merchandising actualizado exitosamente", merchandising);
+    handleSuccess(
+      res,
+      200,
+      "Merchandising actualizado exitosamente",
+      merchandising,
+    );
   } catch (error) {
     handleErrorServer(res, 500, error.message);
   }
@@ -206,13 +240,21 @@ export async function changeEstadoMerchandising(req, res) {
       return handleErrorClient(res, 400, "Estado es obligatorio");
     }
 
-    const [merchandising, error] = await changeEstadoMerchandisingService(id, estado);
+    const [merchandising, error] = await changeEstadoMerchandisingService(
+      id,
+      estado,
+    );
 
     if (error) {
       return handleErrorClient(res, 400, error);
     }
 
-    handleSuccess(res, 200, `Estado del merchandising cambiado a '${estado}' exitosamente`, merchandising);
+    handleSuccess(
+      res,
+      200,
+      `Estado del merchandising cambiado a '${estado}' exitosamente`,
+      merchandising,
+    );
   } catch (error) {
     handleErrorServer(res, 500, error.message);
   }

@@ -37,6 +37,8 @@ export default [
         clearTimeout: "readonly",
         setInterval: "readonly",
         clearInterval: "readonly",
+        URL: "readonly",
+        URLSearchParams: "readonly",
       },
     },
 
@@ -45,8 +47,16 @@ export default [
       "prettier/prettier": "warn",
 
       // Buenas prácticas básicas
-      "no-unused-vars": ["warn", { argsIgnorePattern: "^_|^next$|^req$|^res$" }],
-      "no-console": "off",         // El backend usa console.log/error extensamente
+      "no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_|^next$|^req$|^res$",
+          varsIgnorePattern: "^_",
+          destructuredArrayIgnorePattern: "^_",
+          ignoreRestSiblings: true,
+        },
+      ],
+      "no-console": "off", // El backend usa console.log/error extensamente
       "no-undef": "error",
       "prefer-const": "warn",
       "no-var": "error",

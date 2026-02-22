@@ -8,7 +8,10 @@ import { ACCESS_TOKEN_SECRET } from "../config/configEnv.js";
 export async function loginService(user) {
   try {
     // Debug: Verificar que el ACCESS_TOKEN_SECRET esté disponible
-    console.log("🔧 DEBUG - ACCESS_TOKEN_SECRET disponible:", ACCESS_TOKEN_SECRET ? "✅ Sí" : "❌ No");
+    console.log(
+      "🔧 DEBUG - ACCESS_TOKEN_SECRET disponible:",
+      ACCESS_TOKEN_SECRET ? "✅ Sí" : "❌ No",
+    );
     if (!ACCESS_TOKEN_SECRET) {
       console.error("❌ CRITICAL: ACCESS_TOKEN_SECRET no está definido!");
       return [null, "Error de configuración del servidor"];
@@ -19,20 +22,26 @@ export async function loginService(user) {
 
     const createErrorMessage = (dataInfo, message) => ({
       dataInfo,
-      message
+      message,
     });
     const userFound = await userRepository.findOne({
-      where: { email }
+      where: { email },
     });
 
     if (!userFound) {
-      return [null, createErrorMessage("email", "El correo electrónico es incorrecto")];
+      return [
+        null,
+        createErrorMessage("email", "El correo electrónico es incorrecto"),
+      ];
     }
 
     const isMatch = await comparePassword(password, userFound.password);
 
     if (!isMatch) {
-      return [null, createErrorMessage("password", "La contraseña es incorrecta")];
+      return [
+        null,
+        createErrorMessage("password", "La contraseña es incorrecta"),
+      ];
     }
 
     const payload = {
@@ -45,13 +54,19 @@ export async function loginService(user) {
     };
 
     console.log("🔧 DEBUG - Generando token JWT con payload:", payload);
-    console.log("🔧 DEBUG - Usando ACCESS_TOKEN_SECRET (primeros 20 chars):", ACCESS_TOKEN_SECRET?.substring(0, 20) + "...");
+    console.log(
+      "🔧 DEBUG - Usando ACCESS_TOKEN_SECRET (primeros 20 chars):",
+      ACCESS_TOKEN_SECRET?.substring(0, 20) + "...",
+    );
 
     const accessToken = jwt.sign(payload, ACCESS_TOKEN_SECRET, {
       expiresIn: "1d",
     });
 
-    console.log("🔧 DEBUG - Token generado exitosamente, longitud:", accessToken?.length);
+    console.log(
+      "🔧 DEBUG - Token generado exitosamente, longitud:",
+      accessToken?.length,
+    );
 
     return [accessToken, null];
   } catch (error) {
@@ -60,15 +75,25 @@ export async function loginService(user) {
   }
 }
 
-
 export async function registerService(user) {
   try {
     const userRepository = AppDataSource.getRepository(User);
     console.log("Datos recibidos en el registro:", user); // Verificar que los datos llegan correctamente
-    const { nombreCompleto, email, rut, rol, password, carrera, fechaNacimiento, genero } = user;
+    const {
+      nombreCompleto,
+      email,
+      rut,
+      rol,
+      password,
+      carrera,
+      fechaNacimiento,
+      genero,
+    } = user;
 
     // Verificación de existencia de email o rut
-    const existingEmailUser = await userRepository.findOne({ where: { email } });
+    const existingEmailUser = await userRepository.findOne({
+      where: { email },
+    });
     if (existingEmailUser) {
       return [null, { field: "email", message: "Correo electrónico en uso" }];
     }
@@ -79,7 +104,7 @@ export async function registerService(user) {
     }
 
     console.log("Rol recibido en la solicitud:", rol); // Verificar que rol llega correctamente
-    
+
     const newUser = userRepository.create({
       nombreCompleto,
       email,
@@ -92,7 +117,7 @@ export async function registerService(user) {
     });
     await userRepository.save(newUser);
 
-    const { password: _, ...dataUser } = newUser; // Excluye la contraseña del objeto devuelto
+    const { password: _pw, ...dataUser } = newUser; // Excluye la contraseña del objeto devuelto
     return [dataUser, null];
   } catch (error) {
     console.error("Error al registrar un usuario:", error);

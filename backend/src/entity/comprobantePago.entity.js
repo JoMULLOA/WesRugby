@@ -37,7 +37,14 @@ const ComprobantePagoSchema = new EntitySchema({
     },
     tipoPago: {
       type: "enum",
-      enum: ["mensualidad", "matricula", "uniforme", "evento_especial", "multa", "otro"],
+      enum: [
+        "mensualidad",
+        "matricula",
+        "uniforme",
+        "evento_especial",
+        "multa",
+        "otro",
+      ],
       nullable: false,
       default: "mensualidad",
       comment: "Tipo de obligación cancelada",
@@ -69,7 +76,8 @@ const ComprobantePagoSchema = new EntitySchema({
       type: "varchar",
       length: 50,
       nullable: false,
-      comment: "Mes facturado en formato YYYY-MM o label (ej: 'Agosto 2025', 'Multiple')",
+      comment:
+        "Mes facturado en formato YYYY-MM o label (ej: 'Agosto 2025', 'Multiple')",
     },
     bancoOrigen: {
       type: "varchar",
@@ -165,7 +173,8 @@ const ComprobantePagoSchema = new EntitySchema({
     estudiantesRuts: {
       type: "jsonb",
       nullable: true,
-      comment: "Array de RUTs de estudiantes incluidos en el pago (para pagos agrupados)",
+      comment:
+        "Array de RUTs de estudiantes incluidos en el pago (para pagos agrupados)",
     },
     mesesCorrespondientes: {
       type: "jsonb",
@@ -175,7 +184,8 @@ const ComprobantePagoSchema = new EntitySchema({
     detallesPago: {
       type: "jsonb",
       nullable: true,
-      comment: "Detalles del pago: { estudianteRut: { meses: [...], monto: ... }, ... }",
+      comment:
+        "Detalles del pago: { estudianteRut: { meses: [...], monto: ... }, ... }",
     },
     notificacionEnviada: {
       type: "boolean",

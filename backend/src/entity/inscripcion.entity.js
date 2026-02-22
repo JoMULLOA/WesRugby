@@ -24,7 +24,7 @@ const InscripcionSchema = new EntitySchema({
       nullable: false,
     },
     apellidos: {
-      type: "varchar", 
+      type: "varchar",
       length: 100,
       nullable: false,
     },
@@ -86,7 +86,16 @@ const InscripcionSchema = new EntitySchema({
     },
     relacionAlumno: {
       type: "enum",
-      enum: ["padre", "madre", "abuelo", "abuela", "tio", "tia", "tutor_legal", "otro"],
+      enum: [
+        "padre",
+        "madre",
+        "abuelo",
+        "abuela",
+        "tio",
+        "tia",
+        "tutor_legal",
+        "otro",
+      ],
       nullable: false,
     },
     // Información Médica
@@ -187,7 +196,7 @@ const InscripcionSchema = new EntitySchema({
       inverseSide: "alumno",
     },
     pagos: {
-      type: "one-to-many", 
+      type: "one-to-many",
       target: "ComprobantePago",
       inverseSide: "inscripcion",
     },

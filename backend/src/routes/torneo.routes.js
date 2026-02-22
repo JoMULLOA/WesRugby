@@ -1,14 +1,18 @@
 "use strict";
 import { Router } from "express";
-import { 
-  crearTorneo, 
-  obtenerTorneos, 
-  obtenerTorneosDisponibles, 
-  participarEnTorneo, 
+import {
+  crearTorneo,
+  obtenerTorneos,
+  obtenerTorneosDisponibles,
+  participarEnTorneo,
   obtenerMisParticipaciones,
-  actualizarEstadoTorneo
+  actualizarEstadoTorneo,
 } from "../controllers/torneo.controller.js";
-import { isDirectiva, isRamaExterna, isAuthenticated } from "../middlewares/authorization.middleware.js";
+import {
+  isDirectiva,
+  isRamaExterna,
+  isAuthenticated,
+} from "../middlewares/authorization.middleware.js";
 
 const router = Router();
 
@@ -25,7 +29,6 @@ router
   .get("/mis-participaciones", isRamaExterna, obtenerMisParticipaciones);
 
 // Rutas generales (todos los roles autenticados)
-router
-  .get("/publicos", isAuthenticated, obtenerTorneosDisponibles);
+router.get("/publicos", isAuthenticated, obtenerTorneosDisponibles);
 
 export default router;

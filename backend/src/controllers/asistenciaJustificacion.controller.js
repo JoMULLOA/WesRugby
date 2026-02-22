@@ -1,7 +1,11 @@
 "use strict";
 import { AppDataSource } from "../config/configDb.js";
 import Asistencia from "../entity/asistencia.entity.js";
-import { handleErrorClient, handleErrorServer, handleSuccess } from "../handlers/responseHandlers.js";
+import {
+  handleErrorClient,
+  handleErrorServer,
+  handleSuccess,
+} from "../handlers/responseHandlers.js";
 import { resolveFileUrl, deleteFromS3 } from "../utils/storage.utils.js";
 import { getEstudiantesByApoderadoService } from "../services/estudiante.service.js";
 
@@ -31,11 +35,17 @@ export async function subirJustificanteAsistencia(req, res) {
     // Verificar que el alumno pertenece a los dependientes del apoderado
     const apoderadoRut = req.user?.rut || "";
     const [dependientes] = await getEstudiantesByApoderadoService(apoderadoRut);
-    const dependientesRut = Array.isArray(dependientes) ? dependientes.map((e) => e.rut) : [];
+    const dependientesRut = Array.isArray(dependientes)
+      ? dependientes.map((e) => e.rut)
+      : [];
     const rutAlumno = asistencia.inscripcion?.rutAlumno;
 
     if (!rutAlumno || !dependientesRut.includes(rutAlumno)) {
-      return handleErrorClient(res, 403, "No tienes permisos sobre este alumno");
+      return handleErrorClient(
+        res,
+        403,
+        "No tienes permisos sobre este alumno",
+      );
     }
 
     // Si ya había un archivo y suben uno nuevo, eliminamos el anterior
@@ -54,15 +64,25 @@ export async function subirJustificanteAsistencia(req, res) {
       asistencia.justificacion = justificacion || null;
     }
 
-    asistencia.apoderadoEmailJustificacion = req.user?.email || asistencia.apoderadoEmailJustificacion || null;
+    asistencia.apoderadoEmailJustificacion =
+      req.user?.email || asistencia.apoderadoEmailJustificacion || null;
     asistencia.estado = "justificado";
     asistencia.updatedAt = new Date();
 
     const guardado = await asistenciaRepository.save(asistencia);
 
     // Limpieza del archivo previo si corresponde (no bloquear respuesta si falla)
-    if (file && hadPreviousFile && previousPath && previousPath !== guardado.rutaJustificacion) {
-      try { await deleteFromS3(previousPath); } catch { /* noop */ }
+    if (
+      file &&
+      hadPreviousFile &&
+      previousPath &&
+      previousPath !== guardado.rutaJustificacion
+    ) {
+      try {
+        await deleteFromS3(previousPath);
+      } catch {
+        /* noop */
+      }
     }
 
     const payload = {
@@ -85,7 +105,8 @@ export async function subirJustificanteAsistencia(req, res) {
         ? {
             id: guardado.inscripcion.id,
             codigoAlumno: guardado.inscripcion.codigoAlumno,
-            nombreCompleto: `${guardado.inscripcion.nombre} ${guardado.inscripcion.apellidos}`.trim(),
+            nombreCompleto:
+              `${guardado.inscripcion.nombre} ${guardado.inscripcion.apellidos}`.trim(),
             rutAlumno: guardado.inscripcion.rutAlumno,
             categoria: guardado.inscripcion.categoria || null,
           }
@@ -119,15 +140,23 @@ export async function obtenerJustificacionesApoderado(req, res) {
       .createQueryBuilder("asistencia")
       .leftJoinAndSelect("asistencia.inscripcion", "inscripcion")
       .leftJoinAndSelect("asistencia.marcadoPor", "marcadoPor")
-      .where(dependientesRut.length ? "inscripcion.rutAlumno IN (:...ruts)" : "1=0", { ruts: dependientesRut });
+      .where(
+        dependientesRut.length ? "inscripcion.rutAlumno IN (:...ruts)" : "1=0",
+        { ruts: dependientesRut },
+      );
 
     if (estadoFiltro) {
       qb.andWhere("asistencia.estado = :estado", { estado });
     } else {
-      qb.andWhere("asistencia.estado IN (:...estados)", { estados: allowedStates });
+      qb.andWhere("asistencia.estado IN (:...estados)", {
+        estados: allowedStates,
+      });
     }
 
-    qb.orderBy("asistencia.fecha", "DESC").addOrderBy("asistencia.createdAt", "DESC");
+    qb.orderBy("asistencia.fecha", "DESC").addOrderBy(
+      "asistencia.createdAt",
+      "DESC",
+    );
 
     const [registros, total] = await qb.take(take).skip(skip).getManyAndCount();
 
@@ -151,7 +180,8 @@ export async function obtenerJustificacionesApoderado(req, res) {
         ? {
             id: item.inscripcion.id,
             codigoAlumno: item.inscripcion.codigoAlumno,
-            nombreCompleto: `${item.inscripcion.nombre} ${item.inscripcion.apellidos}`.trim(),
+            nombreCompleto:
+              `${item.inscripcion.nombre} ${item.inscripcion.apellidos}`.trim(),
             rutAlumno: item.inscripcion.rutAlumno,
             categoria: item.inscripcion.categoria || null,
           }
@@ -204,8 +234,12 @@ export async function obtenerAsistenciasPendientesJustificacion(req, res) {
       .createQueryBuilder("asistencia")
       .leftJoinAndSelect("asistencia.inscripcion", "inscripcion")
       .where("inscripcion.rutAlumno IN (:...ruts)", { ruts: dependientesRut })
-      .andWhere("asistencia.estado IN (:...estados)", { estados: ["ausente", "tardanza"] })
-      .andWhere("(asistencia.justificacion IS NULL OR asistencia.justificacion = '')")
+      .andWhere("asistencia.estado IN (:...estados)", {
+        estados: ["ausente", "tardanza"],
+      })
+      .andWhere(
+        "(asistencia.justificacion IS NULL OR asistencia.justificacion = '')",
+      )
       .orderBy("asistencia.fecha", "DESC")
       .take(take);
 
@@ -222,7 +256,8 @@ export async function obtenerAsistenciasPendientesJustificacion(req, res) {
         ? {
             id: item.inscripcion.id,
             codigoAlumno: item.inscripcion.codigoAlumno,
-            nombreCompleto: `${item.inscripcion.nombre} ${item.inscripcion.apellidos}`.trim(),
+            nombreCompleto:
+              `${item.inscripcion.nombre} ${item.inscripcion.apellidos}`.trim(),
             rutAlumno: item.inscripcion.rutAlumno,
             categoria: item.inscripcion.categoria || null,
           }

@@ -123,7 +123,8 @@ const EstudianteSchema = new EntitySchema({
     equipamiento: {
       type: "jsonb",
       nullable: true,
-      comment: "Registro de poleron, calcetas, protector bucal, uniforme y añadidos",
+      comment:
+        "Registro de poleron, calcetas, protector bucal, uniforme y añadidos",
     },
     contactoEmergencia: {
       type: "varchar",
@@ -139,7 +140,7 @@ const EstudianteSchema = new EntitySchema({
       type: "varchar",
       length: 12,
       nullable: true,
-      comment: "RUT del apoderado principal"
+      comment: "RUT del apoderado principal",
     },
     nombreResponsable: {
       type: "varchar",
@@ -150,7 +151,7 @@ const EstudianteSchema = new EntitySchema({
       type: "varchar",
       length: 12,
       nullable: true,
-      comment: "RUT del apoderado secundario"
+      comment: "RUT del apoderado secundario",
     },
     nombreResponsable2: {
       type: "varchar",
@@ -161,7 +162,7 @@ const EstudianteSchema = new EntitySchema({
       type: "varchar",
       length: 500,
       nullable: true,
-      comment: "URL de la foto del estudiante"
+      comment: "URL de la foto del estudiante",
     },
     observaciones: {
       type: "text",
@@ -198,7 +199,7 @@ const EstudianteSchema = new EntitySchema({
       columns: ["rutResponsable"],
     },
     {
-      name: "IDX_ESTUDIANTE_RESPONSABLE2", 
+      name: "IDX_ESTUDIANTE_RESPONSABLE2",
       columns: ["rutResponsable2"],
     },
     {

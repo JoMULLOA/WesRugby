@@ -61,7 +61,10 @@ export async function createAuspiciador(req, res) {
     const auspiciadorData = { ...req.body };
     const { rut, nombreCompleto } = req.user;
 
-    if (typeof auspiciadorData.enlace === "string" && !auspiciadorData.sitioWeb) {
+    if (
+      typeof auspiciadorData.enlace === "string" &&
+      !auspiciadorData.sitioWeb
+    ) {
       auspiciadorData.sitioWeb = auspiciadorData.enlace.trim();
     }
 
@@ -103,7 +106,8 @@ export async function createAuspiciador(req, res) {
       nombreCreador: nombreCompleto || "",
     };
 
-    const [auspiciador, error] = await createAuspiciadorService(dataWithCreator);
+    const [auspiciador, error] =
+      await createAuspiciadorService(dataWithCreator);
 
     if (error) {
       await cleanupUploadedAsset(req.file);
@@ -125,7 +129,7 @@ export async function getAuspiciadores(req, res) {
 
     // Filtros según el rol (si hay usuario autenticado)
     const filters = {};
-    
+
     if (estado) {
       filters.estado = estado;
     }
@@ -185,7 +189,11 @@ export async function getAuspiciador(req, res) {
 
     // Si no es directiva, solo puede ver auspiciadores activos
     if (rol && rol !== "directiva" && auspiciador.estado !== "activo") {
-      return handleErrorClient(res, 403, "No tienes permisos para ver este auspiciador");
+      return handleErrorClient(
+        res,
+        403,
+        "No tienes permisos para ver este auspiciador",
+      );
     }
 
     const responseData = mapAuspiciadorForResponse(auspiciador);
@@ -246,7 +254,11 @@ export async function updateAuspiciador(req, res) {
 
     if (existingError || !existing) {
       await cleanupUploadedAsset(req.file);
-      return handleErrorClient(res, 404, existingError || "Auspiciador no encontrado");
+      return handleErrorClient(
+        res,
+        404,
+        existingError || "Auspiciador no encontrado",
+      );
     }
 
     const previousImageUrl = existing.imagen;
@@ -263,7 +275,12 @@ export async function updateAuspiciador(req, res) {
     }
 
     const responseData = mapAuspiciadorForResponse(auspiciador);
-    handleSuccess(res, 200, "Auspiciador actualizado exitosamente", responseData);
+    handleSuccess(
+      res,
+      200,
+      "Auspiciador actualizado exitosamente",
+      responseData,
+    );
   } catch (error) {
     await cleanupUploadedAsset(req.file);
     handleErrorServer(res, 500, error.message);
@@ -281,7 +298,11 @@ export async function deleteAuspiciador(req, res) {
     const [existing, existingError] = await getAuspiciadorService(id);
 
     if (existingError || !existing) {
-      return handleErrorClient(res, 404, existingError || "Auspiciador no encontrado");
+      return handleErrorClient(
+        res,
+        404,
+        existingError || "Auspiciador no encontrado",
+      );
     }
 
     const previousImageUrl = existing.imagen;
@@ -315,14 +336,22 @@ export async function changeEstadoAuspiciador(req, res) {
       return handleErrorClient(res, 400, "Estado es obligatorio");
     }
 
-    const [auspiciador, error] = await changeEstadoAuspiciadorService(id, estado);
+    const [auspiciador, error] = await changeEstadoAuspiciadorService(
+      id,
+      estado,
+    );
 
     if (error) {
       return handleErrorClient(res, 400, error);
     }
 
     const responseData = mapAuspiciadorForResponse(auspiciador);
-    handleSuccess(res, 200, `Estado del auspiciador cambiado a '${estado}' exitosamente`, responseData);
+    handleSuccess(
+      res,
+      200,
+      `Estado del auspiciador cambiado a '${estado}' exitosamente`,
+      responseData,
+    );
   } catch (error) {
     handleErrorServer(res, 500, error.message);
   }

@@ -20,8 +20,16 @@ export async function createNoticia(req, res) {
     const { rut, nombreCompleto } = req.user;
 
     // Validaciones básicas
-    if (!noticiaData.titulo || !noticiaData.descripcion || !noticiaData.imagen) {
-      return handleErrorClient(res, 400, "Título, descripción e imagen son obligatorios");
+    if (
+      !noticiaData.titulo ||
+      !noticiaData.descripcion ||
+      !noticiaData.imagen
+    ) {
+      return handleErrorClient(
+        res,
+        400,
+        "Título, descripción e imagen son obligatorios",
+      );
     }
 
     // Agregar información del creador
@@ -50,19 +58,19 @@ export async function getNoticias(req, res) {
 
     // Filtros según el rol (si hay usuario autenticado)
     const filters = {};
-    
+
     if (estado) {
       filters.estado = estado;
     }
-    
+
     if (destacada !== undefined) {
-      filters.destacada = destacada === 'true';
+      filters.destacada = destacada === "true";
     }
-    
+
     if (fechaDesde) {
       filters.fechaDesde = fechaDesde;
     }
-    
+
     if (fechaHasta) {
       filters.fechaHasta = fechaHasta;
     }
@@ -92,9 +100,9 @@ export async function getNoticiasPublicas(req, res) {
     const filters = {
       estado: "publicada", // Solo noticias publicadas
     };
-    
+
     if (destacada !== undefined) {
-      filters.destacada = destacada === 'true';
+      filters.destacada = destacada === "true";
     }
 
     const [noticias, error] = await getNoticiasService(filters);
@@ -132,7 +140,11 @@ export async function getNoticia(req, res) {
 
     // Si no es directiva, solo puede ver noticias publicadas
     if (rol && rol !== "directiva" && noticia.estado !== "publicada") {
-      return handleErrorClient(res, 403, "No tienes permisos para ver esta noticia");
+      return handleErrorClient(
+        res,
+        403,
+        "No tienes permisos para ver esta noticia",
+      );
     }
 
     handleSuccess(res, 200, "Noticia encontrada", noticia);
@@ -201,7 +213,12 @@ export async function changeEstadoNoticia(req, res) {
       return handleErrorClient(res, 400, error);
     }
 
-    handleSuccess(res, 200, `Estado de la noticia cambiado a '${estado}' exitosamente`, noticia);
+    handleSuccess(
+      res,
+      200,
+      `Estado de la noticia cambiado a '${estado}' exitosamente`,
+      noticia,
+    );
   } catch (error) {
     handleErrorServer(res, 500, error.message);
   }
@@ -222,7 +239,12 @@ export async function toggleDestacada(req, res) {
     }
 
     const estado = noticia.destacada ? "destacada" : "no destacada";
-    handleSuccess(res, 200, `Noticia marcada como ${estado} exitosamente`, noticia);
+    handleSuccess(
+      res,
+      200,
+      `Noticia marcada como ${estado} exitosamente`,
+      noticia,
+    );
   } catch (error) {
     handleErrorServer(res, 500, error.message);
   }

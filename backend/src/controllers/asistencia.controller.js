@@ -17,8 +17,12 @@ export async function registrarAsistencia(req, res) {
     const userRole = req.user.rol;
 
     if (!["entrenador", "directiva"].includes(userRole)) {
-      return handleErrorClient(res, 403, "No autorizado", 
-        "Solo entrenadores y directiva pueden registrar asistencia");
+      return handleErrorClient(
+        res,
+        403,
+        "No autorizado",
+        "Solo entrenadores y directiva pueden registrar asistencia",
+      );
     }
 
     const {
@@ -32,7 +36,7 @@ export async function registrarAsistencia(req, res) {
       descripcionActividad,
       observaciones,
       clima,
-      estado = "presente"
+      estado = "presente",
     } = req.body;
 
     // Verificar que el jugador existe
@@ -47,13 +51,17 @@ export async function registrarAsistencia(req, res) {
         rutJugador,
         fecha,
         tipoActividad,
-        categoria
-      }
+        categoria,
+      },
     });
 
     if (asistenciaExistente) {
-      return handleErrorClient(res, 400, "Asistencia duplicada", 
-        "Ya existe un registro de asistencia para este jugador en esta fecha y actividad");
+      return handleErrorClient(
+        res,
+        400,
+        "Asistencia duplicada",
+        "Ya existe un registro de asistencia para este jugador en esta fecha y actividad",
+      );
     }
 
     const nuevaAsistencia = asistenciaRepository.create({
@@ -68,18 +76,22 @@ export async function registrarAsistencia(req, res) {
       observaciones,
       clima,
       estado,
-      registradoPorRut: req.user.rut
+      registradoPorRut: req.user.rut,
     });
 
     const asistenciaGuardada = await asistenciaRepository.save(nuevaAsistencia);
 
     const asistenciaCompleta = await asistenciaRepository.findOne({
       where: { id: asistenciaGuardada.id },
-      relations: ["jugador", "registradoPor"]
+      relations: ["jugador", "registradoPor"],
     });
 
-    handleSuccess(res, 201, "Asistencia registrada exitosamente", asistenciaCompleta);
-
+    handleSuccess(
+      res,
+      201,
+      "Asistencia registrada exitosamente",
+      asistenciaCompleta,
+    );
   } catch (error) {
     console.error("Error registrando asistencia:", error);
     handleErrorServer(res, 500, "Error interno del servidor", error.message);
@@ -100,23 +112,23 @@ export async function obtenerAsistencias(req, res) {
       tipoActividad,
       estado,
       limite = 50,
-      pagina = 1
+      pagina = 1,
     } = req.query;
 
-    let whereCondition = {};
+    const whereCondition = {};
 
     // Filtro por rol
     if (userRole === "apoderado") {
       // Apoderados solo ven asistencias de sus hijos
       const hijos = await userRepository.find({
-        where: { rutApoderado: userRut }
+        where: { rutApoderado: userRut },
       });
-      
+
       if (hijos.length === 0) {
         return handleSuccess(res, 200, "Asistencias obtenidas", []);
       }
 
-      const rutsHijos = hijos.map(hijo => hijo.rut);
+      const rutsHijos = hijos.map((hijo) => hijo.rut);
       whereCondition.rutJugador = { $in: rutsHijos };
     } else if (rutJugador) {
       whereCondition.rutJugador = rutJugador;
@@ -130,7 +142,7 @@ export async function obtenerAsistencias(req, res) {
     if (fechaInicio && fechaFin) {
       whereCondition.fecha = {
         $gte: fechaInicio,
-        $lte: fechaFin
+        $lte: fechaFin,
       };
     }
 
@@ -153,7 +165,7 @@ export async function obtenerAsistencias(req, res) {
       relations: ["jugador", "registradoPor"],
       order: { fecha: "DESC", horaInicio: "DESC" },
       take: parseInt(limite),
-      skip: skip
+      skip: skip,
     });
 
     const resultado = {
@@ -162,12 +174,11 @@ export async function obtenerAsistencias(req, res) {
         total,
         pagina: parseInt(pagina),
         limite: parseInt(limite),
-        totalPaginas: Math.ceil(total / parseInt(limite))
-      }
+        totalPaginas: Math.ceil(total / parseInt(limite)),
+      },
     };
 
     handleSuccess(res, 200, "Asistencias obtenidas exitosamente", resultado);
-
   } catch (error) {
     console.error("Error obteniendo asistencias:", error);
     handleErrorServer(res, 500, "Error interno del servidor", error.message);
@@ -181,40 +192,57 @@ export async function actualizarAsistencia(req, res) {
     const userRole = req.user.rol;
 
     if (!["entrenador", "directiva"].includes(userRole)) {
-      return handleErrorClient(res, 403, "No autorizado", 
-        "Solo entrenadores y directiva pueden actualizar asistencia");
+      return handleErrorClient(
+        res,
+        403,
+        "No autorizado",
+        "Solo entrenadores y directiva pueden actualizar asistencia",
+      );
     }
 
     const asistencia = await asistenciaRepository.findOneBy({ id });
     if (!asistencia) {
-      return handleErrorClient(res, 404, "Registro de asistencia no encontrado");
+      return handleErrorClient(
+        res,
+        404,
+        "Registro de asistencia no encontrado",
+      );
     }
 
     const datosActualizacion = req.body;
 
     // Campos permitidos para actualización
     const camposPermitidos = [
-      'estado', 'horaInicio', 'horaFin', 'observaciones', 'clima',
-      'descripcionActividad', 'lugar'
+      "estado",
+      "horaInicio",
+      "horaFin",
+      "observaciones",
+      "clima",
+      "descripcionActividad",
+      "lugar",
     ];
 
-    camposPermitidos.forEach(campo => {
+    camposPermitidos.forEach((campo) => {
       if (datosActualizacion[campo] !== undefined) {
         asistencia[campo] = datosActualizacion[campo];
       }
     });
 
     asistencia.updatedAt = new Date();
-    
+
     const asistenciaActualizada = await asistenciaRepository.save(asistencia);
 
     const asistenciaCompleta = await asistenciaRepository.findOne({
       where: { id: asistenciaActualizada.id },
-      relations: ["jugador", "registradoPor"]
+      relations: ["jugador", "registradoPor"],
     });
 
-    handleSuccess(res, 200, "Asistencia actualizada exitosamente", asistenciaCompleta);
-
+    handleSuccess(
+      res,
+      200,
+      "Asistencia actualizada exitosamente",
+      asistenciaCompleta,
+    );
   } catch (error) {
     console.error("Error actualizando asistencia:", error);
     handleErrorServer(res, 500, "Error interno del servidor", error.message);
@@ -239,7 +267,7 @@ export async function registrarAsistenciaMasiva(req, res) {
       lugar,
       descripcionActividad,
       clima,
-      jugadores // Array de { rut, estado, observaciones? }
+      jugadores, // Array de { rut, estado, observaciones? }
     } = req.body;
 
     if (!jugadores || jugadores.length === 0) {
@@ -252,7 +280,9 @@ export async function registrarAsistenciaMasiva(req, res) {
     for (const jugadorData of jugadores) {
       try {
         // Verificar que el jugador existe
-        const jugador = await userRepository.findOneBy({ rut: jugadorData.rut });
+        const jugador = await userRepository.findOneBy({
+          rut: jugadorData.rut,
+        });
         if (!jugador) {
           errores.push(`Jugador con RUT ${jugadorData.rut} no encontrado`);
           continue;
@@ -264,12 +294,14 @@ export async function registrarAsistenciaMasiva(req, res) {
             rutJugador: jugadorData.rut,
             fecha,
             tipoActividad,
-            categoria
-          }
+            categoria,
+          },
         });
 
         if (asistenciaExistente) {
-          errores.push(`Ya existe asistencia para ${jugador.nombres} ${jugador.apellidos}`);
+          errores.push(
+            `Ya existe asistencia para ${jugador.nombres} ${jugador.apellidos}`,
+          );
           continue;
         }
 
@@ -285,12 +317,12 @@ export async function registrarAsistenciaMasiva(req, res) {
           clima,
           estado: jugadorData.estado || "presente",
           observaciones: jugadorData.observaciones,
-          registradoPorRut: req.user.rut
+          registradoPorRut: req.user.rut,
         });
 
-        const asistenciaGuardada = await asistenciaRepository.save(nuevaAsistencia);
+        const asistenciaGuardada =
+          await asistenciaRepository.save(nuevaAsistencia);
         asistenciasCreadas.push(asistenciaGuardada);
-
       } catch (error) {
         errores.push(`Error procesando ${jugadorData.rut}: ${error.message}`);
       }
@@ -300,17 +332,24 @@ export async function registrarAsistenciaMasiva(req, res) {
       exitosas: asistenciasCreadas.length,
       errores: errores.length,
       detalleErrores: errores,
-      asistencias: asistenciasCreadas
+      asistencias: asistenciasCreadas,
     };
 
     if (asistenciasCreadas.length > 0) {
-      handleSuccess(res, 201, 
-        `Asistencia masiva procesada: ${asistenciasCreadas.length} exitosas, ${errores.length} errores`, 
-        resultado);
+      handleSuccess(
+        res,
+        201,
+        `Asistencia masiva procesada: ${asistenciasCreadas.length} exitosas, ${errores.length} errores`,
+        resultado,
+      );
     } else {
-      handleErrorClient(res, 400, "No se pudo registrar ninguna asistencia", resultado);
+      handleErrorClient(
+        res,
+        400,
+        "No se pudo registrar ninguna asistencia",
+        resultado,
+      );
     }
-
   } catch (error) {
     console.error("Error en registro masivo:", error);
     handleErrorServer(res, 500, "Error interno del servidor", error.message);
@@ -322,16 +361,16 @@ export async function obtenerEstadisticasAsistencia(req, res) {
   try {
     const userRole = req.user.rol;
     const userRut = req.user.rut;
-    
+
     const { fechaInicio, fechaFin, categoria, rutJugador } = req.query;
 
-    let whereCondition = {};
+    const whereCondition = {};
 
     // Filtros de fecha
     if (fechaInicio && fechaFin) {
       whereCondition.fecha = {
         $gte: fechaInicio,
-        $lte: fechaFin
+        $lte: fechaFin,
       };
     }
 
@@ -342,21 +381,25 @@ export async function obtenerEstadisticasAsistencia(req, res) {
     // Restricciones por rol
     if (userRole === "apoderado") {
       const hijos = await userRepository.find({
-        where: { rutApoderado: userRut }
+        where: { rutApoderado: userRut },
       });
-      
+
       if (hijos.length === 0) {
-        return handleSuccess(res, 200, "Estadísticas obtenidas", { mensaje: "No tiene hijos registrados" });
+        return handleSuccess(res, 200, "Estadísticas obtenidas", {
+          mensaje: "No tiene hijos registrados",
+        });
       }
 
-      const rutsHijos = hijos.map(hijo => hijo.rut);
+      const rutsHijos = hijos.map((hijo) => hijo.rut);
       whereCondition.rutJugador = { $in: rutsHijos };
     } else if (rutJugador) {
       whereCondition.rutJugador = rutJugador;
     }
 
     // Estadísticas generales
-    const totalRegistros = await asistenciaRepository.count({ where: whereCondition });
+    const totalRegistros = await asistenciaRepository.count({
+      where: whereCondition,
+    });
 
     // Por estado
     const porEstado = await asistenciaRepository
@@ -393,7 +436,10 @@ export async function obtenerEstadisticasAsistencia(req, res) {
         .leftJoinAndSelect("asistencia.jugador", "jugador")
         .select("jugador.nombres", "nombres")
         .addSelect("jugador.apellidos", "apellidos")
-        .addSelect("COUNT(CASE WHEN asistencia.estado = 'presente' THEN 1 END)", "presentes")
+        .addSelect(
+          "COUNT(CASE WHEN asistencia.estado = 'presente' THEN 1 END)",
+          "presentes",
+        )
         .addSelect("COUNT(*)", "total")
         .where(whereCondition)
         .groupBy("jugador.rut")
@@ -407,13 +453,17 @@ export async function obtenerEstadisticasAsistencia(req, res) {
         totalRegistros,
         porEstado,
         porTipoActividad,
-        porCategoria
+        porCategoria,
       },
-      mejorAsistencia
+      mejorAsistencia,
     };
 
-    handleSuccess(res, 200, "Estadísticas de asistencia obtenidas exitosamente", estadisticas);
-
+    handleSuccess(
+      res,
+      200,
+      "Estadísticas de asistencia obtenidas exitosamente",
+      estadisticas,
+    );
   } catch (error) {
     console.error("Error obteniendo estadísticas:", error);
     handleErrorServer(res, 500, "Error interno del servidor", error.message);
@@ -427,19 +477,26 @@ export async function eliminarAsistencia(req, res) {
     const userRole = req.user.rol;
 
     if (userRole !== "directiva") {
-      return handleErrorClient(res, 403, "No autorizado", 
-        "Solo directiva puede eliminar registros de asistencia");
+      return handleErrorClient(
+        res,
+        403,
+        "No autorizado",
+        "Solo directiva puede eliminar registros de asistencia",
+      );
     }
 
     const asistencia = await asistenciaRepository.findOneBy({ id });
     if (!asistencia) {
-      return handleErrorClient(res, 404, "Registro de asistencia no encontrado");
+      return handleErrorClient(
+        res,
+        404,
+        "Registro de asistencia no encontrado",
+      );
     }
 
     await asistenciaRepository.remove(asistencia);
 
     handleSuccess(res, 200, "Registro de asistencia eliminado exitosamente");
-
   } catch (error) {
     console.error("Error eliminando asistencia:", error);
     handleErrorServer(res, 500, "Error interno del servidor", error.message);

@@ -6,7 +6,7 @@ import {
   obtenerViajesPorMes,
   obtenerClasificacionUsuarios,
   obtenerDestinosPopulares,
-  obtenerAnalisisAvanzado
+  obtenerAnalisisAvanzado,
 } from "../controllers/estadisticas.controller.js";
 import { authenticateJwt } from "../middlewares/authentication.middleware.js";
 import { isAdmin } from "../middlewares/authorization.middleware.js";

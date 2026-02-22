@@ -1,7 +1,7 @@
 "use strict";
 import { Router } from "express";
 import passport from "passport";
-import { 
+import {
   crearEvento,
   obtenerEventos,
   obtenerEventosDisponibles,
@@ -15,7 +15,11 @@ import {
   descargarParticipacionesEventoPdf,
   descargarParticipacionesEventoCsv,
 } from "../controllers/evento.controller.js";
-import { isDirectiva, isRamaExterna, isAuthenticated } from "../middlewares/authorization.middleware.js";
+import {
+  isDirectiva,
+  isRamaExterna,
+  isAuthenticated,
+} from "../middlewares/authorization.middleware.js";
 
 const router = Router();
 
@@ -34,22 +38,55 @@ router
     isDirectiva,
     descargarParticipacionesEventoCsv,
   )
-  .get("/:id/participaciones/pdf", authenticateJWT, isDirectiva, descargarParticipacionesEventoPdf)
-  .get("/:id/participaciones", authenticateJWT, isDirectiva, obtenerParticipacionesEvento);
+  .get(
+    "/:id/participaciones/pdf",
+    authenticateJWT,
+    isDirectiva,
+    descargarParticipacionesEventoPdf,
+  )
+  .get(
+    "/:id/participaciones",
+    authenticateJWT,
+    isDirectiva,
+    obtenerParticipacionesEvento,
+  );
 
 // Rutas para RamaExterna
 router
-  .get("/disponibles", authenticateJWT, isRamaExterna, obtenerEventosDisponibles)
+  .get(
+    "/disponibles",
+    authenticateJWT,
+    isRamaExterna,
+    obtenerEventosDisponibles,
+  )
   .post("/participar", authenticateJWT, isRamaExterna, participarEnEvento)
-  .put("/participacion/:participacionId", authenticateJWT, isRamaExterna, editarParticipacion)
-  .get("/:eventoId/categorias-registradas", authenticateJWT, isRamaExterna, obtenerCategoriasRegistradas);
+  .put(
+    "/participacion/:participacionId",
+    authenticateJWT,
+    isRamaExterna,
+    editarParticipacion,
+  )
+  .get(
+    "/:eventoId/categorias-registradas",
+    authenticateJWT,
+    isRamaExterna,
+    obtenerCategoriasRegistradas,
+  );
 
 // Rutas compartidas entre Directiva y RamaExterna
-router
-  .get("/mis-participaciones", authenticateJWT, isAuthenticated, obtenerMisParticipacionesEvento);
+router.get(
+  "/mis-participaciones",
+  authenticateJWT,
+  isAuthenticated,
+  obtenerMisParticipacionesEvento,
+);
 
 // Rutas generales (todos los roles autenticados)
-router
-  .get("/publicos", authenticateJWT, isAuthenticated, obtenerEventosDisponibles);
+router.get(
+  "/publicos",
+  authenticateJWT,
+  isAuthenticated,
+  obtenerEventosDisponibles,
+);
 
 export default router;

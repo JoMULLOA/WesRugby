@@ -9,7 +9,10 @@ import {
   changeEstadoActa,
 } from "../controllers/actaReunion.controller.js";
 import { authenticateJwt } from "../middlewares/authentication.middleware.js";
-import { isDirectiva, isDirectivaOrTesorera, isDirectivaOrTesoreraOrApoderado } from "../middlewares/authorization.middleware.js";
+import {
+  isDirectiva,
+  isDirectivaOrTesoreraOrApoderado,
+} from "../middlewares/authorization.middleware.js";
 
 const router = Router();
 

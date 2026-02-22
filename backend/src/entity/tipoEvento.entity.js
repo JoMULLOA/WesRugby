@@ -7,40 +7,40 @@ const TipoEvento = new EntitySchema({
     id: {
       type: "uuid",
       primary: true,
-      generated: "uuid"
+      generated: "uuid",
     },
     nombre: {
       type: "varchar",
       length: 100,
       nullable: false,
-      unique: true
+      unique: true,
     },
     esDeportivo: {
       type: "boolean",
       nullable: false,
-      default: false
+      default: false,
     },
     activo: {
       type: "boolean",
       nullable: false,
-      default: true
+      default: true,
     },
     fechaCreacion: {
       type: "timestamp",
-      createDate: true
+      createDate: true,
     },
     fechaActualizacion: {
       type: "timestamp",
-      updateDate: true
-    }
+      updateDate: true,
+    },
   },
   relations: {
     eventos: {
       type: "one-to-many",
       target: "EventoDeportivo",
-      inverseSide: "tipoEvento"
-    }
-  }
+      inverseSide: "tipoEvento",
+    },
+  },
 });
 
 export default TipoEvento;

@@ -6,7 +6,9 @@ import {
 } from "../handlers/responseHandlers.js";
 
 const terminosRepository = AppDataSource.getRepository("TerminosCondiciones");
-const aceptacionesRepository = AppDataSource.getRepository("AceptacionesTerminos");
+const aceptacionesRepository = AppDataSource.getRepository(
+  "AceptacionesTerminos",
+);
 
 /**
  * Obtener la versión activa de términos y condiciones
@@ -47,11 +49,13 @@ export async function verificarAceptacion(req, res) {
     const apoderadoRut = req.user.rut;
     const userRol = req.user.rol;
 
-    console.log(`🔍 Verificando aceptación - RUT: ${apoderadoRut}, Rol: ${userRol}`);
+    console.log(
+      `🔍 Verificando aceptación - RUT: ${apoderadoRut}, Rol: ${userRol}`,
+    );
 
     // Solo los apoderados deben aceptar términos
     // Directiva, tesorera y entrenador están exentos
-    if (userRol !== 'apoderado') {
+    if (userRol !== "apoderado") {
       console.log(`✅ Usuario con rol "${userRol}" exento de términos`);
       return handleSuccess(res, 200, "Usuario exento de aceptar términos", {
         requiereAceptacion: false,
@@ -117,15 +121,19 @@ export async function aceptarTerminos(req, res) {
     console.log("📥 Solicitud de aceptación de términos");
     console.log("👤 Usuario:", req.user);
     console.log("📦 Body:", req.body);
-    
+
     const apoderadoRut = req.user.rut;
     const userRol = req.user.rol;
     const { terminoId } = req.body;
 
     // Solo apoderados pueden aceptar términos
-    if (userRol !== 'apoderado') {
+    if (userRol !== "apoderado") {
       console.log(`❌ Usuario con rol "${userRol}" no puede aceptar términos`);
-      return handleErrorClient(res, 403, "Solo los apoderados deben aceptar términos y condiciones");
+      return handleErrorClient(
+        res,
+        403,
+        "Solo los apoderados deben aceptar términos y condiciones",
+      );
     }
 
     if (!terminoId) {
@@ -134,7 +142,7 @@ export async function aceptarTerminos(req, res) {
     }
 
     console.log(`🔍 Buscando término ID ${terminoId}`);
-    
+
     // Verificar que el término existe y está activo
     const termino = await terminosRepository.findOne({
       where: { id: terminoId, activo: true },
@@ -167,7 +175,7 @@ export async function aceptarTerminos(req, res) {
     const userAgent = req.headers["user-agent"] || "unknown";
 
     console.log(`💾 Registrando aceptación para ${apoderadoRut}`);
-    
+
     // Registrar aceptación
     const aceptacion = aceptacionesRepository.create({
       apoderadoRut,
@@ -180,7 +188,9 @@ export async function aceptarTerminos(req, res) {
 
     await aceptacionesRepository.save(aceptacion);
 
-    console.log(`✅ Apoderado ${apoderadoRut} aceptó términos v${termino.version}`);
+    console.log(
+      `✅ Apoderado ${apoderadoRut} aceptó términos v${termino.version}`,
+    );
 
     handleSuccess(res, 201, "Términos aceptados exitosamente", {
       fechaAceptacion: aceptacion.fechaAceptacion,
@@ -232,7 +242,7 @@ export async function crearTerminos(req, res) {
       return handleErrorClient(
         res,
         400,
-        "Debe proporcionar version, titulo y contenido"
+        "Debe proporcionar version, titulo y contenido",
       );
     }
 
@@ -253,7 +263,7 @@ export async function crearTerminos(req, res) {
     const guardado = await terminosRepository.save(termino);
 
     console.log(
-      `✅ Términos v${version} creados por ${req.user.rut}${activarInmediatamente ? " (ACTIVO)" : ""}`
+      `✅ Términos v${version} creados por ${req.user.rut}${activarInmediatamente ? " (ACTIVO)" : ""}`,
     );
 
     handleSuccess(res, 201, "Términos creados exitosamente", guardado);
@@ -278,7 +288,9 @@ export async function actualizarTerminos(req, res) {
     const { id } = req.params;
     const { version, titulo, contenido, activo } = req.body;
 
-    const termino = await terminosRepository.findOne({ where: { id: parseInt(id) } });
+    const termino = await terminosRepository.findOne({
+      where: { id: parseInt(id) },
+    });
 
     if (!termino) {
       return handleErrorClient(res, 404, "Término no encontrado");
@@ -319,7 +331,9 @@ export async function eliminarTerminos(req, res) {
 
     const { id } = req.params;
 
-    const termino = await terminosRepository.findOne({ where: { id: parseInt(id) } });
+    const termino = await terminosRepository.findOne({
+      where: { id: parseInt(id) },
+    });
 
     if (!termino) {
       return handleErrorClient(res, 404, "Término no encontrado");
@@ -329,7 +343,7 @@ export async function eliminarTerminos(req, res) {
       return handleErrorClient(
         res,
         400,
-        "No se puede eliminar un término activo. Desactívelo primero."
+        "No se puede eliminar un término activo. Desactívelo primero.",
       );
     }
 
@@ -357,7 +371,9 @@ export async function obtenerEstadisticasAceptacion(req, res) {
 
     const { id } = req.params;
 
-    const termino = await terminosRepository.findOne({ where: { id: parseInt(id) } });
+    const termino = await terminosRepository.findOne({
+      where: { id: parseInt(id) },
+    });
 
     if (!termino) {
       return handleErrorClient(res, 404, "Término no encontrado");

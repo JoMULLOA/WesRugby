@@ -14,17 +14,17 @@ const DirectivaSchema = new EntitySchema({
     cargo: {
       type: "enum",
       enum: [
-        "presidente", 
-        "vicepresidente", 
-        "secretario", 
-        "tesorero", 
+        "presidente",
+        "vicepresidente",
+        "secretario",
+        "tesorero",
         "director_deportivo",
         "director_tecnico",
         "vocal",
         "delegado",
         "coordinador_juvenil",
         "coordinador_infantil",
-        "otro"
+        "otro",
       ],
       nullable: false,
       comment: "Cargo en la directiva",
@@ -88,12 +88,12 @@ const DirectivaSchema = new EntitySchema({
       type: "enum",
       enum: [
         "eleccion_periodo",
-        "renuncia", 
+        "renuncia",
         "relevo_temporal",
         "reorganizacion",
         "creacion_cargo",
         "eliminacion_cargo",
-        "otro"
+        "otro",
       ],
       nullable: true,
       comment: "Motivo del cambio (para histórico)",

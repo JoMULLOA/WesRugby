@@ -10,26 +10,21 @@ export const solicitudAmistadBodyValidation = Joi.object({
     .messages({
       "string.empty": "El RUT del receptor no puede estar vacío.",
       "any.required": "El RUT del receptor es obligatorio.",
-      "string.pattern.base": "El formato del RUT debe ser XX.XXX.XXX-X (ej: 12.345.678-9).",
+      "string.pattern.base":
+        "El formato del RUT debe ser XX.XXX.XXX-X (ej: 12.345.678-9).",
       "string.min": "El RUT debe tener al menos 9 caracteres.",
       "string.max": "El RUT no puede tener más de 12 caracteres.",
     }),
-  mensaje: Joi.string()
-    .max(500)
-    .optional()
-    .messages({
-      "string.max": "El mensaje no puede tener más de 500 caracteres.",
-    }),
+  mensaje: Joi.string().max(500).optional().messages({
+    "string.max": "El mensaje no puede tener más de 500 caracteres.",
+  }),
 });
 
 export const respuestaSolicitudValidation = Joi.object({
-  respuesta: Joi.string()
-    .valid("aceptada", "rechazada")
-    .required()
-    .messages({
-      "any.only": "La respuesta debe ser 'aceptada' o 'rechazada'.",
-      "any.required": "La respuesta es obligatoria.",
-    }),
+  respuesta: Joi.string().valid("aceptada", "rechazada").required().messages({
+    "any.only": "La respuesta debe ser 'aceptada' o 'rechazada'.",
+    "any.required": "La respuesta es obligatoria.",
+  }),
 });
 
 export const rutValidation = Joi.object({
@@ -41,7 +36,8 @@ export const rutValidation = Joi.object({
     .messages({
       "string.empty": "El RUT no puede estar vacío.",
       "any.required": "El RUT es obligatorio.",
-      "string.pattern.base": "El formato del RUT debe ser XX.XXX.XXX-X (ej: 12.345.678-9).",
+      "string.pattern.base":
+        "El formato del RUT debe ser XX.XXX.XXX-X (ej: 12.345.678-9).",
       "string.min": "El RUT debe tener al menos 9 caracteres.",
       "string.max": "El RUT no puede tener más de 12 caracteres.",
     }),

@@ -6,14 +6,14 @@ import {
   actualizarInscripcion,
   aprobarInscripcion,
   obtenerEstadisticasInscripciones,
-  darDeBajaInscripcion
+  darDeBajaInscripcion,
 } from "../controllers/inscripcion.controller.js";
 
 import { authenticateJwt } from "../middlewares/authentication.middleware.js";
 import {
   isDirectiva,
   isEntrenador,
-  isAuthenticated
+  isAuthenticated,
 } from "../middlewares/authorization.middleware.js";
 
 const router = Router();
@@ -34,7 +34,12 @@ router.put("/:id", authenticateJwt, isEntrenador, actualizarInscripcion);
 router.patch("/:id/aprobar", authenticateJwt, isDirectiva, aprobarInscripcion);
 
 // Obtener estadísticas (Entrenador, Directiva)
-router.get("/estadisticas/resumen", authenticateJwt, isEntrenador, obtenerEstadisticasInscripciones);
+router.get(
+  "/estadisticas/resumen",
+  authenticateJwt,
+  isEntrenador,
+  obtenerEstadisticasInscripciones,
+);
 
 // Dar de baja inscripción (Solo Directiva)
 router.delete("/:id", authenticateJwt, isDirectiva, darDeBajaInscripcion);

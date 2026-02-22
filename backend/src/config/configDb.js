@@ -1,12 +1,7 @@
 "use strict";
 
 import { DataSource } from "typeorm";
-import {
-  DATABASE,
-  DB_HOST,
-  DB_USERNAME,
-  PASSWORD
-} from "./configEnv.js";
+import { DATABASE, DB_HOST, DB_USERNAME, PASSWORD } from "./configEnv.js";
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -30,8 +25,8 @@ export const AppDataSource = new DataSource({
 
   extra: {
     // PostgreSQL usa 'client_encoding', no 'charset'
-    client_encoding: "UTF8"
-  }
+    client_encoding: "UTF8",
+  },
 });
 
 export async function connectDB() {

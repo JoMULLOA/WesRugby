@@ -14,18 +14,18 @@ const UPLOADS_DIR = path.resolve(__dirname, "..", "..", "uploads");
 function getBackendBaseUrl(req) {
   // 1. Usar variable de entorno explícita si existe (para producción)
   if (process.env.BACKEND_URL) {
-    return process.env.BACKEND_URL.replace(/\/$/, '');
+    return process.env.BACKEND_URL.replace(/\/$/, "");
   }
-  
+
   // 2. PRIORIDAD: Construir desde request (funciona en producción y desarrollo)
   if (req) {
     const protocol = req.protocol;
     const host = req.get("host");
     return `${protocol}://${host}`;
   }
-  
+
   // 3. Fallback a configuración de entorno (solo si no hay request)
-  const protocol = NODE_ENV === 'production' ? 'https' : 'http';
+  const protocol = NODE_ENV === "production" ? "https" : "http";
   return `${protocol}://${HOST}:${PORT}`;
 }
 
@@ -48,12 +48,12 @@ export function resolveFileUrl(value, req) {
   // Para archivos locales: construir URL completa
   const baseUrl = getBackendBaseUrl(req);
   const cleanPath = value.replace(/^\/+/, "");
-  
+
   // Si la ruta no empieza con "uploads", agregarla
   if (!cleanPath.startsWith("uploads/")) {
     return `${baseUrl}/uploads/${cleanPath}`;
   }
-  
+
   return `${baseUrl}/${cleanPath}`;
 }
 
@@ -64,7 +64,7 @@ export function resolveFileUrl(value, req) {
  */
 export function extractObjectKey(pathOrUrl) {
   if (!pathOrUrl) return null;
-  
+
   // Si es una URL completa, extraer el path
   if (/^https?:\/\//i.test(pathOrUrl)) {
     try {
@@ -74,7 +74,7 @@ export function extractObjectKey(pathOrUrl) {
       return null;
     }
   }
-  
+
   // Si es una ruta relativa, limpiarla
   return pathOrUrl.replace(/^\/+/, "");
 }
@@ -93,8 +93,11 @@ export async function deleteFromStorage(pathOrUrl) {
     }
 
     // Construir ruta absoluta
-    const filePath = path.resolve(UPLOADS_DIR, relativePath.replace(/^uploads\//, ""));
-    
+    const filePath = path.resolve(
+      UPLOADS_DIR,
+      relativePath.replace(/^uploads\//, ""),
+    );
+
     // Verificar que el archivo existe
     if (!fs.existsSync(filePath)) {
       console.warn("Archivo no encontrado:", filePath);

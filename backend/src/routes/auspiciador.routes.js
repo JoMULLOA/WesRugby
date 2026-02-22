@@ -40,6 +40,11 @@ router.put(
 router.delete("/:id", authenticateJwt, isDirectiva, deleteAuspiciador);
 
 // Gestión de estado - solo directiva
-router.patch("/:id/estado", authenticateJwt, isDirectiva, changeEstadoAuspiciador);
+router.patch(
+  "/:id/estado",
+  authenticateJwt,
+  isDirectiva,
+  changeEstadoAuspiciador,
+);
 
 export default router;

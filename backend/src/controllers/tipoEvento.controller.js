@@ -1,6 +1,10 @@
 import { AppDataSource } from "../config/configDb.js";
 import TipoEvento from "../entity/tipoEvento.entity.js";
-import { handleSuccess, handleErrorClient, handleErrorServer } from "../handlers/responseHandlers.js";
+import {
+  handleSuccess,
+  handleErrorClient,
+  handleErrorServer,
+} from "../handlers/responseHandlers.js";
 
 const tipoEventoRepository = AppDataSource.getRepository(TipoEvento);
 
@@ -9,10 +13,15 @@ const obtenerTiposEvento = async (req, res) => {
   try {
     const tipos = await tipoEventoRepository.find({
       where: { activo: true },
-      order: { nombre: 'ASC' }
+      order: { nombre: "ASC" },
     });
 
-    return handleSuccess(res, 200, "Tipos de evento obtenidos exitosamente", tipos);
+    return handleSuccess(
+      res,
+      200,
+      "Tipos de evento obtenidos exitosamente",
+      tipos,
+    );
   } catch (err) {
     console.error("Error al obtener tipos de evento:", err);
     return handleErrorServer(res, 500, "Error interno del servidor");
@@ -23,10 +32,15 @@ const obtenerTiposEvento = async (req, res) => {
 const obtenerTodosTiposEvento = async (req, res) => {
   try {
     const tipos = await tipoEventoRepository.find({
-      order: { nombre: 'ASC' }
+      order: { nombre: "ASC" },
     });
 
-    return handleSuccess(res, 200, "Todos los tipos de evento obtenidos exitosamente", tipos);
+    return handleSuccess(
+      res,
+      200,
+      "Todos los tipos de evento obtenidos exitosamente",
+      tipos,
+    );
   } catch (err) {
     console.error("Error al obtener todos los tipos de evento:", err);
     return handleErrorServer(res, 500, "Error interno del servidor");
@@ -38,28 +52,37 @@ const crearTipoEvento = async (req, res) => {
   try {
     const { nombre, esDeportivo } = req.body;
 
-    if (!nombre || typeof esDeportivo !== 'boolean') {
-      return handleErrorClient(res, 400, "Error de validación", { info: "Nombre y esDeportivo son requeridos" });
+    if (!nombre || typeof esDeportivo !== "boolean") {
+      return handleErrorClient(res, 400, "Error de validación", {
+        info: "Nombre y esDeportivo son requeridos",
+      });
     }
 
     // Verificar que no exista un tipo con el mismo nombre
     const tipoExistente = await tipoEventoRepository.findOne({
-      where: { nombre: nombre.trim() }
+      where: { nombre: nombre.trim() },
     });
 
     if (tipoExistente) {
-      return handleErrorClient(res, 409, "Conflicto", { info: "Ya existe un tipo de evento con ese nombre" });
+      return handleErrorClient(res, 409, "Conflicto", {
+        info: "Ya existe un tipo de evento con ese nombre",
+      });
     }
 
     const nuevoTipo = tipoEventoRepository.create({
       nombre: nombre.trim(),
       esDeportivo,
-      activo: true
+      activo: true,
     });
 
     const tipoGuardado = await tipoEventoRepository.save(nuevoTipo);
 
-    return handleSuccess(res, 201, "Tipo de evento creado exitosamente", tipoGuardado);
+    return handleSuccess(
+      res,
+      201,
+      "Tipo de evento creado exitosamente",
+      tipoGuardado,
+    );
   } catch (err) {
     console.error("Error al crear tipo de evento:", err);
     return handleErrorServer(res, 500, "Error interno del servidor");
@@ -73,32 +96,41 @@ const actualizarTipoEvento = async (req, res) => {
     const { nombre, esDeportivo, activo } = req.body;
 
     const tipo = await tipoEventoRepository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!tipo) {
-      return handleErrorClient(res, 404, "No encontrado", { info: "Tipo de evento no encontrado" });
+      return handleErrorClient(res, 404, "No encontrado", {
+        info: "Tipo de evento no encontrado",
+      });
     }
 
     // Verificar nombre duplicado si se está cambiando
     if (nombre && nombre.trim() !== tipo.nombre) {
       const tipoExistente = await tipoEventoRepository.findOne({
-        where: { nombre: nombre.trim() }
+        where: { nombre: nombre.trim() },
       });
 
       if (tipoExistente) {
-        return handleErrorClient(res, 409, "Conflicto", { info: "Ya existe un tipo de evento con ese nombre" });
+        return handleErrorClient(res, 409, "Conflicto", {
+          info: "Ya existe un tipo de evento con ese nombre",
+        });
       }
     }
 
     // Actualizar campos
     if (nombre) tipo.nombre = nombre.trim();
-    if (typeof esDeportivo === 'boolean') tipo.esDeportivo = esDeportivo;
-    if (typeof activo === 'boolean') tipo.activo = activo;
+    if (typeof esDeportivo === "boolean") tipo.esDeportivo = esDeportivo;
+    if (typeof activo === "boolean") tipo.activo = activo;
 
     const tipoActualizado = await tipoEventoRepository.save(tipo);
 
-    return handleSuccess(res, 200, "Tipo de evento actualizado exitosamente", tipoActualizado);
+    return handleSuccess(
+      res,
+      200,
+      "Tipo de evento actualizado exitosamente",
+      tipoActualizado,
+    );
   } catch (err) {
     console.error("Error al actualizar tipo de evento:", err);
     return handleErrorServer(res, 500, "Error interno del servidor");
@@ -111,11 +143,13 @@ const eliminarTipoEvento = async (req, res) => {
     const { id } = req.params;
 
     const tipo = await tipoEventoRepository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!tipo) {
-      return handleErrorClient(res, 404, "No encontrado", { info: "Tipo de evento no encontrado" });
+      return handleErrorClient(res, 404, "No encontrado", {
+        info: "Tipo de evento no encontrado",
+      });
     }
 
     // Solo desactivar, no eliminar físicamente
@@ -135,17 +169,24 @@ const reactivarTipoEvento = async (req, res) => {
     const { id } = req.params;
 
     const tipo = await tipoEventoRepository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!tipo) {
-      return handleErrorClient(res, 404, "No encontrado", { info: "Tipo de evento no encontrado" });
+      return handleErrorClient(res, 404, "No encontrado", {
+        info: "Tipo de evento no encontrado",
+      });
     }
 
     tipo.activo = true;
     await tipoEventoRepository.save(tipo);
 
-    return handleSuccess(res, 200, "Tipo de evento reactivado exitosamente", tipo);
+    return handleSuccess(
+      res,
+      200,
+      "Tipo de evento reactivado exitosamente",
+      tipo,
+    );
   } catch (err) {
     console.error("Error al reactivar tipo de evento:", err);
     return handleErrorServer(res, 500, "Error interno del servidor");
@@ -158,5 +199,5 @@ export {
   crearTipoEvento,
   actualizarTipoEvento,
   eliminarTipoEvento,
-  reactivarTipoEvento
+  reactivarTipoEvento,
 };

@@ -29,7 +29,11 @@ function normalizeOptions(options = {}) {
     normalized.maxHeight = DEFAULT_OPTIONS.maxHeight;
   }
 
-  if (!Number.isFinite(normalized.quality) || normalized.quality <= 0 || normalized.quality > 100) {
+  if (
+    !Number.isFinite(normalized.quality) ||
+    normalized.quality <= 0 ||
+    normalized.quality > 100
+  ) {
     normalized.quality = DEFAULT_OPTIONS.quality;
   }
 
@@ -106,14 +110,12 @@ export async function optimizeImageBuffer(buffer, mimeType, options = {}) {
     };
   }
 
-  let pipeline = sharp(buffer, { failOnError: false })
-    .rotate()
-    .resize({
-      width: normalized.maxWidth,
-      height: normalized.maxHeight,
-      fit: "inside",
-      withoutEnlargement: true,
-    });
+  let pipeline = sharp(buffer, { failOnError: false }).rotate().resize({
+    width: normalized.maxWidth,
+    height: normalized.maxHeight,
+    fit: "inside",
+    withoutEnlargement: true,
+  });
 
   pipeline = applyFormatSettings(
     pipeline,
@@ -131,7 +133,10 @@ export async function optimizeImageBuffer(buffer, mimeType, options = {}) {
     width: optimizedMetadata.width ?? width,
     height: optimizedMetadata.height ?? height,
     format:
-      optimizedMetadata.format ?? metadata.format ?? mimeTypeToFormat(mimeType) ?? null,
+      optimizedMetadata.format ??
+      metadata.format ??
+      mimeTypeToFormat(mimeType) ??
+      null,
   };
 }
 
@@ -172,14 +177,12 @@ export async function optimizeImageFile(filePath, mimeType, options = {}) {
     };
   }
 
-  let pipeline = sharp(filePath, { failOnError: false })
-    .rotate()
-    .resize({
-      width: normalized.maxWidth,
-      height: normalized.maxHeight,
-      fit: "inside",
-      withoutEnlargement: true,
-    });
+  let pipeline = sharp(filePath, { failOnError: false }).rotate().resize({
+    width: normalized.maxWidth,
+    height: normalized.maxHeight,
+    fit: "inside",
+    withoutEnlargement: true,
+  });
 
   pipeline = applyFormatSettings(
     pipeline,
@@ -199,7 +202,10 @@ export async function optimizeImageFile(filePath, mimeType, options = {}) {
     width: optimizedMetadata.width ?? width,
     height: optimizedMetadata.height ?? height,
     format:
-      optimizedMetadata.format ?? metadata.format ?? mimeTypeToFormat(mimeType) ?? null,
+      optimizedMetadata.format ??
+      metadata.format ??
+      mimeTypeToFormat(mimeType) ??
+      null,
   };
 }
 

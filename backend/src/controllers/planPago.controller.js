@@ -15,8 +15,12 @@ export async function crearPlanPago(req, res) {
     const userRole = req.user.rol;
 
     if (!["directiva", "tesorera"].includes(userRole)) {
-      return handleErrorClient(res, 403, "No autorizado", 
-        "Solo directiva y tesorera pueden crear planes de pago");
+      return handleErrorClient(
+        res,
+        403,
+        "No autorizado",
+        "Solo directiva y tesorera pueden crear planes de pago",
+      );
     }
 
     const {
@@ -34,14 +38,18 @@ export async function crearPlanPago(req, res) {
       diasGracia,
       multaMora,
       interesMora,
-      observaciones
+      observaciones,
     } = req.body;
 
     // Verificar que no exista otro plan con el mismo nombre
     const planExistente = await planPagoRepository.findOneBy({ nombre });
     if (planExistente) {
-      return handleErrorClient(res, 400, "Plan duplicado", 
-        "Ya existe un plan de pago con ese nombre");
+      return handleErrorClient(
+        res,
+        400,
+        "Plan duplicado",
+        "Ya existe un plan de pago con ese nombre",
+      );
     }
 
     const nuevoPlan = planPagoRepository.create({
@@ -61,13 +69,12 @@ export async function crearPlanPago(req, res) {
       interesMora: interesMora || 0,
       creadoPorRut: req.user.rut,
       observaciones,
-      activo: true
+      activo: true,
     });
 
     const planGuardado = await planPagoRepository.save(nuevoPlan);
 
     handleSuccess(res, 201, "Plan de pago creado exitosamente", planGuardado);
-
   } catch (error) {
     console.error("Error creando plan de pago:", error);
     handleErrorServer(res, 500, "Error interno del servidor", error.message);
@@ -80,11 +87,11 @@ export async function obtenerPlanesPago(req, res) {
     const { activo, categoria, modalidad } = req.query;
     const userRole = req.user.rol;
 
-    let whereCondition = {};
+    const whereCondition = {};
 
     // Filtros
     if (activo !== undefined) {
-      whereCondition.activo = activo === 'true';
+      whereCondition.activo = activo === "true";
     }
     if (categoria) {
       whereCondition.tipoCategoria = categoria;
@@ -101,12 +108,12 @@ export async function obtenerPlanesPago(req, res) {
     const planes = await planPagoRepository.find({
       where: whereCondition,
       relations: ["creadoPor", "inscripciones"],
-      order: { orden: "ASC", createdAt: "DESC" }
+      order: { orden: "ASC", createdAt: "DESC" },
     });
 
     // Para apoderados, ocultar información sensible
     if (userRole === "apoderado") {
-      planes.forEach(plan => {
+      planes.forEach((plan) => {
         delete plan.precioCosto;
         delete plan.observaciones;
         delete plan.creadoPor;
@@ -114,7 +121,6 @@ export async function obtenerPlanesPago(req, res) {
     }
 
     handleSuccess(res, 200, "Planes de pago obtenidos exitosamente", planes);
-
   } catch (error) {
     console.error("Error obteniendo planes de pago:", error);
     handleErrorServer(res, 500, "Error interno del servidor", error.message);
@@ -129,7 +135,7 @@ export async function obtenerPlanPagoPorId(req, res) {
 
     const plan = await planPagoRepository.findOne({
       where: { id },
-      relations: ["creadoPor", "inscripciones"]
+      relations: ["creadoPor", "inscripciones"],
     });
 
     if (!plan) {
@@ -149,7 +155,6 @@ export async function obtenerPlanPagoPorId(req, res) {
     }
 
     handleSuccess(res, 200, "Plan de pago obtenido exitosamente", plan);
-
   } catch (error) {
     console.error("Error obteniendo plan de pago:", error);
     handleErrorServer(res, 500, "Error interno del servidor", error.message);
@@ -163,8 +168,12 @@ export async function actualizarPlanPago(req, res) {
     const userRole = req.user.rol;
 
     if (!["directiva", "tesorera"].includes(userRole)) {
-      return handleErrorClient(res, 403, "No autorizado", 
-        "Solo directiva y tesorera pueden actualizar planes de pago");
+      return handleErrorClient(
+        res,
+        403,
+        "No autorizado",
+        "Solo directiva y tesorera pueden actualizar planes de pago",
+      );
     }
 
     const plan = await planPagoRepository.findOneBy({ id });
@@ -176,24 +185,40 @@ export async function actualizarPlanPago(req, res) {
 
     // Campos permitidos para actualización
     const camposPermitidos = [
-      'nombre', 'descripcion', 'tipoCategoria', 'modalidad', 'montoBase',
-      'descuentoHermanos', 'descuentoProntoPago', 'incluye', 'restricciones',
-      'fechaFinVigencia', 'activo', 'diasGracia', 'multaMora', 'interesMora',
-      'observaciones', 'orden'
+      "nombre",
+      "descripcion",
+      "tipoCategoria",
+      "modalidad",
+      "montoBase",
+      "descuentoHermanos",
+      "descuentoProntoPago",
+      "incluye",
+      "restricciones",
+      "fechaFinVigencia",
+      "activo",
+      "diasGracia",
+      "multaMora",
+      "interesMora",
+      "observaciones",
+      "orden",
     ];
 
-    camposPermitidos.forEach(campo => {
+    camposPermitidos.forEach((campo) => {
       if (datosActualizacion[campo] !== undefined) {
         plan[campo] = datosActualizacion[campo];
       }
     });
 
     plan.updatedAt = new Date();
-    
+
     const planActualizado = await planPagoRepository.save(plan);
 
-    handleSuccess(res, 200, "Plan de pago actualizado exitosamente", planActualizado);
-
+    handleSuccess(
+      res,
+      200,
+      "Plan de pago actualizado exitosamente",
+      planActualizado,
+    );
   } catch (error) {
     console.error("Error actualizando plan de pago:", error);
     handleErrorServer(res, 500, "Error interno del servidor", error.message);
@@ -207,13 +232,17 @@ export async function desactivarPlanPago(req, res) {
     const userRole = req.user.rol;
 
     if (userRole !== "directiva") {
-      return handleErrorClient(res, 403, "No autorizado", 
-        "Solo directiva puede desactivar planes de pago");
+      return handleErrorClient(
+        res,
+        403,
+        "No autorizado",
+        "Solo directiva puede desactivar planes de pago",
+      );
     }
 
     const plan = await planPagoRepository.findOne({
       where: { id },
-      relations: ["inscripciones"]
+      relations: ["inscripciones"],
     });
 
     if (!plan) {
@@ -222,21 +251,29 @@ export async function desactivarPlanPago(req, res) {
 
     // Verificar si tiene inscripciones activas
     const inscripcionesActivas = plan.inscripciones?.filter(
-      inscripcion => inscripcion.estado === "activo"
+      (inscripcion) => inscripcion.estado === "activo",
     );
 
     if (inscripcionesActivas && inscripcionesActivas.length > 0) {
-      return handleErrorClient(res, 400, "No se puede desactivar", 
-        `El plan tiene ${inscripcionesActivas.length} inscripciones activas`);
+      return handleErrorClient(
+        res,
+        400,
+        "No se puede desactivar",
+        `El plan tiene ${inscripcionesActivas.length} inscripciones activas`,
+      );
     }
 
     plan.activo = false;
     plan.fechaFinVigencia = new Date();
-    
+
     const planDesactivado = await planPagoRepository.save(plan);
 
-    handleSuccess(res, 200, "Plan de pago desactivado exitosamente", planDesactivado);
-
+    handleSuccess(
+      res,
+      200,
+      "Plan de pago desactivado exitosamente",
+      planDesactivado,
+    );
   } catch (error) {
     console.error("Error desactivando plan de pago:", error);
     handleErrorServer(res, 500, "Error interno del servidor", error.message);
@@ -253,8 +290,12 @@ export async function obtenerEstadisticasPlanes(req, res) {
     }
 
     const totalPlanes = await planPagoRepository.count();
-    const planesActivos = await planPagoRepository.count({ where: { activo: true } });
-    const planesInactivos = await planPagoRepository.count({ where: { activo: false } });
+    const planesActivos = await planPagoRepository.count({
+      where: { activo: true },
+    });
+    const planesInactivos = await planPagoRepository.count({
+      where: { activo: false },
+    });
 
     // Estadísticas por categoría
     const porCategoria = await planPagoRepository
@@ -292,17 +333,21 @@ export async function obtenerEstadisticasPlanes(req, res) {
       totales: {
         total: totalPlanes,
         activos: planesActivos,
-        inactivos: planesInactivos
+        inactivos: planesInactivos,
       },
       distribucion: {
         porCategoria,
-        porModalidad
+        porModalidad,
       },
-      masPopular: planMasPopular
+      masPopular: planMasPopular,
     };
 
-    handleSuccess(res, 200, "Estadísticas de planes obtenidas exitosamente", estadisticas);
-
+    handleSuccess(
+      res,
+      200,
+      "Estadísticas de planes obtenidas exitosamente",
+      estadisticas,
+    );
   } catch (error) {
     console.error("Error obteniendo estadísticas de planes:", error);
     handleErrorServer(res, 500, "Error interno del servidor", error.message);
@@ -312,15 +357,22 @@ export async function obtenerEstadisticasPlanes(req, res) {
 // Calcular monto con descuentos
 export async function calcularMontoConDescuentos(req, res) {
   try {
-    const { planId, tieneHermanos, pagoProntoPago, cantidadHermanos = 1 } = req.body;
+    const { planId, tieneHermanos, pagoProntoPago } = req.body;
 
-    const plan = await planPagoRepository.findOneBy({ id: planId, activo: true });
+    const plan = await planPagoRepository.findOneBy({
+      id: planId,
+      activo: true,
+    });
     if (!plan) {
-      return handleErrorClient(res, 404, "Plan de pago no encontrado o inactivo");
+      return handleErrorClient(
+        res,
+        404,
+        "Plan de pago no encontrado o inactivo",
+      );
     }
 
     let montoFinal = plan.montoBase;
-    let descuentosAplicados = [];
+    const descuentosAplicados = [];
 
     // Aplicar descuento por hermanos
     if (tieneHermanos && plan.descuentoHermanos > 0) {
@@ -329,7 +381,7 @@ export async function calcularMontoConDescuentos(req, res) {
       descuentosAplicados.push({
         tipo: "hermanos",
         porcentaje: plan.descuentoHermanos,
-        monto: descuentoHermanos
+        monto: descuentoHermanos,
       });
     }
 
@@ -340,7 +392,7 @@ export async function calcularMontoConDescuentos(req, res) {
       descuentosAplicados.push({
         tipo: "pronto_pago",
         porcentaje: plan.descuentoProntoPago,
-        monto: descuentoPronto
+        monto: descuentoPronto,
       });
     }
 
@@ -348,18 +400,20 @@ export async function calcularMontoConDescuentos(req, res) {
       plan: {
         id: plan.id,
         nombre: plan.nombre,
-        montoBase: plan.montoBase
+        montoBase: plan.montoBase,
       },
       calculo: {
         montoBase: plan.montoBase,
         descuentosAplicados,
-        totalDescuentos: descuentosAplicados.reduce((sum, d) => sum + d.monto, 0),
-        montoFinal: Math.round(montoFinal)
-      }
+        totalDescuentos: descuentosAplicados.reduce(
+          (sum, d) => sum + d.monto,
+          0,
+        ),
+        montoFinal: Math.round(montoFinal),
+      },
     };
 
     handleSuccess(res, 200, "Monto calculado exitosamente", resultado);
-
   } catch (error) {
     console.error("Error calculando monto:", error);
     handleErrorServer(res, 500, "Error interno del servidor", error.message);

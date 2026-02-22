@@ -1,5 +1,9 @@
 import { enviarCodigo, enviarCodigoR } from "../utils/mailer.js";
-import { guardarCodigo, obtenerCodigo, eliminarCodigo } from "../utils/veritemp.js"; // funciones para guardar, obtener y eliminar el código
+import {
+  guardarCodigo,
+  obtenerCodigo,
+  eliminarCodigo,
+} from "../utils/veritemp.js"; // funciones para guardar, obtener y eliminar el código
 import { getUserGService } from "../services/user.service.js";
 import Joi from "joi";
 import { handleErrorClient } from "../handlers/responseHandlers.js";
@@ -11,8 +15,8 @@ const domainEmailValidator = (value, helper) => {
   if (!isValidDomain) {
     return helper.message(
       `El correo electrónico debe ser de uno de los siguientes dominios: ${allowedDomains.join(
-        ", "
-      )}`
+        ", ",
+      )}`,
     );
   }
   return value;
@@ -31,7 +35,8 @@ const emailValidation = Joi.object({
       "any.required": "El correo electrónico es obligatorio.",
       "string.base": "El correo electrónico debe ser de tipo texto.",
       "string.min": "El correo electrónico debe tener al menos 10 caracteres.",
-      "string.max": "El correo electrónico debe tener como máximo 50 caracteres.",
+      "string.max":
+        "El correo electrónico debe tener como máximo 50 caracteres.",
       "string.email": "El correo electrónico debe tener un formato válido.",
     }),
 });
@@ -44,7 +49,7 @@ export async function sendCode(req, res) {
   }
 
   const { email } = req.body;
-  const [user, errorUser] = await getUserGService({ email });
+  const [user] = await getUserGService({ email });
   if (user) {
     return res.status(409).json({ error: "El usuario ya está registrado" }); // 409: Conflict
   }
@@ -63,7 +68,7 @@ export async function sendCoder(req, res) {
   const { email } = req.body;
 
   try {
-    const [user, errorUser] = await getUserGService({ email });
+    const [_user, errorUser] = await getUserGService({ email });
     if (errorUser) {
       return res.status(404).json({ error: errorUser }); // Usuario no encontrado
     }

@@ -2,7 +2,6 @@
 import {
   deleteUserService,
   getUserService,
-  getUserGService,
   getUsersService,
   updateUserService,
   searchUserService,
@@ -10,7 +9,6 @@ import {
   calcularCalificacionBayesiana,
   obtenerPromedioGlobalService,
   actualizarTokenFCMService,
-  obtenerUserByRut,
 } from "../services/user.service.js";
 import {
   userBodyValidation,
@@ -56,11 +54,7 @@ export async function getUsers(req, res) {
       ? handleSuccess(res, 204)
       : handleSuccess(res, 200, "Usuarios encontrados", users);
   } catch (error) {
-    handleErrorServer(
-      res,
-      500,
-      error.message,
-    );
+    handleErrorServer(res, 500, error.message);
   }
 }
 
@@ -97,7 +91,7 @@ export async function buscarRut(req, res) {
     if (queryError) {
       return handleErrorClient(
         res,
-        400,  
+        400,
         "Error de validación en la consulta",
         queryError.message,
       );
@@ -115,8 +109,8 @@ export async function updateUser(req, res) {
     const { rut, email } = req.query;
     const { body } = req;
 
-    console.log('🔍 UpdateUser - Query params:', { rut, email });
-    console.log('📝 UpdateUser - Body received:', body);
+    console.log("🔍 UpdateUser - Query params:", { rut, email });
+    console.log("📝 UpdateUser - Body received:", body);
 
     const { error: queryError } = userQueryValidation.validate({
       rut,
@@ -124,7 +118,7 @@ export async function updateUser(req, res) {
     });
 
     if (queryError) {
-      console.log('❌ Query validation error:', queryError.message);
+      console.log("❌ Query validation error:", queryError.message);
       return handleErrorClient(
         res,
         400,
@@ -136,7 +130,7 @@ export async function updateUser(req, res) {
     const { error: bodyError } = userBodyValidation.validate(body);
 
     if (bodyError) {
-      console.log('❌ Body validation error:', bodyError.message);
+      console.log("❌ Body validation error:", bodyError.message);
       return handleErrorClient(
         res,
         400,
@@ -145,19 +139,24 @@ export async function updateUser(req, res) {
       );
     }
 
-    console.log('✅ Validaciones pasadas, actualizando usuario...');
+    console.log("✅ Validaciones pasadas, actualizando usuario...");
 
     const [user, userError] = await updateUserService({ rut, email }, body);
 
     if (userError) {
-      console.log('❌ Service error:', userError);
-      return handleErrorClient(res, 400, "Error modificando al usuario", userError);
+      console.log("❌ Service error:", userError);
+      return handleErrorClient(
+        res,
+        400,
+        "Error modificando al usuario",
+        userError,
+      );
     }
 
-    console.log('✅ Usuario actualizado exitosamente');
+    console.log("✅ Usuario actualizado exitosamente");
     handleSuccess(res, 200, "Usuario modificado correctamente", user);
   } catch (error) {
-    console.error('💥 Unexpected error in updateUser:', error);
+    console.error("💥 Unexpected error in updateUser:", error);
     handleErrorServer(res, 500, error.message);
   }
 }
@@ -167,9 +166,12 @@ export async function getMisVehiculos(req, res) {
     const userRut = req.user.rut;
 
     // Importar el servicio dentro de la función
-    const { getVehiculosByUserService } = await import("../services/vehiculo.service.js");
+    const { getVehiculosByUserService } = await import(
+      "../services/vehiculo.service.js"
+    );
 
-    const [vehiculos, vehiculosError] = await getVehiculosByUserService(userRut);
+    const [vehiculos, vehiculosError] =
+      await getVehiculosByUserService(userRut);
 
     if (vehiculosError) {
       return handleErrorClient(res, 404, vehiculosError);
@@ -240,10 +242,19 @@ export async function updateAvatar(req, res) {
 
 export async function calcularCalificacion(req, res) {
   try {
-    const { promedioUsuario, cantidadValoraciones, promedioGlobal, minimoValoraciones } = req.body;
+    const {
+      promedioUsuario,
+      cantidadValoraciones,
+      promedioGlobal,
+      minimoValoraciones,
+    } = req.body;
 
-    if (typeof promedioUsuario !== 'number' || typeof cantidadValoraciones !== 'number' ||
-        typeof promedioGlobal !== 'number' || typeof minimoValoraciones !== 'number') {
+    if (
+      typeof promedioUsuario !== "number" ||
+      typeof cantidadValoraciones !== "number" ||
+      typeof promedioGlobal !== "number" ||
+      typeof minimoValoraciones !== "number"
+    ) {
       return handleErrorClient(res, 400, "Todos los campos deben ser números");
     }
 
@@ -251,14 +262,16 @@ export async function calcularCalificacion(req, res) {
       promedioUsuario,
       cantidadValoraciones,
       promedioGlobal,
-      minimoValoraciones
+      minimoValoraciones,
     );
 
     if (calificacionAjustada === null) {
       return handleErrorServer(res, 500, "Error al calcular la calificación");
     }
 
-    handleSuccess(res, 200, "Calificación calculada correctamente", { calificacionAjustada });
+    handleSuccess(res, 200, "Calificación calculada correctamente", {
+      calificacionAjustada,
+    });
   } catch (error) {
     handleErrorServer(res, 500, error.message);
   }
@@ -273,9 +286,9 @@ export async function obtenerPromedioGlobal(req, res) {
       // Aún así retornamos el promedio por defecto
     }
 
-    handleSuccess(res, 200, "Promedio global obtenido correctamente", { 
+    handleSuccess(res, 200, "Promedio global obtenido correctamente", {
       promedioGlobal: promedioGlobal,
-      mensaje: error || "Cálculo exitoso"
+      mensaje: error || "Cálculo exitoso",
     });
   } catch (error) {
     console.error("Error en obtenerPromedioGlobal controller:", error);
@@ -285,23 +298,27 @@ export async function obtenerPromedioGlobal(req, res) {
 
 export async function deleteUser(req, res) {
   try {
-    console.log('🗑️ DeleteUser (VIEJO) - Params:', req.params);
-    console.log('🗑️ DeleteUser (VIEJO) - Query:', req.query);
-    
+    console.log("🗑️ DeleteUser (VIEJO) - Params:", req.params);
+    console.log("🗑️ DeleteUser (VIEJO) - Query:", req.query);
+
     // Obtener rut del parámetro de la URL o del query
     const rutFromParams = req.params.rut;
     const { rut: rutFromQuery, email } = req.query;
-    
+
     const rut = rutFromParams || rutFromQuery;
-    console.log('🗑️ DeleteUser (VIEJO) - RUT final:', rut);
+    console.log("🗑️ DeleteUser (VIEJO) - RUT final:", rut);
 
     if (!rut && !email) {
-      return handleErrorClient(res, 400, "Debe proporcionar RUT o email del usuario a eliminar");
+      return handleErrorClient(
+        res,
+        400,
+        "Debe proporcionar RUT o email del usuario a eliminar",
+      );
     }
 
     // Buscar el usuario a eliminar
     const userToDelete = await userRepository.findOne({
-      where: [{ rut: rut }, { email: email }]
+      where: [{ rut: rut }, { email: email }],
     });
 
     if (!userToDelete) {
@@ -309,12 +326,18 @@ export async function deleteUser(req, res) {
     }
 
     // Protección especial: si el usuario a eliminar es directiva
-    if (userToDelete.rol === 'directiva') {
+    if (userToDelete.rol === "directiva") {
       // Contar cuántas directivas hay en total
-      const directivasCount = await userRepository.count({ where: { rol: 'directiva' } });
-      
+      const directivasCount = await userRepository.count({
+        where: { rol: "directiva" },
+      });
+
       if (directivasCount <= 1) {
-        return handleErrorClient(res, 400, "No puedes eliminar este usuario porque debe existir al menos un usuario con rol de directiva en el sistema");
+        return handleErrorClient(
+          res,
+          400,
+          "No puedes eliminar este usuario porque debe existir al menos un usuario con rol de directiva en el sistema",
+        );
       }
     }
 
@@ -325,9 +348,16 @@ export async function deleteUser(req, res) {
     const [user, errorUser] = await deleteUserService({ rut, email });
     if (errorUser) return handleErrorClient(res, 404, errorUser);
 
-    console.log(`✅ Usuario eliminado por directiva ${req.user.rut}: ${userToDelete.email} con rol ${userToDelete.rol}`);
+    console.log(
+      `✅ Usuario eliminado por directiva ${req.user.rut}: ${userToDelete.email} con rol ${userToDelete.rol}`,
+    );
 
-    handleSuccess(res, 200, "Usuario y todas sus relaciones eliminadas exitosamente", user);
+    handleSuccess(
+      res,
+      200,
+      "Usuario y todas sus relaciones eliminadas exitosamente",
+      user,
+    );
   } catch (error) {
     console.error("Error al eliminar usuario:", error);
     handleErrorServer(res, 500, error.message);
@@ -340,13 +370,20 @@ export async function actualizarTokenFCM(req, res) {
     const rutUsuario = req.user.rut;
 
     // Validación básica
-    if (!fcmToken || typeof fcmToken !== 'string' || fcmToken.trim() === '') {
-      return handleErrorClient(res, 400, "Token FCM requerido y debe ser válido");
+    if (!fcmToken || typeof fcmToken !== "string" || fcmToken.trim() === "") {
+      return handleErrorClient(
+        res,
+        400,
+        "Token FCM requerido y debe ser válido",
+      );
     }
 
     console.log(`🔄 Actualizando token FCM para usuario ${rutUsuario}`);
 
-    const [result, error] = await actualizarTokenFCMService(rutUsuario, fcmToken.trim());
+    const [_result, error] = await actualizarTokenFCMService(
+      rutUsuario,
+      fcmToken.trim(),
+    );
 
     if (error) {
       console.error(`❌ Error actualizando token FCM: ${error}`);
@@ -354,9 +391,9 @@ export async function actualizarTokenFCM(req, res) {
     }
 
     console.log(`✅ Token FCM actualizado exitosamente para ${rutUsuario}`);
-    handleSuccess(res, 200, "Token FCM actualizado correctamente", { 
+    handleSuccess(res, 200, "Token FCM actualizado correctamente", {
       rut: rutUsuario,
-      tokenActualizado: true 
+      tokenActualizado: true,
     });
   } catch (error) {
     console.error("💥 Error en actualizarTokenFCM:", error);
@@ -379,8 +416,11 @@ export async function getHistorialTransacciones(req, res) {
     }
 
     // Obtener el historial de transacciones
-    const { obtenerHistorialTransaccionesService } = await import('../services/transaccion.service.js');
-    const [historial, historialError] = await obtenerHistorialTransaccionesService(userData.rut);
+    const { obtenerHistorialTransaccionesService } = await import(
+      "../services/transaccion.service.js"
+    );
+    const [historial, historialError] =
+      await obtenerHistorialTransaccionesService(userData.rut);
 
     if (historialError) {
       console.error("Error al obtener historial:", historialError);
@@ -389,7 +429,7 @@ export async function getHistorialTransacciones(req, res) {
     }
 
     // Formatear las transacciones para el frontend
-    const historialFormateado = historial.map(transaccion => ({
+    const historialFormateado = historial.map((transaccion) => ({
       id: transaccion.id,
       tipo: transaccion.tipo,
       concepto: transaccion.concepto,
@@ -398,10 +438,15 @@ export async function getHistorialTransacciones(req, res) {
       estado: transaccion.estado,
       metodo_pago: transaccion.metodo_pago,
       viaje_id: transaccion.viaje_id,
-      transaccion_id: transaccion.transaccion_id
+      transaccion_id: transaccion.transaccion_id,
     }));
 
-    handleSuccess(res, 200, "Historial de transacciones obtenido", historialFormateado);
+    handleSuccess(
+      res,
+      200,
+      "Historial de transacciones obtenido",
+      historialFormateado,
+    );
   } catch (error) {
     console.error("Error en getHistorialTransacciones:", error);
     handleErrorServer(res, 500, error.message);
@@ -416,21 +461,35 @@ export async function calificarUsuario(req, res) {
     const { rutUsuarioCalificado, calificacion } = req.body;
     const rutCalificador = req.user.rut;
 
-    console.log(`⭐ Calificando usuario: ${rutUsuarioCalificado} con ${calificacion} estrellas por ${rutCalificador}`);
+    console.log(
+      `⭐ Calificando usuario: ${rutUsuarioCalificado} con ${calificacion} estrellas por ${rutCalificador}`,
+    );
 
     // Validar parámetros
-    if (!rutUsuarioCalificado || calificacion === undefined || calificacion === null) {
-      return handleErrorClient(res, 400, "Parámetros requeridos: rutUsuarioCalificado, calificacion");
+    if (
+      !rutUsuarioCalificado ||
+      calificacion === undefined ||
+      calificacion === null
+    ) {
+      return handleErrorClient(
+        res,
+        400,
+        "Parámetros requeridos: rutUsuarioCalificado, calificacion",
+      );
     }
 
     // Validar rango de calificación (0-5)
     if (calificacion < 0 || calificacion > 5) {
-      return handleErrorClient(res, 400, "La calificación debe estar entre 0 y 5");
+      return handleErrorClient(
+        res,
+        400,
+        "La calificación debe estar entre 0 y 5",
+      );
     }
 
     // Verificar que el usuario calificado existe
     const usuarioCalificado = await userRepository.findOne({
-      where: { rut: rutUsuarioCalificado }
+      where: { rut: rutUsuarioCalificado },
     });
 
     if (!usuarioCalificado) {
@@ -446,15 +505,21 @@ export async function calificarUsuario(req, res) {
     const clasificacionActual = usuarioCalificado.clasificacion || 0;
     const cantidadValoraciones = usuarioCalificado.cantidadValoraciones || 0;
     const puntuacionActual = usuarioCalificado.puntuacion || 0;
-    
+
     // Calcular nuevo promedio simple (para luego aplicar bayesiano)
     const nuevaCantidadValoraciones = cantidadValoraciones + 1;
-    const nuevoPromedioSimple = ((clasificacionActual * cantidadValoraciones) + calificacion) / nuevaCantidadValoraciones;
+    const nuevoPromedioSimple =
+      (clasificacionActual * cantidadValoraciones + calificacion) /
+      nuevaCantidadValoraciones;
 
     // Obtener el promedio global para el cálculo bayesiano
-    const [promedioGlobal, errorPromedio] = await obtenerPromedioGlobalService();
+    const [promedioGlobal, errorPromedio] =
+      await obtenerPromedioGlobalService();
     if (errorPromedio) {
-      console.warn("Error obteniendo promedio global, usando valor por defecto:", errorPromedio);
+      console.warn(
+        "Error obteniendo promedio global, usando valor por defecto:",
+        errorPromedio,
+      );
     }
 
     // Calcular clasificación bayesiana
@@ -463,11 +528,14 @@ export async function calificarUsuario(req, res) {
       nuevoPromedioSimple,
       nuevaCantidadValoraciones,
       promedioGlobal,
-      minimoValoraciones
+      minimoValoraciones,
     );
-    
+
     // La clasificación final será la bayesiana si se calculó correctamente, sino el promedio simple
-    const clasificacionFinal = clasificacionBayesiana !== null ? clasificacionBayesiana : nuevoPromedioSimple;
+    const clasificacionFinal =
+      clasificacionBayesiana !== null
+        ? clasificacionBayesiana
+        : nuevoPromedioSimple;
 
     // NUEVO: Calcular puntos a sumar según la calificación recibida
     let puntosASumar = 0;
@@ -496,8 +564,8 @@ export async function calificarUsuario(req, res) {
         clasificacion: clasificacionFinal,
         cantidadValoraciones: nuevaCantidadValoraciones,
         puntuacion: nuevaPuntuacion,
-        updatedAt: new Date()
-      }
+        updatedAt: new Date(),
+      },
     );
 
     console.log(`✅ Usuario ${rutUsuarioCalificado} calificado:`);
@@ -506,7 +574,9 @@ export async function calificarUsuario(req, res) {
     console.log(`   Clasificación bayesiana: ${clasificacionFinal.toFixed(3)}`);
     console.log(`   Cantidad valoraciones: ${nuevaCantidadValoraciones}`);
     console.log(`   Promedio global usado: ${promedioGlobal}`);
-    console.log(`   Puntuación actualizada: ${puntuacionActual} → ${nuevaPuntuacion} (+${puntosASumar})`);
+    console.log(
+      `   Puntuación actualizada: ${puntuacionActual} → ${nuevaPuntuacion} (+${puntosASumar})`,
+    );
 
     handleSuccess(res, 200, "Usuario calificado exitosamente", {
       rutUsuarioCalificado,
@@ -518,9 +588,8 @@ export async function calificarUsuario(req, res) {
       promedioGlobalUsado: promedioGlobal,
       puntosOtorgados: puntosASumar,
       puntuacionAnterior: puntuacionActual,
-      nuevaPuntuacion: nuevaPuntuacion
+      nuevaPuntuacion: nuevaPuntuacion,
     });
-
   } catch (error) {
     console.error("Error al calificar usuario:", error);
     handleErrorServer(res, 500, "Error interno del servidor");
@@ -537,8 +606,20 @@ export async function changeUserRole(req, res) {
     }
 
     // Actualizar roles válidos según la entidad User
-    if (!['directiva', 'tesorera', 'entrenador', 'apoderado', 'RamaExterna'].includes(nuevoRol)) {
-      return handleErrorClient(res, 400, "Rol inválido. Debe ser 'directiva', 'tesorera', 'entrenador', 'apoderado' o 'RamaExterna'");
+    if (
+      ![
+        "directiva",
+        "tesorera",
+        "entrenador",
+        "apoderado",
+        "RamaExterna",
+      ].includes(nuevoRol)
+    ) {
+      return handleErrorClient(
+        res,
+        400,
+        "Rol inválido. Debe ser 'directiva', 'tesorera', 'entrenador', 'apoderado' o 'RamaExterna'",
+      );
     }
 
     // Buscar el usuario por RUT
@@ -556,9 +637,8 @@ export async function changeUserRole(req, res) {
       rut: usuario.rut,
       nombreCompleto: usuario.nombreCompleto,
       email: usuario.email,
-      rol: usuario.rol
+      rol: usuario.rol,
     });
-
   } catch (error) {
     console.error("Error al cambiar rol de usuario:", error);
     handleErrorServer(res, 500, "Error interno del servidor");
@@ -568,16 +648,33 @@ export async function changeUserRole(req, res) {
 // Nueva función para crear usuarios desde el dashboard de directiva
 export async function createUserByDirectiva(req, res) {
   try {
-    const { rut, nombreCompleto, email, password, rol, fechaNacimiento } = req.body;
+    const { rut, nombreCompleto, email, password, rol, fechaNacimiento } =
+      req.body;
 
     // Validaciones básicas
     if (!rut || !nombreCompleto || !email || !password || !rol) {
-      return handleErrorClient(res, 400, "Todos los campos son requeridos: rut, nombreCompleto, email, password, rol");
+      return handleErrorClient(
+        res,
+        400,
+        "Todos los campos son requeridos: rut, nombreCompleto, email, password, rol",
+      );
     }
 
     // Validar que el rol sea válido
-    if (!['directiva', 'tesorera', 'entrenador', 'apoderado', 'RamaExterna'].includes(rol)) {
-      return handleErrorClient(res, 400, "Rol inválido. Debe ser 'directiva', 'tesorera', 'entrenador', 'apoderado' o 'RamaExterna'");
+    if (
+      ![
+        "directiva",
+        "tesorera",
+        "entrenador",
+        "apoderado",
+        "RamaExterna",
+      ].includes(rol)
+    ) {
+      return handleErrorClient(
+        res,
+        400,
+        "Rol inválido. Debe ser 'directiva', 'tesorera', 'entrenador', 'apoderado' o 'RamaExterna'",
+      );
     }
 
     // Verificar que el usuario no exista
@@ -586,7 +683,9 @@ export async function createUserByDirectiva(req, res) {
       return handleErrorClient(res, 400, "Ya existe un usuario con este RUT");
     }
 
-    const existingUserByEmail = await userRepository.findOne({ where: { email } });
+    const existingUserByEmail = await userRepository.findOne({
+      where: { email },
+    });
     if (existingUserByEmail) {
       return handleErrorClient(res, 400, "Ya existe un usuario con este email");
     }
@@ -609,10 +708,11 @@ export async function createUserByDirectiva(req, res) {
     // Remover password del response
     const { password: _, ...userResponse } = savedUser;
 
-    console.log(`✅ Usuario creado por directiva ${req.user.rut}: ${savedUser.email} con rol ${savedUser.rol}`);
+    console.log(
+      `✅ Usuario creado por directiva ${req.user.rut}: ${savedUser.email} con rol ${savedUser.rol}`,
+    );
 
     handleSuccess(res, 201, "Usuario creado exitosamente", userResponse);
-
   } catch (error) {
     console.error("Error al crear usuario:", error);
     handleErrorServer(res, 500, "Error interno del servidor");
@@ -624,21 +724,44 @@ export async function updateUserByDirectiva(req, res) {
   try {
     const { rut, nombreCompleto, email, rol } = req.body;
 
-    console.log('🔧 UpdateUserByDirectiva - Body received:', req.body);
-    console.log('🔧 UpdateUserByDirectiva - User making request:', req.user.rut);
+    console.log("🔧 UpdateUserByDirectiva - Body received:", req.body);
+    console.log(
+      "🔧 UpdateUserByDirectiva - User making request:",
+      req.user.rut,
+    );
 
     // Validaciones básicas
     if (!rut) {
-      return handleErrorClient(res, 400, "El RUT es requerido para actualizar el usuario");
+      return handleErrorClient(
+        res,
+        400,
+        "El RUT es requerido para actualizar el usuario",
+      );
     }
 
     if (!nombreCompleto || !email || !rol) {
-      return handleErrorClient(res, 400, "Todos los campos son requeridos: nombreCompleto, email, rol");
+      return handleErrorClient(
+        res,
+        400,
+        "Todos los campos son requeridos: nombreCompleto, email, rol",
+      );
     }
 
     // Validar que el rol sea válido
-    if (!['directiva', 'tesorera', 'entrenador', 'apoderado', 'RamaExterna'].includes(rol)) {
-      return handleErrorClient(res, 400, "Rol inválido. Debe ser 'directiva', 'tesorera', 'entrenador', 'apoderado' o 'RamaExterna'");
+    if (
+      ![
+        "directiva",
+        "tesorera",
+        "entrenador",
+        "apoderado",
+        "RamaExterna",
+      ].includes(rol)
+    ) {
+      return handleErrorClient(
+        res,
+        400,
+        "Rol inválido. Debe ser 'directiva', 'tesorera', 'entrenador', 'apoderado' o 'RamaExterna'",
+      );
     }
 
     // Buscar el usuario a actualizar
@@ -648,21 +771,31 @@ export async function updateUserByDirectiva(req, res) {
     }
 
     // Protección especial: si el usuario actual es directiva y se quiere cambiar su rol
-    if (usuario.rol === 'directiva' && rol !== 'directiva') {
+    if (usuario.rol === "directiva" && rol !== "directiva") {
       // Contar cuántas directivas hay en total
-      const directivasCount = await userRepository.count({ where: { rol: 'directiva' } });
-      
+      const directivasCount = await userRepository.count({
+        where: { rol: "directiva" },
+      });
+
       if (directivasCount <= 1) {
-        return handleErrorClient(res, 400, "No puedes cambiar este rol porque debe existir al menos un usuario con rol de directiva en el sistema");
+        return handleErrorClient(
+          res,
+          400,
+          "No puedes cambiar este rol porque debe existir al menos un usuario con rol de directiva en el sistema",
+        );
       }
     }
 
     // Verificar que el email no esté siendo usado por otro usuario
-    const existingUserByEmail = await userRepository.findOne({ 
-      where: { email: email.trim().toLowerCase() } 
+    const existingUserByEmail = await userRepository.findOne({
+      where: { email: email.trim().toLowerCase() },
     });
     if (existingUserByEmail && existingUserByEmail.rut !== rut) {
-      return handleErrorClient(res, 400, "Ya existe otro usuario con este email");
+      return handleErrorClient(
+        res,
+        400,
+        "Ya existe otro usuario con este email",
+      );
     }
 
     // Actualizar el usuario
@@ -676,10 +809,11 @@ export async function updateUserByDirectiva(req, res) {
     // Remover password del response
     const { password: _, ...userResponse } = updatedUser;
 
-    console.log(`✅ Usuario actualizado por directiva ${req.user.rut}: ${updatedUser.email} con rol ${updatedUser.rol}`);
+    console.log(
+      `✅ Usuario actualizado por directiva ${req.user.rut}: ${updatedUser.email} con rol ${updatedUser.rol}`,
+    );
 
     handleSuccess(res, 200, "Usuario actualizado exitosamente", userResponse);
-
   } catch (error) {
     console.error("Error al actualizar usuario:", error);
     handleErrorServer(res, 500, "Error interno del servidor");
@@ -689,8 +823,8 @@ export async function updateUserByDirectiva(req, res) {
 // Función para eliminar usuario (solo para directiva) con protección
 export const deleteUserByDirectiva = async (req, res) => {
   try {
-    console.log('🗑️ DeleteUserByDirectiva - RUT a eliminar:', req.params.rut);
-    
+    console.log("🗑️ DeleteUserByDirectiva - RUT a eliminar:", req.params.rut);
+
     const { rut } = req.params;
 
     if (!rut) {
@@ -707,33 +841,40 @@ export const deleteUserByDirectiva = async (req, res) => {
     }
 
     // Si el usuario es directiva, verificar que no sea el último
-    if (usuario.rol === 'directiva') {
+    if (usuario.rol === "directiva") {
       const directivasCount = await userRepository.count({
-        where: { rol: 'directiva' }
+        where: { rol: "directiva" },
       });
 
       if (directivasCount <= 1) {
-        console.log(`❌ Intento de eliminar último usuario directiva por ${req.user.rut}`);
-        return handleErrorClient(res, 400, "No se puede eliminar el último usuario con rol de directiva");
+        console.log(
+          `❌ Intento de eliminar último usuario directiva por ${req.user.rut}`,
+        );
+        return handleErrorClient(
+          res,
+          400,
+          "No se puede eliminar el último usuario con rol de directiva",
+        );
       }
     }
 
     // Eliminar el usuario
     await userRepository.delete({ rut: rut.trim() });
 
-    console.log(`✅ Usuario eliminado por directiva ${req.user.rut}: ${usuario.email} (${usuario.rol})`);
+    console.log(
+      `✅ Usuario eliminado por directiva ${req.user.rut}: ${usuario.email} (${usuario.rol})`,
+    );
 
     handleSuccess(res, 200, "Usuario eliminado exitosamente", {
       rut: usuario.rut,
       email: usuario.email,
-      nombreCompleto: usuario.nombreCompleto
+      nombreCompleto: usuario.nombreCompleto,
     });
-
   } catch (error) {
     console.error("Error al eliminar usuario:", error);
     handleErrorServer(res, 500, "Error interno del servidor");
   }
-}
+};
 
 /**
  * @name getEntrenadores
@@ -746,7 +887,7 @@ export async function getEntrenadores(req, res) {
     const entrenadores = await userRepository.find({
       where: { rol: "entrenador" },
       select: ["rut", "nombreCompleto", "email", "avatar"],
-      order: { nombreCompleto: "ASC" }
+      order: { nombreCompleto: "ASC" },
     });
 
     handleSuccess(res, 200, "Entrenadores encontrados", entrenadores);
@@ -755,4 +896,3 @@ export async function getEntrenadores(req, res) {
     handleErrorServer(res, 500, "Error interno del servidor");
   }
 }
-

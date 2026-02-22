@@ -6,14 +6,14 @@ import {
   actualizarPlanPago,
   desactivarPlanPago,
   obtenerEstadisticasPlanes,
-  calcularMontoConDescuentos
+  calcularMontoConDescuentos,
 } from "../controllers/planPago.controller.js";
 
 import { authenticateJwt } from "../middlewares/authentication.middleware.js";
 import {
   isDirectiva,
   isTesorera,
-  isAuthenticated
+  isAuthenticated,
 } from "../middlewares/authorization.middleware.js";
 
 const router = Router();
@@ -31,12 +31,27 @@ router.get("/:id", authenticateJwt, isAuthenticated, obtenerPlanPagoPorId);
 router.put("/:id", authenticateJwt, isTesorera, actualizarPlanPago);
 
 // Desactivar plan de pago (Solo Directiva)
-router.patch("/:id/desactivar", authenticateJwt, isDirectiva, desactivarPlanPago);
+router.patch(
+  "/:id/desactivar",
+  authenticateJwt,
+  isDirectiva,
+  desactivarPlanPago,
+);
 
 // Obtener estadísticas (Directiva, Tesorera)
-router.get("/estadisticas/resumen", authenticateJwt, isTesorera, obtenerEstadisticasPlanes);
+router.get(
+  "/estadisticas/resumen",
+  authenticateJwt,
+  isTesorera,
+  obtenerEstadisticasPlanes,
+);
 
 // Calcular monto con descuentos (Todos los autenticados)
-router.post("/calcular-monto", authenticateJwt, isAuthenticated, calcularMontoConDescuentos);
+router.post(
+  "/calcular-monto",
+  authenticateJwt,
+  isAuthenticated,
+  calcularMontoConDescuentos,
+);
 
 export default router;

@@ -20,24 +20,32 @@ export async function createActaReunionService(actaData) {
 export async function getActasReunionService(filters = {}) {
   try {
     const actaRepository = AppDataSource.getRepository(ActaReunion);
-    
+
     const queryBuilder = actaRepository.createQueryBuilder("acta");
 
     // Filtros opcionales
     if (filters.estado) {
-      queryBuilder.andWhere("acta.estado = :estado", { estado: filters.estado });
+      queryBuilder.andWhere("acta.estado = :estado", {
+        estado: filters.estado,
+      });
     }
 
     if (filters.fechaDesde) {
-      queryBuilder.andWhere("acta.fecha >= :fechaDesde", { fechaDesde: filters.fechaDesde });
+      queryBuilder.andWhere("acta.fecha >= :fechaDesde", {
+        fechaDesde: filters.fechaDesde,
+      });
     }
 
     if (filters.fechaHasta) {
-      queryBuilder.andWhere("acta.fecha <= :fechaHasta", { fechaHasta: filters.fechaHasta });
+      queryBuilder.andWhere("acta.fecha <= :fechaHasta", {
+        fechaHasta: filters.fechaHasta,
+      });
     }
 
     // Ordenar por fecha descendente (más recientes primero)
-    queryBuilder.orderBy("acta.fecha", "DESC").addOrderBy("acta.createdAt", "DESC");
+    queryBuilder
+      .orderBy("acta.fecha", "DESC")
+      .addOrderBy("acta.createdAt", "DESC");
 
     const actas = await queryBuilder.getMany();
 
@@ -53,7 +61,7 @@ export async function getActaReunionService(id) {
     const actaRepository = AppDataSource.getRepository(ActaReunion);
 
     const acta = await actaRepository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!acta) {
@@ -72,7 +80,7 @@ export async function updateActaReunionService(id, updateData) {
     const actaRepository = AppDataSource.getRepository(ActaReunion);
 
     const acta = await actaRepository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!acta) {
@@ -97,7 +105,7 @@ export async function deleteActaReunionService(id) {
     const actaRepository = AppDataSource.getRepository(ActaReunion);
 
     const acta = await actaRepository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!acta) {
@@ -118,7 +126,7 @@ export async function changeEstadoActaService(id, nuevoEstado) {
     const actaRepository = AppDataSource.getRepository(ActaReunion);
 
     const acta = await actaRepository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!acta) {

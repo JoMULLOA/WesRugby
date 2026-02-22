@@ -1,8 +1,8 @@
 "use strict";
 import { Router } from "express";
-import { 
+import {
   importEstudiantesFromExcel,
-  importFormulariosRegistro 
+  importFormulariosRegistro,
 } from "../controllers/importacion.controller.js";
 
 const router = Router();

@@ -4,12 +4,21 @@ import {
   handleErrorServer,
   handleSuccess,
 } from "../handlers/responseHandlers.js";
-import { resolveFileUrl, deleteFromS3, extractObjectKey } from "../utils/storage.utils.js";
+import {
+  resolveFileUrl,
+  deleteFromS3,
+  extractObjectKey,
+} from "../utils/storage.utils.js";
 
 export async function uploadImagen(req, res) {
   try {
     if (!req.file?.location) {
-      return handleErrorClient(res, 400, "Archivo requerido", "Debes adjuntar una imagen válida.");
+      return handleErrorClient(
+        res,
+        400,
+        "Archivo requerido",
+        "Debes adjuntar una imagen válida.",
+      );
     }
 
     const payload = {
@@ -50,7 +59,9 @@ export async function deleteImagen(req, res) {
     }
 
     await deleteFromS3(objectKey);
-    handleSuccess(res, 200, "Imagen eliminada exitosamente", { key: objectKey });
+    handleSuccess(res, 200, "Imagen eliminada exitosamente", {
+      key: objectKey,
+    });
   } catch (error) {
     console.error("Error eliminando imagen:", error);
     handleErrorServer(res, 500, "Error interno del servidor", error.message);

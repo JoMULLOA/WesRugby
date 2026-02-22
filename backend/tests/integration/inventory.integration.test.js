@@ -342,7 +342,7 @@ describe("POST /api/inventario/sales/varios", () => {
 // ─── POST /api/inventario/scans/bulk ──────────────────────────────────────────
 
 describe("POST /api/inventario/scans/bulk", () => {
-  let productId;
+  let _productId;
   let productBarcode;
 
   beforeAll(async () => {
@@ -351,7 +351,7 @@ describe("POST /api/inventario/scans/bulk", () => {
       pricingMode: "fixed",
       defaultPriceCents: 900,
     });
-    productId = res.body.id;
+    _productId = res.body.id;
     productBarcode = res.body.barcode;
   });
 
@@ -390,9 +390,7 @@ describe("POST /api/inventario/scans/bulk", () => {
   });
 
   it("retorna 400 si falta el campo scans", async () => {
-    const res = await request(app)
-      .post(`${BASE}/scans/bulk`)
-      .send({});
+    const res = await request(app).post(`${BASE}/scans/bulk`).send({});
 
     expect(res.status).toBe(400);
   });

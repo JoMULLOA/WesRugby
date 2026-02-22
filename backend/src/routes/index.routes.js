@@ -33,42 +33,42 @@ import terminosCondicionesRoutes from "./terminosCondiciones.routes.js";
 const router = Router();
 
 router
-    .use("/auth", authRoutes)
-    .use("/user", userRoutes)
-    .use("/notificaciones", notificacionRoutes)
-    // Rutas modulos rugby
-    .use("/planes-pago", planPagoRoutes)
-    .use("/asistencia", asistenciaRoutes)
-    .use("/comprobantes-pago", comprobantePagoRoutes)
-    .use("/justificantes", justificanteRoutes)
-    .use("/eventos-deportivos", eventoDeportivoRoutes)
-    .use("/directiva", directivaRoutes)
-    .use("/estudiantes", estudianteRoutes)
-    .use("/importacion", importacionRoutes)
-    .use("/sesiones-asistencia", sesionAsistenciaRoutes)
-    .use("/torneos", torneoRoutes)
-    .use("/eventos", eventoRoutes)
-    .use("/tipos-evento", tipoEventoRoutes)
-    .use("/actas-reunion", actaReunionRoutes)
-    // Rutas informacion publica
-    .use("/noticias", noticiaRoutes)
-    .use("/auspiciadores", auspiciadorRoutes)
-    .use("/merchandising", merchandisingRoutes)
-    .use("/homepage", homepageRoutes)
-    .use("/inventario", inventoryRoutes)
-    .use("/configuracion-precios", configuracionPrecioRoutes)
-    .use("/entrenadores", entrenadorPublicoRoutes)
-    .use("/terminos", terminosCondicionesRoutes)
-    .use("/upload", uploadRoutes);
+  .use("/auth", authRoutes)
+  .use("/user", userRoutes)
+  .use("/notificaciones", notificacionRoutes)
+  // Rutas modulos rugby
+  .use("/planes-pago", planPagoRoutes)
+  .use("/asistencia", asistenciaRoutes)
+  .use("/comprobantes-pago", comprobantePagoRoutes)
+  .use("/justificantes", justificanteRoutes)
+  .use("/eventos-deportivos", eventoDeportivoRoutes)
+  .use("/directiva", directivaRoutes)
+  .use("/estudiantes", estudianteRoutes)
+  .use("/importacion", importacionRoutes)
+  .use("/sesiones-asistencia", sesionAsistenciaRoutes)
+  .use("/torneos", torneoRoutes)
+  .use("/eventos", eventoRoutes)
+  .use("/tipos-evento", tipoEventoRoutes)
+  .use("/actas-reunion", actaReunionRoutes)
+  // Rutas informacion publica
+  .use("/noticias", noticiaRoutes)
+  .use("/auspiciadores", auspiciadorRoutes)
+  .use("/merchandising", merchandisingRoutes)
+  .use("/homepage", homepageRoutes)
+  .use("/inventario", inventoryRoutes)
+  .use("/configuracion-precios", configuracionPrecioRoutes)
+  .use("/entrenadores", entrenadorPublicoRoutes)
+  .use("/terminos", terminosCondicionesRoutes)
+  .use("/upload", uploadRoutes);
 
 // Health check endpoint para Docker y monitoring
 router.get("/health", (req, res) => {
-    res.status(200).json({ 
-        status: "ok", 
-        timestamp: new Date().toISOString(),
-        uptime: process.uptime(),
-        environment: process.env.NODE_ENV || "development"
-    });
+  res.status(200).json({
+    status: "ok",
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || "development",
+  });
 });
 
 export default router;

@@ -20,7 +20,11 @@ export async function createActaReunion(req, res) {
 
     // Validaciones básicas
     if (!actaData.titulo || !actaData.fecha || !actaData.descripcion) {
-      return handleErrorClient(res, 400, "Título, fecha y descripción son obligatorios");
+      return handleErrorClient(
+        res,
+        400,
+        "Título, fecha y descripción son obligatorios",
+      );
     }
 
     // Agregar información del creador
@@ -49,15 +53,15 @@ export async function getActasReunion(req, res) {
 
     // Filtros según el rol
     const filters = {};
-    
+
     if (estado) {
       filters.estado = estado;
     }
-    
+
     if (fechaDesde) {
       filters.fechaDesde = fechaDesde;
     }
-    
+
     if (fechaHasta) {
       filters.fechaHasta = fechaHasta;
     }
@@ -100,7 +104,11 @@ export async function getActaReunion(req, res) {
 
     // Los apoderados solo pueden ver actas publicadas
     if (rol === "apoderado" && acta.estado !== "publicada") {
-      return handleErrorClient(res, 403, "No tienes permisos para ver este acta");
+      return handleErrorClient(
+        res,
+        403,
+        "No tienes permisos para ver este acta",
+      );
     }
 
     handleSuccess(res, 200, "Acta de reunión encontrada", acta);
@@ -121,7 +129,11 @@ export async function updateActaReunion(req, res) {
 
     // Solo la directiva puede editar actas
     if (rol !== "directiva") {
-      return handleErrorClient(res, 403, "Solo la directiva puede editar actas de reunión");
+      return handleErrorClient(
+        res,
+        403,
+        "Solo la directiva puede editar actas de reunión",
+      );
     }
 
     // Verificar que el acta existe y obtener datos actuales
@@ -132,7 +144,11 @@ export async function updateActaReunion(req, res) {
 
     // Solo el creador puede editar el acta (opcional, puedes remover esta validación)
     if (actaExistente.rutCreador !== rut) {
-      return handleErrorClient(res, 403, "Solo el creador del acta puede editarla");
+      return handleErrorClient(
+        res,
+        403,
+        "Solo el creador del acta puede editarla",
+      );
     }
 
     const [acta, error] = await updateActaReunionService(id, updateData);
@@ -158,7 +174,11 @@ export async function deleteActaReunion(req, res) {
 
     // Solo la directiva puede eliminar actas
     if (rol !== "directiva") {
-      return handleErrorClient(res, 403, "Solo la directiva puede eliminar actas de reunión");
+      return handleErrorClient(
+        res,
+        403,
+        "Solo la directiva puede eliminar actas de reunión",
+      );
     }
 
     // Verificar que el acta existe
@@ -169,7 +189,11 @@ export async function deleteActaReunion(req, res) {
 
     // Solo el creador puede eliminar el acta (opcional)
     if (actaExistente.rutCreador !== rut) {
-      return handleErrorClient(res, 403, "Solo el creador del acta puede eliminarla");
+      return handleErrorClient(
+        res,
+        403,
+        "Solo el creador del acta puede eliminarla",
+      );
     }
 
     const [result, error] = await deleteActaReunionService(id);
@@ -200,7 +224,11 @@ export async function changeEstadoActa(req, res) {
 
     // Solo la directiva puede cambiar el estado
     if (rol !== "directiva") {
-      return handleErrorClient(res, 403, "Solo la directiva puede cambiar el estado del acta");
+      return handleErrorClient(
+        res,
+        403,
+        "Solo la directiva puede cambiar el estado del acta",
+      );
     }
 
     const [acta, error] = await changeEstadoActaService(id, estado);
@@ -209,7 +237,12 @@ export async function changeEstadoActa(req, res) {
       return handleErrorClient(res, 400, error);
     }
 
-    handleSuccess(res, 200, `Estado del acta cambiado a '${estado}' exitosamente`, acta);
+    handleSuccess(
+      res,
+      200,
+      `Estado del acta cambiado a '${estado}' exitosamente`,
+      acta,
+    );
   } catch (error) {
     handleErrorServer(res, 500, error.message);
   }

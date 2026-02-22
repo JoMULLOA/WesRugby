@@ -95,19 +95,27 @@ export async function buildParticipacionesPdf({
     doc
       .fontSize(12)
       .fillColor("#555555")
-      .text("No hay participaciones registradas con los criterios seleccionados.");
+      .text(
+        "No hay participaciones registradas con los criterios seleccionados.",
+      );
   } else {
     const sortedRamas = [...estadisticasPorRama].sort((a, b) =>
-      normalizeText(a.nombreRama).localeCompare(normalizeText(b.nombreRama), "es", {
-        sensitivity: "base",
-      }),
+      normalizeText(a.nombreRama).localeCompare(
+        normalizeText(b.nombreRama),
+        "es",
+        {
+          sensitivity: "base",
+        },
+      ),
     );
 
     for (const rama of sortedRamas) {
       doc
         .fontSize(14)
         .fillColor("#111111")
-        .text(normalizeText(rama.nombreRama) || "Rama sin nombre", { underline: true })
+        .text(normalizeText(rama.nombreRama) || "Rama sin nombre", {
+          underline: true,
+        })
         .moveDown(0.1);
 
       doc
@@ -122,7 +130,9 @@ export async function buildParticipacionesPdf({
         : [];
 
       for (const participacion of participaciones) {
-        const categoria = normalizeText(participacion.categoria || "Sin categoría");
+        const categoria = normalizeText(
+          participacion.categoria || "Sin categoría",
+        );
         if (!categoriasMap.has(categoria)) {
           categoriasMap.set(categoria, {
             total: 0,
@@ -137,8 +147,8 @@ export async function buildParticipacionesPdf({
         );
       }
 
-      const categoriasOrdenadas = Array.from(categoriasMap.entries()).sort((a, b) =>
-        a[0].localeCompare(b[0], "es", { sensitivity: "base" }),
+      const categoriasOrdenadas = Array.from(categoriasMap.entries()).sort(
+        (a, b) => a[0].localeCompare(b[0], "es", { sensitivity: "base" }),
       );
 
       if (categoriasOrdenadas.length === 0) {
@@ -152,7 +162,9 @@ export async function buildParticipacionesPdf({
           doc
             .fontSize(12)
             .fillColor("#222222")
-            .text(`• ${categoria.toUpperCase()} (${info.total} niños)`, { indent: 6 })
+            .text(`• ${categoria.toUpperCase()} (${info.total} niños)`, {
+              indent: 6,
+            })
             .moveDown(0.1);
 
           const nombres = Array.from(new Set(info.participantes)).sort((a, b) =>
@@ -165,7 +177,11 @@ export async function buildParticipacionesPdf({
               .fillColor("#888888")
               .text("Sin nombres registrados", {
                 indent: 22,
-                width: doc.page.width - doc.page.margins.left - doc.page.margins.right - 16,
+                width:
+                  doc.page.width -
+                  doc.page.margins.left -
+                  doc.page.margins.right -
+                  16,
               })
               .moveDown(0.3);
           } else {
@@ -176,7 +192,11 @@ export async function buildParticipacionesPdf({
                 .fillColor("#444444")
                 .text(`${index + 1}) ${nombre}`, {
                   indent: 22,
-                  width: doc.page.width - doc.page.margins.left - doc.page.margins.right - 16,
+                  width:
+                    doc.page.width -
+                    doc.page.margins.left -
+                    doc.page.margins.right -
+                    16,
                 });
             });
             doc.moveDown(0.3);

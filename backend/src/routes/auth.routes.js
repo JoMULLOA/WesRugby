@@ -1,7 +1,16 @@
 "use strict";
 import { Router } from "express";
-import { login, logout, register, getProfile } from "../controllers/auth.controller.js";
-import { sendCode, sendCoder, verifyCode } from "../controllers/verification.controller.js";
+import {
+  login,
+  logout,
+  register,
+  getProfile,
+} from "../controllers/auth.controller.js";
+import {
+  sendCode,
+  sendCoder,
+  verifyCode,
+} from "../controllers/verification.controller.js";
 import { authenticateJwt } from "../middlewares/authentication.middleware.js";
 import { isAdmin } from "../middlewares/authorization.middleware.js";
 

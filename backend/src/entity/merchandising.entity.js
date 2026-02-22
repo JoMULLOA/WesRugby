@@ -14,80 +14,80 @@ const MerchandisingSchema = new EntitySchema({
       type: "varchar",
       length: 255,
       nullable: false,
-      comment: "Nombre del producto"
+      comment: "Nombre del producto",
     },
     descripcion: {
       type: "text",
       nullable: true,
-      comment: "Descripción del producto"
+      comment: "Descripción del producto",
     },
     imagen: {
       type: "varchar",
       length: 500,
       nullable: false,
-      comment: "URL de la imagen del producto"
+      comment: "URL de la imagen del producto",
     },
     precio: {
       type: "decimal",
       precision: 10,
       scale: 2,
       nullable: false,
-      comment: "Precio del producto"
+      comment: "Precio del producto",
     },
     moneda: {
       type: "varchar",
       length: 5,
       default: "CLP",
       nullable: false,
-      comment: "Moneda del precio"
+      comment: "Moneda del precio",
     },
     disponible: {
       type: "boolean",
       default: true,
       nullable: false,
-      comment: "Si el producto está disponible"
+      comment: "Si el producto está disponible",
     },
     stock: {
       type: "int",
       nullable: true,
-      comment: "Cantidad en stock (opcional)"
+      comment: "Cantidad en stock (opcional)",
     },
     categoria: {
       type: "varchar",
       length: 100,
       nullable: true,
-      comment: "Categoría del producto (camisetas, accesorios, etc.)"
+      comment: "Categoría del producto (camisetas, accesorios, etc.)",
     },
     estado: {
       type: "enum",
       enum: ["activo", "inactivo"],
       default: "activo",
       nullable: false,
-      comment: "Estado del producto"
+      comment: "Estado del producto",
     },
     rutCreador: {
       type: "varchar",
       length: 12,
       nullable: false,
-      comment: "RUT del usuario que creó el producto (directiva)"
+      comment: "RUT del usuario que creó el producto (directiva)",
     },
     nombreCreador: {
       type: "varchar",
       length: 255,
       nullable: false,
-      comment: "Nombre completo del creador"
+      comment: "Nombre completo del creador",
     },
     orden: {
       type: "int",
       default: 0,
       nullable: false,
-      comment: "Orden de visualización en el home"
+      comment: "Orden de visualización en el home",
     },
     contactoVenta: {
       type: "varchar",
       length: 255,
       nullable: true,
-      comment: "Información de contacto para la venta"
+      comment: "Información de contacto para la venta",
     },
     createdAt: {
       type: "timestamp with time zone",

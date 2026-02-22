@@ -34,7 +34,9 @@ export async function generateUniqueBarcode(repository, category) {
   const maxAttempts = 25;
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     const candidate = generateBarcodeCandidate(category);
-    const existing = await repository.findOne({ where: { barcode: candidate } });
+    const existing = await repository.findOne({
+      where: { barcode: candidate },
+    });
     if (!existing) {
       return candidate;
     }

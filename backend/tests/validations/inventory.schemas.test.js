@@ -3,9 +3,16 @@ import Joi from "joi";
 
 // Esquemas replicados del controller (misma lógica, sin depender de la BD)
 const INVENTORY_PRODUCT_CATEGORIES = [
-  "bebida_latas", "pasteleria", "selladitos", "cafeteria",
-  "pastillas", "papas_fritas_cajita", "bebidas_energeticas",
-  "varios", "comestibles", "otros_productos",
+  "bebida_latas",
+  "pasteleria",
+  "selladitos",
+  "cafeteria",
+  "pastillas",
+  "papas_fritas_cajita",
+  "bebidas_energeticas",
+  "varios",
+  "comestibles",
+  "otros_productos",
 ];
 const INVENTORY_SOURCE_TYPES = ["compra", "donacion"];
 const INVENTORY_PRICING_MODES = ["fixed", "variable"];
@@ -13,9 +20,15 @@ const INVENTORY_PRICING_MODES = ["fixed", "variable"];
 const productSchema = Joi.object({
   id: Joi.string().uuid({ version: "uuidv4" }).optional(),
   name: Joi.string().min(2).max(200).required(),
-  category: Joi.string().valid(...INVENTORY_PRODUCT_CATEGORIES).required(),
-  sourceType: Joi.string().valid(...INVENTORY_SOURCE_TYPES).required(),
-  pricingMode: Joi.string().valid(...INVENTORY_PRICING_MODES).required(),
+  category: Joi.string()
+    .valid(...INVENTORY_PRODUCT_CATEGORIES)
+    .required(),
+  sourceType: Joi.string()
+    .valid(...INVENTORY_SOURCE_TYPES)
+    .required(),
+  pricingMode: Joi.string()
+    .valid(...INVENTORY_PRICING_MODES)
+    .required(),
   defaultPriceCents: Joi.number().integer().min(0).allow(null).optional(),
   barcode: Joi.string().min(6).max(40).optional(),
   active: Joi.boolean().optional(),
@@ -67,7 +80,10 @@ describe("productSchema", () => {
   });
 
   it("acepta defaultPriceCents en null", () => {
-    const { error } = productSchema.validate({ ...validProduct, defaultPriceCents: null });
+    const { error } = productSchema.validate({
+      ...validProduct,
+      defaultPriceCents: null,
+    });
     expect(error).toBeUndefined();
   });
 
@@ -82,12 +98,18 @@ describe("productSchema", () => {
   });
 
   it("rechaza nombre mayor a 200 caracteres", () => {
-    const { error } = productSchema.validate({ ...validProduct, name: "A".repeat(201) });
+    const { error } = productSchema.validate({
+      ...validProduct,
+      name: "A".repeat(201),
+    });
     expect(error).toBeDefined();
   });
 
   it("rechaza categoría inválida", () => {
-    const { error } = productSchema.validate({ ...validProduct, category: "categoria_falsa" });
+    const { error } = productSchema.validate({
+      ...validProduct,
+      category: "categoria_falsa",
+    });
     expect(error).toBeDefined();
   });
 
@@ -99,27 +121,42 @@ describe("productSchema", () => {
   });
 
   it("rechaza sourceType inválido", () => {
-    const { error } = productSchema.validate({ ...validProduct, sourceType: "regalo" });
+    const { error } = productSchema.validate({
+      ...validProduct,
+      sourceType: "regalo",
+    });
     expect(error).toBeDefined();
   });
 
   it("rechaza pricingMode inválido", () => {
-    const { error } = productSchema.validate({ ...validProduct, pricingMode: "dinamico" });
+    const { error } = productSchema.validate({
+      ...validProduct,
+      pricingMode: "dinamico",
+    });
     expect(error).toBeDefined();
   });
 
   it("rechaza defaultPriceCents negativo", () => {
-    const { error } = productSchema.validate({ ...validProduct, defaultPriceCents: -1 });
+    const { error } = productSchema.validate({
+      ...validProduct,
+      defaultPriceCents: -1,
+    });
     expect(error).toBeDefined();
   });
 
   it("rechaza barcode menor a 6 caracteres", () => {
-    const { error } = productSchema.validate({ ...validProduct, barcode: "123" });
+    const { error } = productSchema.validate({
+      ...validProduct,
+      barcode: "123",
+    });
     expect(error).toBeDefined();
   });
 
   it("rechaza uuid con formato inválido", () => {
-    const { error } = productSchema.validate({ ...validProduct, id: "no-es-uuid" });
+    const { error } = productSchema.validate({
+      ...validProduct,
+      id: "no-es-uuid",
+    });
     expect(error).toBeDefined();
   });
 });
@@ -149,7 +186,7 @@ describe("scanSchema", () => {
   });
 
   it("rechaza sin id", () => {
-    const { id, ...rest } = validScan;
+    const { id: _id, ...rest } = validScan;
     expect(scanSchema.validate(rest).error).toBeDefined();
   });
 
@@ -190,7 +227,9 @@ describe("bulkSchema", () => {
   });
 
   it("acepta bulk con múltiples scans válidos", () => {
-    expect(bulkSchema.validate({ scans: [validScan, validScan] }).error).toBeUndefined();
+    expect(
+      bulkSchema.validate({ scans: [validScan, validScan] }).error,
+    ).toBeUndefined();
   });
 
   it("rechaza array vacío (mín 1 scan)", () => {
@@ -217,7 +256,11 @@ describe("variosSchema", () => {
 
   it("acepta payload completo", () => {
     expect(
-      variosSchema.validate({ priceCents: 1000, quantity: 2, deviceId: "CAJA-001" }).error
+      variosSchema.validate({
+        priceCents: 1000,
+        quantity: 2,
+        deviceId: "CAJA-001",
+      }).error,
     ).toBeUndefined();
   });
 
@@ -230,7 +273,9 @@ describe("variosSchema", () => {
   });
 
   it("rechaza quantity 0 (mín 1)", () => {
-    expect(variosSchema.validate({ priceCents: 500, quantity: 0 }).error).toBeDefined();
+    expect(
+      variosSchema.validate({ priceCents: 500, quantity: 0 }).error,
+    ).toBeDefined();
   });
 
   it("rechaza sin priceCents", () => {
@@ -238,6 +283,8 @@ describe("variosSchema", () => {
   });
 
   it("rechaza deviceId de 1 caracter (mín 2)", () => {
-    expect(variosSchema.validate({ priceCents: 500, deviceId: "X" }).error).toBeDefined();
+    expect(
+      variosSchema.validate({ priceCents: 500, deviceId: "X" }).error,
+    ).toBeDefined();
   });
 });

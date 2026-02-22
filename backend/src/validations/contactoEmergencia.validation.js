@@ -8,9 +8,11 @@ const phoneValidator = (value, helper) => {
   // Formato chileno: +56XXXXXXXXX (9 dígitos después del +56)
   // También acepta 9XXXXXXXX (8 dígitos después del 9)
   const phoneRegex = /^(\+56|56)?[2-9]\d{8}$/;
-  
-  if (!phoneRegex.test(value.replace(/\s/g, ''))) {
-    return helper.message("El número de teléfono debe ser válido (formato chileno)");
+
+  if (!phoneRegex.test(value.replace(/\s/g, ""))) {
+    return helper.message(
+      "El número de teléfono debe ser válido (formato chileno)",
+    );
   }
   return value;
 };
@@ -33,37 +35,26 @@ export const contactoEmergenciaBodyValidation = Joi.object({
       "any.required": "El nombre es obligatorio.",
     }),
 
-  telefono: Joi.string()
-    .custom(phoneValidator)
-    .required()
-    .messages({
-      "string.empty": "El teléfono no puede estar vacío.",
-      "string.base": "El teléfono debe ser de tipo string.",
-      "any.required": "El teléfono es obligatorio.",
-    }),
+  telefono: Joi.string().custom(phoneValidator).required().messages({
+    "string.empty": "El teléfono no puede estar vacío.",
+    "string.base": "El teléfono debe ser de tipo string.",
+    "any.required": "El teléfono es obligatorio.",
+  }),
 
-  email: Joi.string()
-    .email()
-    .max(255)
-    .optional()
-    .allow('')
-    .messages({
-      "string.email": "El email debe tener un formato válido.",
-      "string.max": "El email debe tener como máximo 255 caracteres.",
-    }),
+  email: Joi.string().email().max(255).optional().allow("").messages({
+    "string.email": "El email debe tener un formato válido.",
+    "string.max": "El email debe tener como máximo 255 caracteres.",
+  }),
 });
 
 /**
  * Validación para consultas por ID
  */
 export const contactoEmergenciaQueryValidation = Joi.object({
-  id: Joi.string()
-    .uuid()
-    .required()
-    .messages({
-      "string.empty": "El ID no puede estar vacío.",
-      "string.base": "El ID debe ser de tipo string.",
-      "string.uuid": "El ID debe ser un UUID válido.",
-      "any.required": "El ID es obligatorio.",
-    }),
+  id: Joi.string().uuid().required().messages({
+    "string.empty": "El ID no puede estar vacío.",
+    "string.base": "El ID debe ser de tipo string.",
+    "string.uuid": "El ID debe ser un UUID válido.",
+    "any.required": "El ID es obligatorio.",
+  }),
 });

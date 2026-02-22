@@ -3,7 +3,13 @@ import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 import { AppDataSource, connectDB } from "../config/configDb.js";
-import { listActiveProducts, listProductsByCategory, listProductsByIds, generateSheetBuffer, seedInventoryProducts } from "../services/inventory.service.js";
+import {
+  listActiveProducts,
+  listProductsByCategory,
+  listProductsByIds,
+  generateSheetBuffer,
+  seedInventoryProducts,
+} from "../services/inventory.service.js";
 
 function parseArgs(argv) {
   const args = { includeAll: true };
@@ -20,7 +26,10 @@ function parseArgs(argv) {
         break;
       case "ids":
         if (value) {
-          args.ids = value.split(",").map((id) => id.trim()).filter(Boolean);
+          args.ids = value
+            .split(",")
+            .map((id) => id.trim())
+            .filter(Boolean);
         }
         break;
       case "includeAll":

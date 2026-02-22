@@ -13,7 +13,12 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "html"],
       include: ["src/**/*.js"],
-      exclude: ["src/index.js", "src/config/**", "src/entity/**", "src/migrations/**"],
+      exclude: [
+        "src/index.js",
+        "src/config/**",
+        "src/entity/**",
+        "src/migrations/**",
+      ],
     },
   },
 });

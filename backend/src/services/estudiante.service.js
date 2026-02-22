@@ -14,11 +14,11 @@ export function calcularCategoria(fechaNacimiento) {
 
   const fecha = new Date(fechaNacimiento);
   const hoy = new Date();
-  
+
   // Calcular edad en años
   let edad = hoy.getFullYear() - fecha.getFullYear();
   const mes = hoy.getMonth() - fecha.getMonth();
-  
+
   // Ajustar si aún no ha cumplido años este año
   if (mes < 0 || (mes === 0 && hoy.getDate() < fecha.getDate())) {
     edad--;
@@ -29,7 +29,7 @@ export function calcularCategoria(fechaNacimiento) {
   if (edad >= 8 && edad <= 9) return "M8";
   if (edad >= 10 && edad <= 11) return "M10";
   if (edad >= 12) return "M12";
-  
+
   // Si es menor de 6 años, no asignar categoría
   return null;
 }
@@ -60,7 +60,10 @@ async function aplicarMesesExentos(estudiantes) {
       const actuales = mesesExencionPorRut.get(j.estudianteRut) || new Set();
       j.mesesExencion.forEach((mesYYYYMM) => {
         // Solo considerar formato YYYY-MM válido del año 2025
-        if (typeof mesYYYYMM === "string" && /^2025-(0[1-9]|1[0-2])$/u.test(mesYYYYMM)) {
+        if (
+          typeof mesYYYYMM === "string" &&
+          /^2025-(0[1-9]|1[0-2])$/u.test(mesYYYYMM)
+        ) {
           actuales.add(mesYYYYMM);
         }
       });
@@ -83,18 +86,33 @@ async function aplicarMesesExentos(estudiantes) {
 
     // Mapear YYYY-MM a nombre de mes en español (marzo, abril, etc.)
     const mapaMesNumeroANombre = {
-      "01": "enero", "02": "febrero", "03": "marzo", "04": "abril",
-      "05": "mayo", "06": "junio", "07": "julio", "08": "agosto",
-      "09": "septiembre", "10": "octubre", "11": "noviembre", "12": "diciembre",
+      "01": "enero",
+      "02": "febrero",
+      "03": "marzo",
+      "04": "abril",
+      "05": "mayo",
+      "06": "junio",
+      "07": "julio",
+      "08": "agosto",
+      "09": "septiembre",
+      10: "octubre",
+      11: "noviembre",
+      12: "diciembre",
     };
 
     mesesExentosSet.forEach((mesYYYYMM) => {
       const mesNumero = mesYYYYMM.split("-")[1]; // Extrae "03" de "2025-03"
       const mesNombre = mapaMesNumeroANombre[mesNumero];
-      if (mesNombre && mesesActualizados.hasOwnProperty(mesNombre)) {
+      if (
+        mesNombre &&
+        Object.prototype.hasOwnProperty.call(mesesActualizados, mesNombre)
+      ) {
         const estadoActual = mesesActualizados[mesNombre];
         // Solo marcar como justificado si está no pagado o vacío
-        if (!estadoActual || estadoActual.toString().trim().toLowerCase() === "no pagado") {
+        if (
+          !estadoActual ||
+          estadoActual.toString().trim().toLowerCase() === "no pagado"
+        ) {
           mesesActualizados[mesNombre] = "justificado";
         }
       }
@@ -116,7 +134,7 @@ export async function createEstudianteService(estudianteData) {
 
     // Verificar si el estudiante ya existe
     const existingEstudiante = await estudianteRepository.findOne({
-      where: { rut: estudianteData.rut }
+      where: { rut: estudianteData.rut },
     });
 
     if (existingEstudiante) {
@@ -125,8 +143,12 @@ export async function createEstudianteService(estudianteData) {
 
     // Calcular y asignar categoría automáticamente si tiene fecha de nacimiento
     if (estudianteData.fechaNacimiento && !estudianteData.categoria) {
-      estudianteData.categoria = calcularCategoria(estudianteData.fechaNacimiento);
-      console.log(`📊 Categoría asignada automáticamente: ${estudianteData.categoria} para estudiante con edad calculada desde ${estudianteData.fechaNacimiento}`);
+      estudianteData.categoria = calcularCategoria(
+        estudianteData.fechaNacimiento,
+      );
+      console.log(
+        `📊 Categoría asignada automáticamente: ${estudianteData.categoria} para estudiante con edad calculada desde ${estudianteData.fechaNacimiento}`,
+      );
     }
 
     // Crear nuevo estudiante
@@ -142,7 +164,7 @@ export async function createEstudianteService(estudianteData) {
 
 export async function getEstudiantesService() {
   try {
-    console.log('🔍 Obteniendo todos los estudiantes...');
+    console.log("🔍 Obteniendo todos los estudiantes...");
     const estudianteRepository = AppDataSource.getRepository(Estudiante);
 
     const estudiantes = await estudianteRepository.find({
@@ -150,20 +172,20 @@ export async function getEstudiantesService() {
         nombre: "ASC",
       },
     });
-    
-    console.log('✅ Estudiantes encontrados en DB:', estudiantes.length);
+
+    console.log("✅ Estudiantes encontrados en DB:", estudiantes.length);
 
     if (!estudiantes || estudiantes.length === 0) {
       return [null, "No hay estudiantes registrados"];
     }
 
     // Procesar los estudiantes para separar nombres y apellidos
-    const estudiantesProcessed = estudiantes.map(estudiante => {
-      const nombreCompleto = estudiante.nombre || '';
-      const partesNombre = nombreCompleto.trim().split(' ');
-      
-      const nombres = partesNombre.slice(0, 2).join(' ') || nombreCompleto;
-      const apellidos = partesNombre.slice(2).join(' ') || '';
+    const estudiantesProcessed = estudiantes.map((estudiante) => {
+      const nombreCompleto = estudiante.nombre || "";
+      const partesNombre = nombreCompleto.trim().split(" ");
+
+      const nombres = partesNombre.slice(0, 2).join(" ") || nombreCompleto;
+      const apellidos = partesNombre.slice(2).join(" ") || "";
 
       return {
         ...estudiante,
@@ -173,7 +195,8 @@ export async function getEstudiantesService() {
     });
 
     // Aplicar meses exentos basados en justificantes aprobados
-    const estudiantesConExenciones = await aplicarMesesExentos(estudiantesProcessed);
+    const estudiantesConExenciones =
+      await aplicarMesesExentos(estudiantesProcessed);
 
     return [estudiantesConExenciones, null];
   } catch (error) {
@@ -191,7 +214,7 @@ export async function getEstudiantesByApoderadoService(rutApoderado) {
     const estudiantes = await estudianteRepository.find({
       where: [
         { rutResponsable: rutApoderado },
-        { rutResponsable2: rutApoderado }
+        { rutResponsable2: rutApoderado },
       ],
       order: {
         nombre: "ASC",
@@ -201,19 +224,19 @@ export async function getEstudiantesByApoderadoService(rutApoderado) {
     console.log("✅ Estudiantes encontrados en DB:", estudiantes.length);
 
     // Procesar los estudiantes para separar nombres y apellidos
-    const estudiantesProcessed = estudiantes.map(estudiante => {
-      const nombreCompleto = estudiante.nombre || '';
-      const partesNombre = nombreCompleto.trim().split(' ');
-      
+    const estudiantesProcessed = estudiantes.map((estudiante) => {
+      const nombreCompleto = estudiante.nombre || "";
+      const partesNombre = nombreCompleto.trim().split(" ");
+
       // Para "Ana Pérez" -> nombres: "Ana", apellidos: "Pérez"
       let nombres, apellidos;
       if (partesNombre.length >= 2) {
         // Tomar el primer elemento como nombres y el resto como apellidos
         nombres = partesNombre[0];
-        apellidos = partesNombre.slice(1).join(' ');
+        apellidos = partesNombre.slice(1).join(" ");
       } else {
         nombres = nombreCompleto;
-        apellidos = '';
+        apellidos = "";
       }
 
       return {
@@ -224,7 +247,8 @@ export async function getEstudiantesByApoderadoService(rutApoderado) {
     });
 
     // Aplicar meses exentos basados en justificantes aprobados
-    const estudiantesConExenciones = await aplicarMesesExentos(estudiantesProcessed);
+    const estudiantesConExenciones =
+      await aplicarMesesExentos(estudiantesProcessed);
 
     return [estudiantesConExenciones, null];
   } catch (error) {
@@ -238,7 +262,7 @@ export async function getEstudianteService(rut) {
     const estudianteRepository = AppDataSource.getRepository(Estudiante);
 
     const estudiante = await estudianteRepository.findOne({
-      where: { rut }
+      where: { rut },
     });
 
     if (!estudiante) {
@@ -246,17 +270,17 @@ export async function getEstudianteService(rut) {
     }
 
     // Procesar para separar nombres y apellidos
-    const nombreCompleto = estudiante.nombre || '';
-    const partesNombre = nombreCompleto.trim().split(' ');
-    
+    const nombreCompleto = estudiante.nombre || "";
+    const partesNombre = nombreCompleto.trim().split(" ");
+
     let nombres, apellidos;
     if (partesNombre.length >= 2) {
       // Tomar el primer elemento como nombres y el resto como apellidos
       nombres = partesNombre[0];
-      apellidos = partesNombre.slice(1).join(' ');
+      apellidos = partesNombre.slice(1).join(" ");
     } else {
       nombres = nombreCompleto;
-      apellidos = '';
+      apellidos = "";
     }
 
     const estudianteProcessed = {
@@ -266,7 +290,9 @@ export async function getEstudianteService(rut) {
     };
 
     // Aplicar meses exentos basados en justificantes aprobados
-    const [estudianteConExenciones] = await aplicarMesesExentos([estudianteProcessed]);
+    const [estudianteConExenciones] = await aplicarMesesExentos([
+      estudianteProcessed,
+    ]);
 
     return [estudianteConExenciones, null];
   } catch (error) {
@@ -280,7 +306,7 @@ export async function updateEstudianteService(rut, updateData) {
     const estudianteRepository = AppDataSource.getRepository(Estudiante);
 
     const estudiante = await estudianteRepository.findOne({
-      where: { rut }
+      where: { rut },
     });
 
     if (!estudiante) {
@@ -292,7 +318,9 @@ export async function updateEstudianteService(rut, updateData) {
       const nuevaCategoria = calcularCategoria(updateData.fechaNacimiento);
       if (nuevaCategoria) {
         updateData.categoria = nuevaCategoria;
-        console.log(`📊 Categoría recalculada automáticamente: ${nuevaCategoria} para estudiante ${rut}`);
+        console.log(
+          `📊 Categoría recalculada automáticamente: ${nuevaCategoria} para estudiante ${rut}`,
+        );
       }
     }
 
@@ -314,7 +342,7 @@ export async function deleteEstudianteService(rut) {
     const estudianteRepository = AppDataSource.getRepository(Estudiante);
 
     const estudiante = await estudianteRepository.findOne({
-      where: { rut }
+      where: { rut },
     });
 
     if (!estudiante) {
@@ -335,7 +363,7 @@ export async function updateEstudianteFotoService(rut, fotoUrl) {
     const estudianteRepository = AppDataSource.getRepository(Estudiante);
 
     const estudiante = await estudianteRepository.findOne({
-      where: { rut }
+      where: { rut },
     });
 
     if (!estudiante) {
@@ -364,7 +392,7 @@ export async function recalcularCategoriasService() {
 
     // Obtener todos los estudiantes con fecha de nacimiento
     const estudiantes = await estudianteRepository.find({
-      where: {}
+      where: {},
     });
 
     let actualizados = 0;
@@ -378,12 +406,14 @@ export async function recalcularCategoriasService() {
       }
 
       const categoriaCalculada = calcularCategoria(estudiante.fechaNacimiento);
-      
+
       if (categoriaCalculada && categoriaCalculada !== estudiante.categoria) {
         estudiante.categoria = categoriaCalculada;
         await estudianteRepository.save(estudiante);
         actualizados++;
-        console.log(`✅ Categoría actualizada para ${estudiante.nombre}: ${categoriaCalculada}`);
+        console.log(
+          `✅ Categoría actualizada para ${estudiante.nombre}: ${categoriaCalculada}`,
+        );
       } else {
         sinCambios++;
       }
@@ -393,7 +423,7 @@ export async function recalcularCategoriasService() {
       total: estudiantes.length,
       actualizados,
       sinFecha,
-      sinCambios
+      sinCambios,
     };
 
     console.log(`📊 Recálculo completado:`, resultado);
@@ -406,18 +436,18 @@ export async function recalcularCategoriasService() {
 
 export const getEstudiantesByRutListService = async (rutList) => {
   try {
-    console.log('🔍 Buscando estudiantes por lista de RUTs:', rutList.length);
-    
+    console.log("🔍 Buscando estudiantes por lista de RUTs:", rutList.length);
+
     const estudianteRepository = AppDataSource.getRepository(Estudiante);
-    
+
     const estudiantes = await estudianteRepository.find({
-      where: rutList.map(rut => ({ rut }))
+      where: rutList.map((rut) => ({ rut })),
     });
 
-    console.log('✅ Estudiantes encontrados por RUT list:', estudiantes.length);
+    console.log("✅ Estudiantes encontrados por RUT list:", estudiantes.length);
     return [estudiantes, null];
   } catch (error) {
-    console.error('Error obtener estudiantes por lista:', error);
+    console.error("Error obtener estudiantes por lista:", error);
     return [null, error];
   }
 };

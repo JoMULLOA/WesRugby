@@ -7,7 +7,8 @@ import {
   handleSuccess,
 } from "../handlers/responseHandlers.js";
 
-const configuracionPrecioRepository = AppDataSource.getRepository(ConfiguracionPrecio);
+const configuracionPrecioRepository =
+  AppDataSource.getRepository(ConfiguracionPrecio);
 
 /**
  * Obtener la configuración de precios para un año específico
@@ -26,15 +27,20 @@ export async function obtenerPreciosPorAnio(req, res) {
     });
 
     if (!configuracion) {
-      return handleSuccess(res, 200, "No hay configuración de precios para este año", {
-        anio: anioNum,
-        precioMensualidad: null,
-        precioMatricula: null,
-        descuentoMensualidad2: null,
-        descuentoMensualidad3Plus: null,
-        descuentoMatricula2: null,
-        descuentoMatricula3Plus: null,
-      });
+      return handleSuccess(
+        res,
+        200,
+        "No hay configuración de precios para este año",
+        {
+          anio: anioNum,
+          precioMensualidad: null,
+          precioMatricula: null,
+          descuentoMensualidad2: null,
+          descuentoMensualidad3Plus: null,
+          descuentoMatricula2: null,
+          descuentoMatricula3Plus: null,
+        },
+      );
     }
 
     handleSuccess(res, 200, "Configuración de precios obtenida", {
@@ -75,17 +81,27 @@ export async function guardarPrecios(req, res) {
       return handleErrorClient(
         res,
         400,
-        "Faltan campos requeridos: anio, precioMensualidad, precioMatricula"
+        "Faltan campos requeridos: anio, precioMensualidad, precioMatricula",
       );
     }
 
     const anioNum = parseInt(anio, 10);
     const mensualidadNum = parseFloat(precioMensualidad);
     const matriculaNum = parseFloat(precioMatricula);
-  const descMen2 = descuentoMensualidad2 !== undefined ? parseInt(descuentoMensualidad2, 10) : 0;
-  const descMen3 = descuentoMensualidad3Plus !== undefined ? parseInt(descuentoMensualidad3Plus, 10) : 0;
-  const descMat2 = descuentoMatricula2 !== undefined ? parseInt(descuentoMatricula2, 10) : 0;
-  const descMat3 = descuentoMatricula3Plus !== undefined ? parseInt(descuentoMatricula3Plus, 10) : 0;
+    const descMen2 =
+      descuentoMensualidad2 !== undefined
+        ? parseInt(descuentoMensualidad2, 10)
+        : 0;
+    const descMen3 =
+      descuentoMensualidad3Plus !== undefined
+        ? parseInt(descuentoMensualidad3Plus, 10)
+        : 0;
+    const descMat2 =
+      descuentoMatricula2 !== undefined ? parseInt(descuentoMatricula2, 10) : 0;
+    const descMat3 =
+      descuentoMatricula3Plus !== undefined
+        ? parseInt(descuentoMatricula3Plus, 10)
+        : 0;
 
     if (isNaN(anioNum) || anioNum < 2020 || anioNum > 2100) {
       return handleErrorClient(res, 400, "Año inválido");
@@ -103,7 +119,11 @@ export async function guardarPrecios(req, res) {
     const descuentos = [descMen2, descMen3, descMat2, descMat3];
     for (const d of descuentos) {
       if (isNaN(d) || d < 0 || d > 100) {
-        return handleErrorClient(res, 400, "Los descuentos deben ser enteros entre 0 y 100");
+        return handleErrorClient(
+          res,
+          400,
+          "Los descuentos deben ser enteros entre 0 y 100",
+        );
       }
     }
 
@@ -122,8 +142,10 @@ export async function guardarPrecios(req, res) {
       configuracion.descuentoMatricula3Plus = descMat3;
       await configuracionPrecioRepository.save(configuracion);
 
-      console.log(`✅ Configuración de precios actualizada para año ${anioNum}`);
-      
+      console.log(
+        `✅ Configuración de precios actualizada para año ${anioNum}`,
+      );
+
       return handleSuccess(res, 200, "Configuración de precios actualizada", {
         id: configuracion.id,
         anio: configuracion.anio,
@@ -193,7 +215,7 @@ export async function obtenerTodasLasConfiguraciones(req, res) {
       res,
       200,
       "Configuraciones de precios obtenidas",
-      configuracionesFormateadas
+      configuracionesFormateadas,
     );
   } catch (error) {
     console.error("Error al obtener configuraciones:", error);

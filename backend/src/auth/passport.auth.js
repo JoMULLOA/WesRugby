@@ -10,27 +10,36 @@ const options = {
   secretOrKey: ACCESS_TOKEN_SECRET,
 };
 
-console.log("🔧 DEBUG - Passport JWT configurado con secretOrKey:", ACCESS_TOKEN_SECRET ? "✅ Definido" : "❌ No definido");
+console.log(
+  "🔧 DEBUG - Passport JWT configurado con secretOrKey:",
+  ACCESS_TOKEN_SECRET ? "✅ Definido" : "❌ No definido",
+);
 
 passport.use(
   new JwtStrategy(options, async (jwt_payload, done) => {
     try {
       console.log("🔍 DEBUG - JWT Payload recibido:", jwt_payload);
-      
+
       const userRepository = AppDataSource.getRepository(User);
-      
+
       // Buscar por RUT si está disponible, o por email como respaldo
       let user;
       if (jwt_payload.rut) {
         user = await userRepository.findOne({
-          where: { rut: jwt_payload.rut }
+          where: { rut: jwt_payload.rut },
         });
-        console.log("🔍 DEBUG - Usuario encontrado por RUT:", user ? "SÍ" : "NO");
+        console.log(
+          "🔍 DEBUG - Usuario encontrado por RUT:",
+          user ? "SÍ" : "NO",
+        );
       } else if (jwt_payload.email) {
         user = await userRepository.findOne({
-          where: { email: jwt_payload.email }
+          where: { email: jwt_payload.email },
         });
-        console.log("🔍 DEBUG - Usuario encontrado por EMAIL:", user ? "SÍ" : "NO");
+        console.log(
+          "🔍 DEBUG - Usuario encontrado por EMAIL:",
+          user ? "SÍ" : "NO",
+        );
       }
 
       if (user) {

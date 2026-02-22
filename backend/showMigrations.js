@@ -8,7 +8,7 @@ async function showMigrations() {
     console.log("✅ Conexión establecida\n");
 
     const executedMigrations = await AppDataSource.query(
-      `SELECT * FROM migrations_history ORDER BY timestamp DESC`
+      `SELECT * FROM migrations_history ORDER BY timestamp DESC`,
     );
 
     console.log("📋 Migraciones ejecutadas:");

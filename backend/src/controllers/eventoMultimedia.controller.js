@@ -100,9 +100,7 @@ function resolveEventoIdForRoutes(media) {
 function buildMediaPayload(media, req) {
   const assetUrl = resolveFileUrl(media.storagePath, req);
   const routeEventoId = resolveEventoIdForRoutes(media);
-  const routeSegment = routeEventoId
-    ? encodeURIComponent(routeEventoId)
-    : null;
+  const routeSegment = routeEventoId ? encodeURIComponent(routeEventoId) : null;
   const viewUrl = routeSegment
     ? `${getBaseUrl(req)}/api/eventos-deportivos/${routeSegment}/multimedia/${media.id}`
     : assetUrl;
@@ -115,10 +113,12 @@ function buildMediaPayload(media, req) {
   const uploaderRol = uploader?.rol || media.uploadedByRol || null;
   const uploaderRut = uploader?.rut || media.uploadedByRut || null;
   const avatarVersion =
-    typeof uploader?.avatarVersion === "number"
-      ? uploader.avatarVersion
-      : null;
-  const avatarUrl = buildAvatarUrl(req, uploader?.avatarPath, avatarVersion ?? undefined);
+    typeof uploader?.avatarVersion === "number" ? uploader.avatarVersion : null;
+  const avatarUrl = buildAvatarUrl(
+    req,
+    uploader?.avatarPath,
+    avatarVersion ?? undefined,
+  );
 
   const createdAtDate =
     media.createdAt instanceof Date
@@ -196,8 +196,7 @@ async function ensureUserCanAccessMedia(req, media) {
       ok: false,
       status: 403,
       message: "No autorizado",
-      details:
-        "No se pudo validar la pertenencia al evento para este recurso.",
+      details: "No se pudo validar la pertenencia al evento para este recurso.",
     };
   }
 
@@ -248,12 +247,18 @@ export async function subirMultimediaDirectiva(req, res) {
 
     if (!archivo.location) {
       await cleanupUploadedAsset(archivo);
-      return handleErrorServer(res, 500, "Error procesando la imagen", "No se obtuvo la URL de almacenamiento.");
+      return handleErrorServer(
+        res,
+        500,
+        "Error procesando la imagen",
+        "No se obtuvo la URL de almacenamiento.",
+      );
     }
 
     const evento = validacion.evento;
     const esPrivado = visibilidad === "privada";
-    const extension = archivo.originalname?.split(".").pop()?.toLowerCase() || null;
+    const extension =
+      archivo.originalname?.split(".").pop()?.toLowerCase() || null;
 
     const registro = multimediaRepository.create({
       eventoDeportivoId: evento.id,
@@ -278,10 +283,7 @@ export async function subirMultimediaDirectiva(req, res) {
         uploader: true,
       },
     });
-    const payload = buildMediaPayload(
-      guardadoConRelaciones ?? guardado,
-      req,
-    );
+    const payload = buildMediaPayload(guardadoConRelaciones ?? guardado, req);
 
     handleSuccess(res, 201, "Imagen subida exitosamente", payload);
   } catch (error) {
@@ -334,10 +336,16 @@ export async function subirMultimediaRama(req, res) {
 
     if (!archivo.location) {
       await cleanupUploadedAsset(archivo);
-      return handleErrorServer(res, 500, "Error procesando la imagen", "No se obtuvo la URL de almacenamiento.");
+      return handleErrorServer(
+        res,
+        500,
+        "Error procesando la imagen",
+        "No se obtuvo la URL de almacenamiento.",
+      );
     }
 
-    const extension = archivo.originalname?.split(".").pop()?.toLowerCase() || null;
+    const extension =
+      archivo.originalname?.split(".").pop()?.toLowerCase() || null;
 
     const registro = multimediaRepository.create({
       eventoDeportivoId: eventoId,
@@ -362,10 +370,7 @@ export async function subirMultimediaRama(req, res) {
         uploader: true,
       },
     });
-    const payload = buildMediaPayload(
-      guardadoConRelaciones ?? guardado,
-      req,
-    );
+    const payload = buildMediaPayload(guardadoConRelaciones ?? guardado, req);
 
     handleSuccess(res, 201, "Imagen subida exitosamente", payload);
   } catch (error) {
@@ -456,14 +461,7 @@ export async function obtenerMultimediaEventoCompartido(req, res) {
 
 export async function obtenerMultimediaGlobalDirectiva(req, res) {
   try {
-    const {
-      fechaDesde,
-      fechaHasta,
-      evento,
-      rut,
-      rol,
-      visibilidad,
-    } = req.query;
+    const { fechaDesde, fechaHasta, evento, rut, rol, visibilidad } = req.query;
 
     const qb = multimediaRepository
       .createQueryBuilder("media")
@@ -621,15 +619,11 @@ export async function eliminarMultimediaEvento(req, res) {
     // Eliminar el registro de la base de datos
     await multimediaRepository.remove(media);
 
-    handleSuccess(
-      res,
-      200,
-      "Multimedia eliminada exitosamente",
-      { id: mediaId },
-    );
+    handleSuccess(res, 200, "Multimedia eliminada exitosamente", {
+      id: mediaId,
+    });
   } catch (error) {
     console.error("Error eliminando multimedia:", error);
     handleErrorServer(res, 500, "Error interno del servidor", error.message);
   }
 }
-

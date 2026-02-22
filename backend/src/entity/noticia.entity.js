@@ -14,54 +14,54 @@ const NoticiaSchema = new EntitySchema({
       type: "varchar",
       length: 255,
       nullable: false,
-      comment: "Título de la noticia"
+      comment: "Título de la noticia",
     },
     descripcion: {
       type: "text",
       nullable: false,
-      comment: "Descripción detallada de la noticia"
+      comment: "Descripción detallada de la noticia",
     },
     imagen: {
       type: "varchar",
       length: 500,
       nullable: false,
-      comment: "URL de la imagen de la noticia"
+      comment: "URL de la imagen de la noticia",
     },
     fechaPublicacion: {
       type: "date",
       nullable: false,
-      comment: "Fecha de publicación de la noticia"
+      comment: "Fecha de publicación de la noticia",
     },
     estado: {
       type: "enum",
       enum: ["borrador", "publicada", "archivada"],
       default: "borrador",
       nullable: false,
-      comment: "Estado de la noticia"
+      comment: "Estado de la noticia",
     },
     destacada: {
       type: "boolean",
       default: false,
       nullable: false,
-      comment: "Si la noticia está destacada en el home"
+      comment: "Si la noticia está destacada en el home",
     },
     rutCreador: {
       type: "varchar",
       length: 12,
       nullable: false,
-      comment: "RUT del usuario que creó la noticia (directiva)"
+      comment: "RUT del usuario que creó la noticia (directiva)",
     },
     nombreCreador: {
       type: "varchar",
       length: 255,
       nullable: false,
-      comment: "Nombre completo del creador"
+      comment: "Nombre completo del creador",
     },
     orden: {
       type: "int",
       default: 0,
       nullable: false,
-      comment: "Orden de visualización en el home"
+      comment: "Orden de visualización en el home",
     },
     createdAt: {
       type: "timestamp with time zone",

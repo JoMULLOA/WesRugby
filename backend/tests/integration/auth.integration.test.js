@@ -63,9 +63,10 @@ describe("POST /api/auth/login", () => {
   });
 
   it("retorna 400 cuando la contraseña es incorrecta", async () => {
-    const res = await request(app)
-      .post("/api/auth/login")
-      .send({ email: "directiva@wessex.cl", password: "contraseña_incorrecta" });
+    const res = await request(app).post("/api/auth/login").send({
+      email: "directiva@wessex.cl",
+      password: "contraseña_incorrecta",
+    });
 
     expect(res.status).toBe(400);
   });
@@ -174,16 +175,14 @@ describe("POST /api/auth/logout", () => {
 
 describe("POST /api/auth/register-apoderado", () => {
   it("retorna 201 al registrar un apoderado con datos válidos", async () => {
-    const res = await request(app)
-      .post("/api/auth/register-apoderado")
-      .send({
-        // RUT válido: máx 29.999.999, con puntos y check digit en [0-9kK]
-        rut: "12.999.001-K",
-        nombreCompleto: "Apoderado Test Integration",
-        email: "apoderado.test.integration@wessex.cl",
-        password: "Password123",
-        rol: "apoderado",
-      });
+    const res = await request(app).post("/api/auth/register-apoderado").send({
+      // RUT válido: máx 29.999.999, con puntos y check digit en [0-9kK]
+      rut: "12.999.001-K",
+      nombreCompleto: "Apoderado Test Integration",
+      email: "apoderado.test.integration@wessex.cl",
+      password: "Password123",
+      rol: "apoderado",
+    });
 
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
@@ -191,15 +190,13 @@ describe("POST /api/auth/register-apoderado", () => {
 
   it("retorna 400 al intentar registrar con un email ya existente", async () => {
     // El mismo email del seed
-    const res = await request(app)
-      .post("/api/auth/register-apoderado")
-      .send({
-        rut: "11.111.111-1",
-        nombreCompleto: "Duplicado",
-        email: "directiva@wessex.cl",
-        password: "Password123",
-        rol: "apoderado",
-      });
+    const res = await request(app).post("/api/auth/register-apoderado").send({
+      rut: "11.111.111-1",
+      nombreCompleto: "Duplicado",
+      email: "directiva@wessex.cl",
+      password: "Password123",
+      rol: "apoderado",
+    });
 
     expect(res.status).toBe(400);
   });

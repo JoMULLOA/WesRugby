@@ -12,10 +12,13 @@ const userRepository = AppDataSource.getRepository(User);
  */
 export async function crearNotificacionService(notificacionData) {
   try {
-    const { tipo, titulo, mensaje, rutReceptor, rutEmisor, datos } = notificacionData;
+    const { tipo, titulo, mensaje, rutReceptor, rutEmisor, datos } =
+      notificacionData;
 
     // Verificar que el receptor existe
-    const receptor = await userRepository.findOne({ where: { rut: rutReceptor } });
+    const receptor = await userRepository.findOne({
+      where: { rut: rutReceptor },
+    });
     if (!receptor) {
       throw new Error("Receptor no encontrado");
     }
@@ -31,14 +34,14 @@ export async function crearNotificacionService(notificacionData) {
       fechaCreacion: new Date(),
     });
 
-    const notificacionGuardada = await notificacionRepository.save(notificacion);
+    const notificacionGuardada =
+      await notificacionRepository.save(notificacion);
 
     return {
       success: true,
       data: notificacionGuardada,
       message: "Notificación creada exitosamente",
     };
-
   } catch (error) {
     console.error("Error al crear notificación:", error.message);
     throw new Error(`Error al crear notificación: ${error.message}`);
@@ -56,9 +59,16 @@ export async function crearNotificacionService(notificacionData) {
  * @param {string} params.rutEmisor - RUT del emisor
  * @returns {Promise<Array>} Resultado
  */
-export async function crearNotificacionMasivaService({ destinatarios, titulo, mensaje, tipo, datos, rutEmisor }) {
+export async function crearNotificacionMasivaService({
+  destinatarios,
+  titulo,
+  mensaje,
+  tipo,
+  datos,
+  rutEmisor,
+}) {
   try {
-    const notificaciones = destinatarios.map(rutReceptor => ({
+    const notificaciones = destinatarios.map((rutReceptor) => ({
       tipo,
       titulo,
       mensaje,
@@ -74,12 +84,14 @@ export async function crearNotificacionMasivaService({ destinatarios, titulo, me
 
     const resultado = await notificacionRepository.save(notificaciones);
 
-    return [{
-      success: true,
-      count: resultado.length,
-      message: `${resultado.length} notificaciones creadas`
-    }, null];
-
+    return [
+      {
+        success: true,
+        count: resultado.length,
+        message: `${resultado.length} notificaciones creadas`,
+      },
+      null,
+    ];
   } catch (error) {
     console.error("Error al crear notificaciones masivas:", error.message);
     return [null, `Error al crear notificaciones: ${error.message}`];
@@ -104,7 +116,6 @@ export async function obtenerNotificacionesUsuario(rutUsuario, limite = 50) {
       success: true,
       data: notificaciones,
     };
-
   } catch (error) {
     console.error("Error al obtener notificaciones:", error.message);
     throw new Error(`Error al obtener notificaciones: ${error.message}`);
@@ -119,16 +130,24 @@ export async function obtenerNotificacionesUsuario(rutUsuario, limite = 50) {
  */
 export async function eliminarNotificacion(idNotificacion, rutUsuario) {
   try {
-    console.log(`[DEBUG] Intentando eliminar notificación. ID: ${idNotificacion}, RUT Usuario: ${rutUsuario}`);
+    console.log(
+      `[DEBUG] Intentando eliminar notificación. ID: ${idNotificacion}, RUT Usuario: ${rutUsuario}`,
+    );
 
     // Verificar si existe primero para debug
-    const notificacion = await notificacionRepository.findOne({ where: { id: parseInt(idNotificacion) } });
+    const notificacion = await notificacionRepository.findOne({
+      where: { id: parseInt(idNotificacion) },
+    });
     if (!notificacion) {
-      console.log(`[DEBUG] Notificación ${idNotificacion} no encontrada en DB.`);
+      console.log(
+        `[DEBUG] Notificación ${idNotificacion} no encontrada en DB.`,
+      );
     } else {
       console.log(`[DEBUG] Notificación encontrada:`, notificacion);
       if (notificacion.rutReceptor !== rutUsuario) {
-        console.log(`[DEBUG] Mismatch de RUT. Receptor en DB: ${notificacion.rutReceptor}, Usuario solicitante: ${rutUsuario}`);
+        console.log(
+          `[DEBUG] Mismatch de RUT. Receptor en DB: ${notificacion.rutReceptor}, Usuario solicitante: ${rutUsuario}`,
+        );
       }
     }
 
@@ -147,7 +166,6 @@ export async function eliminarNotificacion(idNotificacion, rutUsuario) {
       success: true,
       message: "Notificación eliminada correctamente",
     };
-
   } catch (error) {
     console.error("Error al eliminar notificación:", error.message);
     throw new Error(`Error al eliminar notificación: ${error.message}`);
@@ -179,10 +197,11 @@ export async function contarNotificacionesPendientesService(rutUsuario) {
       success: true,
       data: { count },
     };
-
   } catch (error) {
     console.error("Error al contar notificaciones pendientes:", error.message);
-    throw new Error(`Error al contar notificaciones pendientes: ${error.message}`);
+    throw new Error(
+      `Error al contar notificaciones pendientes: ${error.message}`,
+    );
   }
 }
 
@@ -193,15 +212,11 @@ export async function contarNotificacionesPendientesService(rutUsuario) {
  * @returns {Promise<Object>} Resultado de la operación
  */
 export async function marcarComoLeidaService(idNotificacion, rutUsuario) {
-  try {
-    const resultado = await notificacionRepository.update(
-      { id: idNotificacion, rutReceptor: rutUsuario },
-      { leida: true }
-    );
-    return { success: true, message: "Notificación marcada como leída" };
-  } catch (error) {
-    throw error;
-  }
+  await notificacionRepository.update(
+    { id: idNotificacion, rutReceptor: rutUsuario },
+    { leida: true },
+  );
+  return { success: true, message: "Notificación marcada como leída" };
 }
 
 /**

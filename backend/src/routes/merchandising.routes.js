@@ -27,6 +27,11 @@ router.put("/:id", authenticateJwt, isDirectiva, updateMerchandising);
 router.delete("/:id", authenticateJwt, isDirectiva, deleteMerchandising);
 
 // Gestión de estado - solo directiva
-router.patch("/:id/estado", authenticateJwt, isDirectiva, changeEstadoMerchandising);
+router.patch(
+  "/:id/estado",
+  authenticateJwt,
+  isDirectiva,
+  changeEstadoMerchandising,
+);
 
 export default router;

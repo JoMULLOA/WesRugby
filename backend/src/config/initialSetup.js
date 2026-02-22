@@ -6,8 +6,7 @@ import TipoEvento from "../entity/tipoEvento.entity.js";
 import EventoDeportivo from "../entity/eventoDeportivo.entity.js";
 import { seedInventoryProducts } from "../services/inventory.service.js";
 
-
-//Los ruts estan hasta un maximo de 29.999.999-9, por lo que no se pueden crear usuarios con ruts mayores a ese valor, se creara, 
+//Los ruts estan hasta un maximo de 29.999.999-9, por lo que no se pueden crear usuarios con ruts mayores a ese valor, se creara,
 //pero no se podra buscar como un amigo.
 async function createInitialData() {
   try {
@@ -16,7 +15,6 @@ async function createInitialData() {
     const userCount = await userRepository.count();
 
     if (userCount === 0) {
-      
       // Usuario 1: Directiva - MÃ¡ximo nivel de acceso
       const userDirectiva = userRepository.create({
         rut: "12.345.678-9",
@@ -62,20 +60,24 @@ async function createInitialData() {
         rol: "RamaExterna",
       });
 
-      await userRepository.save([userDirectiva, userTesorera, userEntrenador, userApoderado, userRamaExterna]);
-      
-      console.log("âœ… Usuarios del sistema Wessex Rugby creados exitosamente:");
+      await userRepository.save([
+        userDirectiva,
+        userTesorera,
+        userEntrenador,
+        userApoderado,
+        userRamaExterna,
+      ]);
+
+      console.log(
+        "âœ… Usuarios del sistema Wessex Rugby creados exitosamente:",
+      );
       console.log("   - Directiva: directiva@wessex.cl / Directiva2024");
       console.log("   - Tesorera: tesorera@wessex.cl / Tesorera2024");
       console.log("   - Entrenador: entrenador@wessex.cl / Entrenador2024");
       console.log("   - Apoderado: apoderado@wessex.cl / Apoderado2024");
       console.log("   - RamaExterna: coordinador@wessex.cl / Coordinador2024");
 
-      // Mantener referencia para creaciÃ³n de otros datos
-      const user1 = userDirectiva;
-      const user2 = userTesorera;
-      const user3 = userEntrenador;
-
+      // Mantener referencia para creación de otros datos (no se usan actualmente)
     } else {
       console.log("Usuarios del sistema ya existen, cargando referencias...");
     }
@@ -83,7 +85,6 @@ async function createInitialData() {
     await ensureSampleEntrenadores(userRepository);
     await ensureSampleRamaUsers(userRepository);
     await removeLegacyDemoEvents();
-
 
     // Crear Tipos de Evento por defecto
     const tipoEventoRepository = AppDataSource.getRepository(TipoEvento);
@@ -97,29 +98,30 @@ async function createInitialData() {
         { nombre: "ReuniÃ³n", esDeportivo: false },
         { nombre: "Evento Social", esDeportivo: false },
         { nombre: "Viaje", esDeportivo: false },
-        { nombre: "Otro", esDeportivo: false }
+        { nombre: "Otro", esDeportivo: false },
       ];
 
-      const tiposCreados = tiposEventoDefecto.map(tipo => 
+      const tiposCreados = tiposEventoDefecto.map((tipo) =>
         tipoEventoRepository.create({
           nombre: tipo.nombre,
           esDeportivo: tipo.esDeportivo,
-          activo: true
-        })
+          activo: true,
+        }),
       );
 
       await tipoEventoRepository.save(tiposCreados);
-      
+
       console.log("âœ… Tipos de evento creados exitosamente:");
-      tiposEventoDefecto.forEach(tipo => {
-        console.log(`   - ${tipo.nombre} (${tipo.esDeportivo ? 'Deportivo' : 'No deportivo'})`);
+      tiposEventoDefecto.forEach((tipo) => {
+        console.log(
+          `   - ${tipo.nombre} (${tipo.esDeportivo ? "Deportivo" : "No deportivo"})`,
+        );
       });
     } else {
       console.log("Tipos de evento ya existen...");
     }
 
     await seedInventoryProducts();
-
   } catch (error) {
     console.error("Error al crear datos iniciales:", error);
   }
@@ -185,7 +187,9 @@ async function ensureSampleEntrenadores(userRepository) {
         });
 
         await userRepository.save(entrenador);
-        console.log(`   - Entrenador creado: ${sample.nombreCompleto} (${sample.email})`);
+        console.log(
+          `   - Entrenador creado: ${sample.nombreCompleto} (${sample.email})`,
+        );
       }
     }
     console.log("✅ Entrenadores de ejemplo verificados/creados");

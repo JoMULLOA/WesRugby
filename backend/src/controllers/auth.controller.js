@@ -36,7 +36,8 @@ export async function login(req, res) {
     }
     const [accessToken, errorToken] = await loginService(body);
 
-    if (errorToken) return handleErrorClient(res, 400, "Error iniciando sesión", errorToken);
+    if (errorToken)
+      return handleErrorClient(res, 400, "Error iniciando sesión", errorToken);
 
     // Decodificar el token para obtener la información del usuario
     const decoded = jwt.verify(accessToken, ACCESS_TOKEN_SECRET);
@@ -53,7 +54,7 @@ export async function login(req, res) {
     const avatarUrl = buildAvatarUrl(req, avatarPath, avatarVersion);
 
     // Devolver tanto el token como la información del usuario decodificada
-    handleSuccess(res, 200, "Inicio de sesión exitoso", { 
+    handleSuccess(res, 200, "Inicio de sesión exitoso", {
       token: accessToken,
       user: {
         nombreCompleto: decoded.nombreCompleto,
@@ -63,7 +64,7 @@ export async function login(req, res) {
         avatarPath,
         avatarUrl,
         avatarVersion,
-      }
+      },
     });
   } catch (error) {
     handleErrorServer(res, 500, error.message);
@@ -79,7 +80,13 @@ export async function register(req, res) {
       return handleErrorClient(res, 400, "Error de validación", error.message);
     const [newUser, errorNewUser] = await registerService(body);
     console.log("newUser", errorNewUser);
-    if (errorNewUser) return handleErrorClient(res, 400, "Error registrando al usuario", errorNewUser);
+    if (errorNewUser)
+      return handleErrorClient(
+        res,
+        400,
+        "Error registrando al usuario",
+        errorNewUser,
+      );
 
     handleSuccess(res, 201, "Usuario registrado con éxito", newUser);
   } catch (error) {
@@ -90,20 +97,24 @@ export async function register(req, res) {
 export async function logout(req, res) {
   try {
     // Obtener información del usuario autenticado si está disponible
-    const userInfo = req.user ? {
-      email: req.user.email,
-      rut: req.user.rut,
-      nombreCompleto: req.user.nombreCompleto
-    } : 'Usuario anónimo';
+    const userInfo = req.user
+      ? {
+          email: req.user.email,
+          rut: req.user.rut,
+          nombreCompleto: req.user.nombreCompleto,
+        }
+      : "Usuario anónimo";
 
     // Log de seguridad para auditoría
-    console.log(`🔐 LOGOUT: Usuario ${userInfo.email || 'anónimo'} cerró sesión en ${new Date().toISOString()}`);
+    console.log(
+      `🔐 LOGOUT: Usuario ${userInfo.email || "anónimo"} cerró sesión en ${new Date().toISOString()}`,
+    );
 
     // Limpiar la cookie JWT
-    res.clearCookie("jwt", { 
+    res.clearCookie("jwt", {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production', // Solo HTTPS en producción
-      sameSite: 'strict'
+      secure: process.env.NODE_ENV === "production", // Solo HTTPS en producción
+      sameSite: "strict",
     });
 
     // En el futuro aquí se podría:
@@ -113,7 +124,7 @@ export async function logout(req, res) {
 
     handleSuccess(res, 200, "Sesión cerrada exitosamente", {
       message: "Logout completado",
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
   } catch (error) {
     console.error("Error durante el logout:", error);
@@ -127,12 +138,18 @@ export async function getProfile(req, res) {
     const user = req.user;
 
     if (!user) {
-      return handleErrorClient(res, 401, "No autenticado", "No se encontró información del usuario");
+      return handleErrorClient(
+        res,
+        401,
+        "No autenticado",
+        "No se encontró información del usuario",
+      );
     }
 
     const avatarPath = user.avatarPath || null;
     const avatarVersion =
-      typeof user.avatarVersion === "number" && !Number.isNaN(user.avatarVersion)
+      typeof user.avatarVersion === "number" &&
+      !Number.isNaN(user.avatarVersion)
         ? user.avatarVersion
         : 0;
     const avatarUrl = buildAvatarUrl(req, avatarPath, avatarVersion);

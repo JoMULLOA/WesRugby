@@ -33,7 +33,12 @@ router.post("/", authenticateJwt, isTesorera, crearComprobantePago);
 router.get("/", authenticateJwt, isAuthenticated, obtenerComprobantesPago);
 
 // Obtener estadísticas (Tesorería o Directiva)
-router.get("/estadisticas/resumen", authenticateJwt, isTesorera, obtenerEstadisticasPagos);
+router.get(
+  "/estadisticas/resumen",
+  authenticateJwt,
+  isTesorera,
+  obtenerEstadisticasPagos,
+);
 
 // Endpoints para apoderados
 router.get(

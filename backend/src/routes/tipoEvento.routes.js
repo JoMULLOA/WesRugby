@@ -5,11 +5,14 @@ import {
   crearTipoEvento,
   actualizarTipoEvento,
   eliminarTipoEvento,
-  reactivarTipoEvento
+  reactivarTipoEvento,
 } from "../controllers/tipoEvento.controller.js";
 
 import { authenticateJwt } from "../middlewares/authentication.middleware.js";
-import { isDirectiva, isAuthenticated } from "../middlewares/authorization.middleware.js";
+import {
+  isDirectiva,
+  isAuthenticated,
+} from "../middlewares/authorization.middleware.js";
 
 const router = Router();
 
@@ -21,6 +24,11 @@ router.get("/todos", authenticateJwt, isDirectiva, obtenerTodosTiposEvento);
 router.post("/", authenticateJwt, isDirectiva, crearTipoEvento);
 router.put("/:id", authenticateJwt, isDirectiva, actualizarTipoEvento);
 router.delete("/:id", authenticateJwt, isDirectiva, eliminarTipoEvento);
-router.patch("/:id/reactivar", authenticateJwt, isDirectiva, reactivarTipoEvento);
+router.patch(
+  "/:id/reactivar",
+  authenticateJwt,
+  isDirectiva,
+  reactivarTipoEvento,
+);
 
 export default router;

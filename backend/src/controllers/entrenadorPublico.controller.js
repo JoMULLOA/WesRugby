@@ -2,13 +2,18 @@
 import { AppDataSource } from "../config/configDb.js";
 import EntrenadorPublico from "../entity/entrenadorPublico.entity.js";
 import User from "../entity/user.entity.js";
-import { handleErrorClient, handleErrorServer, handleSuccess } from "../handlers/responseHandlers.js";
+import {
+  handleErrorClient,
+  handleErrorServer,
+  handleSuccess,
+} from "../handlers/responseHandlers.js";
 import { resolveFileUrl, deleteFromS3 } from "../utils/storage.utils.js";
 
-const entrenadorPublicoRepository = AppDataSource.getRepository(EntrenadorPublico);
+const entrenadorPublicoRepository =
+  AppDataSource.getRepository(EntrenadorPublico);
 const userRepository = AppDataSource.getRepository(User);
 
-function buildAvatarUrl(req, storedValue, version) {
+function _buildAvatarUrl(req, storedValue, version) {
   const resolved = resolveFileUrl(storedValue, req);
   if (!resolved) {
     return null;
@@ -32,7 +37,12 @@ function buildPublicFileUrl(storedValue, version, req) {
   return resolved;
 }
 
-function validateTextField(value, field, { required = false, minLength = 0, maxLength = 255 } = {}, errors) {
+function validateTextField(
+  value,
+  field,
+  { required = false, minLength = 0, maxLength = 255 } = {},
+  errors,
+) {
   const provided = value !== undefined;
   if (!provided) {
     if (required) {
@@ -142,7 +152,12 @@ function validateBooleanField(value, field, errors) {
   return { provided: false, value: undefined };
 }
 
-function validateIntegerField(value, field, { min = 0, max = 999 } = {}, errors) {
+function validateIntegerField(
+  value,
+  field,
+  { min = 0, max = 999 } = {},
+  errors,
+) {
   const provided = value !== undefined && value !== null && value !== "";
   if (!provided) {
     return { provided: false, value: undefined };
@@ -167,36 +182,82 @@ function validateIntegerField(value, field, { min = 0, max = 999 } = {}, errors)
   return { provided: true, value: parsed };
 }
 
-function sanitizeEntrenadorPayload(payload, { requireCoreFields = false } = {}) {
+function sanitizeEntrenadorPayload(
+  payload,
+  { requireCoreFields = false } = {},
+) {
   const errors = [];
   const sanitized = {};
 
-  const titulo = validateTextField(payload.titulo, "titulo", { required: requireCoreFields, minLength: 3, maxLength: 255 }, errors);
+  const titulo = validateTextField(
+    payload.titulo,
+    "titulo",
+    { required: requireCoreFields, minLength: 3, maxLength: 255 },
+    errors,
+  );
   if (titulo.provided) sanitized.titulo = titulo.value ?? null;
 
-  const especialidad = validateTextField(payload.especialidad, "especialidad", { required: requireCoreFields, minLength: 3, maxLength: 255 }, errors);
-  if (especialidad.provided) sanitized.especialidad = especialidad.value ?? null;
+  const especialidad = validateTextField(
+    payload.especialidad,
+    "especialidad",
+    { required: requireCoreFields, minLength: 3, maxLength: 255 },
+    errors,
+  );
+  if (especialidad.provided)
+    sanitized.especialidad = especialidad.value ?? null;
 
-  const categorias = validateTextField(payload.categorias, "categorias", { required: requireCoreFields, minLength: 2, maxLength: 500 }, errors);
+  const categorias = validateTextField(
+    payload.categorias,
+    "categorias",
+    { required: requireCoreFields, minLength: 2, maxLength: 500 },
+    errors,
+  );
   if (categorias.provided) sanitized.categorias = categorias.value ?? null;
 
-  const biografia = validateTextField(payload.biografia, "biografia", { required: requireCoreFields, minLength: 20, maxLength: 2000 }, errors);
+  const biografia = validateTextField(
+    payload.biografia,
+    "biografia",
+    { required: requireCoreFields, minLength: 20, maxLength: 2000 },
+    errors,
+  );
   if (biografia.provided) sanitized.biografia = biografia.value ?? null;
 
-  const logros = validateTextField(payload.logros, "logros", { required: false, minLength: 0, maxLength: 1500 }, errors);
+  const logros = validateTextField(
+    payload.logros,
+    "logros",
+    { required: false, minLength: 0, maxLength: 1500 },
+    errors,
+  );
   if (logros.provided) sanitized.logros = logros.value ?? null;
 
-  const certificaciones = validateTextField(payload.certificaciones, "certificaciones", { required: false, minLength: 0, maxLength: 1500 }, errors);
-  if (certificaciones.provided) sanitized.certificaciones = certificaciones.value ?? null;
+  const certificaciones = validateTextField(
+    payload.certificaciones,
+    "certificaciones",
+    { required: false, minLength: 0, maxLength: 1500 },
+    errors,
+  );
+  if (certificaciones.provided)
+    sanitized.certificaciones = certificaciones.value ?? null;
 
-  const experiencia = validateExperience(payload.aniosExperiencia, { required: requireCoreFields }, errors);
-  if (experiencia.provided) sanitized.aniosExperiencia = experiencia.value ?? null;
+  const experiencia = validateExperience(
+    payload.aniosExperiencia,
+    { required: requireCoreFields },
+    errors,
+  );
+  if (experiencia.provided)
+    sanitized.aniosExperiencia = experiencia.value ?? null;
 
   const visible = validateBooleanField(payload.visible, "visible", errors);
   if (visible.provided) sanitized.visible = visible.value;
 
-  const ordenVisualizacion = validateIntegerField(payload.ordenVisualizacion, "ordenVisualizacion", { min: 0, max: 999 }, errors);
-  if (ordenVisualizacion.provided) sanitized.ordenVisualizacion = ordenVisualizacion.value ?? 0;
+  const ordenVisualizacion = validateIntegerField(
+    payload.ordenVisualizacion,
+    "ordenVisualizacion",
+    { min: 0, max: 999 },
+    errors,
+  );
+  if (ordenVisualizacion.provided)
+    sanitized.ordenVisualizacion = ordenVisualizacion.value ?? 0;
 
   return { sanitized, errors };
 }
@@ -243,7 +304,12 @@ export async function getEntrenadoresPublicos(req, res) {
       };
     });
 
-    handleSuccess(res, 200, "Entrenadores públicos obtenidos", entrenadoresFormateados);
+    handleSuccess(
+      res,
+      200,
+      "Entrenadores públicos obtenidos",
+      entrenadoresFormateados,
+    );
   } catch (error) {
     console.error("Error al obtener entrenadores públicos:", error);
     handleErrorServer(res, 500, error.message);
@@ -292,7 +358,12 @@ export async function getEntrenadorPublico(req, res) {
       ordenVisualizacion: entrenador.ordenVisualizacion,
     };
 
-    handleSuccess(res, 200, "Entrenador público obtenido", entrenadorFormateado);
+    handleSuccess(
+      res,
+      200,
+      "Entrenador público obtenido",
+      entrenadorFormateado,
+    );
   } catch (error) {
     console.error("Error al obtener entrenador público:", error);
     handleErrorServer(res, 500, error.message);
@@ -326,10 +397,14 @@ export async function crearEntrenadorPublico(req, res) {
     }
 
     if (usuario.rol !== "entrenador") {
-      return handleErrorClient(res, 400, "El usuario debe tener rol de entrenador");
+      return handleErrorClient(
+        res,
+        400,
+        "El usuario debe tener rol de entrenador",
+      );
     }
 
-    let entrenador = await entrenadorPublicoRepository.findOne({
+    const entrenador = await entrenadorPublicoRepository.findOne({
       where: { userRut },
     });
 
@@ -339,7 +414,12 @@ export async function crearEntrenadorPublico(req, res) {
     if (entrenador) {
       Object.assign(entrenador, sanitized);
       await entrenadorPublicoRepository.save(entrenador);
-      handleSuccess(res, 200, "Perfil publico de entrenador actualizado", entrenador);
+      handleSuccess(
+        res,
+        200,
+        "Perfil publico de entrenador actualizado",
+        entrenador,
+      );
     } else {
       const nuevoEntrenador = entrenadorPublicoRepository.create({
         userRut,
@@ -347,7 +427,12 @@ export async function crearEntrenadorPublico(req, res) {
       });
 
       await entrenadorPublicoRepository.save(nuevoEntrenador);
-      handleSuccess(res, 201, "Perfil publico de entrenador creado", nuevoEntrenador);
+      handleSuccess(
+        res,
+        201,
+        "Perfil publico de entrenador creado",
+        nuevoEntrenador,
+      );
     }
   } catch (error) {
     console.error("Error al crear/actualizar entrenador publico:", error);
@@ -452,7 +537,7 @@ export async function toggleVisibilidadEntrenador(req, res) {
       res,
       200,
       `Entrenador ${entrenador.visible ? "visible" : "oculto"}`,
-      entrenador
+      entrenador,
     );
   } catch (error) {
     console.error("Error al cambiar visibilidad:", error);
@@ -506,7 +591,12 @@ export async function getEntrenadoresParaGestion(req, res) {
       };
     });
 
-    handleSuccess(res, 200, "Entrenadores para gestión obtenidos", entrenadoresConPerfil);
+    handleSuccess(
+      res,
+      200,
+      "Entrenadores para gestión obtenidos",
+      entrenadoresConPerfil,
+    );
   } catch (error) {
     console.error("Error al obtener entrenadores para gestión:", error);
     handleErrorServer(res, 500, error.message);
@@ -543,7 +633,11 @@ export async function actualizarFotoEntrenador(req, res) {
 
     if (entrenador.rol !== "entrenador") {
       await deleteFromS3(req.file?.location);
-      return handleErrorClient(res, 400, "El usuario no corresponde a un entrenador");
+      return handleErrorClient(
+        res,
+        400,
+        "El usuario no corresponde a un entrenador",
+      );
     }
 
     let perfilPublico = await entrenadorPublicoRepository.findOne({

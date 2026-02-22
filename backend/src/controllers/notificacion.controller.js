@@ -2,9 +2,8 @@
 import {
   obtenerNotificacionesService,
   contarNotificacionesPendientesService,
-  marcarComoLeidaService,
   crearNotificacionMasivaService,
-  eliminarNotificacion as eliminarNotificacionService
+  eliminarNotificacion as eliminarNotificacionService,
 } from "../services/notificacion.service.js";
 import {
   handleErrorClient,
@@ -18,7 +17,12 @@ export async function obtenerNotificaciones(req, res) {
 
     const result = await obtenerNotificacionesService(rutUsuario);
 
-    handleSuccess(res, 200, "Notificaciones obtenidas correctamente", result.data);
+    handleSuccess(
+      res,
+      200,
+      "Notificaciones obtenidas correctamente",
+      result.data,
+    );
   } catch (error) {
     console.error("Error en obtenerNotificaciones:", error);
     handleErrorServer(res, 500, error.message);
@@ -31,7 +35,12 @@ export async function contarNotificacionesPendientes(req, res) {
 
     const result = await contarNotificacionesPendientesService(rutUsuario);
 
-    handleSuccess(res, 200, "Conteo de notificaciones obtenido correctamente", result.data);
+    handleSuccess(
+      res,
+      200,
+      "Conteo de notificaciones obtenido correctamente",
+      result.data,
+    );
   } catch (error) {
     console.error("Error en contarNotificacionesPendientes:", error);
     handleErrorServer(res, 500, error.message);
@@ -57,8 +66,16 @@ export async function crearNotificacionMasiva(req, res) {
     const { destinatarios, titulo, mensaje, tipo, datos } = req.body;
     const rutEmisor = req.user.rut;
 
-    if (!destinatarios || !Array.isArray(destinatarios) || destinatarios.length === 0) {
-      return handleErrorClient(res, 400, "Se requiere una lista de destinatarios");
+    if (
+      !destinatarios ||
+      !Array.isArray(destinatarios) ||
+      destinatarios.length === 0
+    ) {
+      return handleErrorClient(
+        res,
+        400,
+        "Se requiere una lista de destinatarios",
+      );
     }
 
     const [resultado, error] = await crearNotificacionMasivaService({
@@ -67,7 +84,7 @@ export async function crearNotificacionMasiva(req, res) {
       mensaje,
       tipo,
       datos,
-      rutEmisor
+      rutEmisor,
     });
 
     if (error) {

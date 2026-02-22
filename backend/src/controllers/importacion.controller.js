@@ -36,10 +36,20 @@ const COLUMN_ALIASES = {
   ficha: ["ficha"],
   curso: ["curso", "cursoyletra"],
   nombreMadre: ["nombremadre"],
-  telefonoMadre: ["ntelefonomadre", "ntelefonmadre", "telefonomadre", "numerotelefonomadre"],
+  telefonoMadre: [
+    "ntelefonomadre",
+    "ntelefonmadre",
+    "telefonomadre",
+    "numerotelefonomadre",
+  ],
   emailMadre: ["correoelectronicomadre", "emailmadre"],
   nombrePadre: ["nombrepadre"],
-  telefonoPadre: ["ntelefonopadre", "telefonompadre", "telefonopadre", "numerotelefonopadre"],
+  telefonoPadre: [
+    "ntelefonopadre",
+    "telefonompadre",
+    "telefonopadre",
+    "numerotelefonopadre",
+  ],
   emailPadre: ["correoelectronicopadre", "emailpadre"],
   hermanos: ["hermanos", "runhermano"],
   enfermedad: [
@@ -171,7 +181,7 @@ function normalizeRut(raw) {
 function safeNormalizeRut(raw) {
   try {
     return normalizeRut(raw);
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -197,7 +207,7 @@ function buildRutLookupKeys(raw) {
       variants.add(`${cuerpo}-${dv}`);
     }
   }
-  const noSeparators = value.replace(/[.\-]/g, "").toUpperCase();
+  const noSeparators = value.replace(/[.-]/g, "").toUpperCase();
   if (noSeparators) {
     variants.add(noSeparators);
   }
@@ -237,7 +247,9 @@ async function findStudentByRutVariants(estudianteRepository, rut) {
   if (variants.length === 0) {
     return null;
   }
-  return estudianteRepository.findOne({ where: variants.map((variant) => ({ rut: variant })) });
+  return estudianteRepository.findOne({
+    where: variants.map((variant) => ({ rut: variant })),
+  });
 }
 
 function parseFecha(raw) {
@@ -245,7 +257,7 @@ function parseFecha(raw) {
   if (!value) {
     throw new Error("Fecha de nacimiento es obligatoria");
   }
-  const match = value.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+  const match = value.match(/(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})/);
   if (!match) {
     throw new Error("Formato de fecha invalido (dd-mm-yy)");
   }
@@ -326,7 +338,9 @@ function normalizeEmail(raw) {
 function normalizeTalla(raw) {
   const value = cleanString(raw);
   if (!value) return null;
-  if (isPlaceholderValue(value, ["sin talla", "ninguna", "ninguno", "no", "0"])) {
+  if (
+    isPlaceholderValue(value, ["sin talla", "ninguna", "ninguno", "no", "0"])
+  ) {
     return null;
   }
   return value.toUpperCase().slice(0, 5);
@@ -341,14 +355,14 @@ function parseHermanos(raw) {
   const value = cleanString(raw);
   if (!value) return [];
   const candidatos = value
-    .split(/[;,\/\n]/)
+    .split(/[;,/\n]/)
     .map((item) => item.trim())
     .filter(Boolean);
   const resultado = [];
   for (const candidato of candidatos) {
     try {
       resultado.push(normalizeRut(candidato));
-    } catch (error) {
+    } catch {
       // omit invalid sibling rut but continue
     }
   }
@@ -378,7 +392,9 @@ function buildEquipamiento(rowMap) {
   return {
     poleron: cleanString(pickValue(rowMap, COLUMN_ALIASES.poleron) ?? ""),
     calcetas: cleanString(pickValue(rowMap, COLUMN_ALIASES.calcetas) ?? ""),
-    protectorBucal: cleanString(pickValue(rowMap, COLUMN_ALIASES.protectorBucal) ?? ""),
+    protectorBucal: cleanString(
+      pickValue(rowMap, COLUMN_ALIASES.protectorBucal) ?? "",
+    ),
     uniforme: cleanString(pickValue(rowMap, COLUMN_ALIASES.uniforme) ?? ""),
     anadido: cleanString(pickValue(rowMap, COLUMN_ALIASES.anadido) ?? ""),
   };
@@ -386,7 +402,14 @@ function buildEquipamiento(rowMap) {
 
 function resolveSimpleResponsable(
   responsableRaw,
-  { nombreMadre, nombrePadre, telefonoMadre, telefonoPadre, emailMadre, emailPadre },
+  {
+    nombreMadre,
+    nombrePadre,
+    telefonoMadre,
+    telefonoPadre,
+    emailMadre,
+    emailPadre,
+  },
 ) {
   const cleaned = cleanString(responsableRaw);
   if (!cleaned) {
@@ -407,7 +430,9 @@ function resolveSimpleResponsable(
       preferencia: "madre",
       telefono: telefonoMadre ?? null,
       email: emailMadre ?? null,
-      warning: nombreMadre ? null : "Responsable definido como Madre pero no se encontró nombre de la madre",
+      warning: nombreMadre
+        ? null
+        : "Responsable definido como Madre pero no se encontró nombre de la madre",
     };
   }
   if (normalized.includes("padre")) {
@@ -417,7 +442,9 @@ function resolveSimpleResponsable(
       preferencia: "padre",
       telefono: telefonoPadre ?? null,
       email: emailPadre ?? null,
-      warning: nombrePadre ? null : "Responsable definido como Padre pero no se encontró nombre del padre",
+      warning: nombrePadre
+        ? null
+        : "Responsable definido como Padre pero no se encontró nombre del padre",
     };
   }
 
@@ -473,15 +500,21 @@ function normalizeBasicFormularioRow(row) {
     uniforme = null;
   }
   const talla = normalizeTalla(pickValue(rowMap, COLUMN_ALIASES.talla));
-  let dorsalNombre = normalizeTexto(pickValue(rowMap, COLUMN_ALIASES.dorsalNombre));
+  let dorsalNombre = normalizeTexto(
+    pickValue(rowMap, COLUMN_ALIASES.dorsalNombre),
+  );
   if (isPlaceholderValue(dorsalNombre, ["sin nombre", "sin apodo"])) {
     dorsalNombre = null;
   } else if (dorsalNombre) {
     dorsalNombre = toTitleCase(dorsalNombre);
   }
-  const alumnoNuevo = normalizeTexto(pickValue(rowMap, COLUMN_ALIASES.alumnoNuevo));
+  const alumnoNuevo = normalizeTexto(
+    pickValue(rowMap, COLUMN_ALIASES.alumnoNuevo),
+  );
 
-  const nombreMadreRaw = normalizeTexto(pickValue(rowMap, COLUMN_ALIASES.nombreMadre));
+  const nombreMadreRaw = normalizeTexto(
+    pickValue(rowMap, COLUMN_ALIASES.nombreMadre),
+  );
   const nombreMadre = nombreMadreRaw ? toTitleCase(nombreMadreRaw) : null;
   let telefonoMadre = null;
   const telefonoMadreRaw = pickValue(rowMap, COLUMN_ALIASES.telefonoMadre);
@@ -502,7 +535,9 @@ function normalizeBasicFormularioRow(row) {
     }
   }
 
-  const nombrePadreRaw = normalizeTexto(pickValue(rowMap, COLUMN_ALIASES.nombrePadre));
+  const nombrePadreRaw = normalizeTexto(
+    pickValue(rowMap, COLUMN_ALIASES.nombrePadre),
+  );
   const nombrePadre = nombrePadreRaw ? toTitleCase(nombrePadreRaw) : null;
   let telefonoPadre = null;
   const telefonoPadreRaw = pickValue(rowMap, COLUMN_ALIASES.telefonoPadre);
@@ -662,7 +697,8 @@ function resolveResponsable(
       ...info,
       etiqueta: "Madre",
       nombre: "Madre",
-      warning: "Responsable definido como Madre pero no se encontró nombre de la madre en el registro",
+      warning:
+        "Responsable definido como Madre pero no se encontró nombre de la madre en el registro",
     };
   }
 
@@ -674,7 +710,8 @@ function resolveResponsable(
       ...info,
       etiqueta: "Padre",
       nombre: "Padre",
-      warning: "Responsable definido como Padre pero no se encontró nombre del padre en el registro",
+      warning:
+        "Responsable definido como Padre pero no se encontró nombre del padre en el registro",
     };
   }
 
@@ -765,7 +802,10 @@ function generateGuardianEmail({
       localPart = localPart.slice(0, MAX_EMAIL_LOCAL_LENGTH);
     }
     const candidate = `${localPart}${GUARDIAN_EMAIL_DOMAIN}`.toLowerCase();
-    if (!guardianEmailsInUse.has(candidate) && !guardianEmailsBatch.has(candidate)) {
+    if (
+      !guardianEmailsInUse.has(candidate) &&
+      !guardianEmailsBatch.has(candidate)
+    ) {
       guardianEmailsBatch.add(candidate);
       guardianEmailsInUse.add(candidate);
       return candidate;
@@ -782,7 +822,8 @@ function findGuardianFromSiblings({ siblingRuts, estudiantesMap }) {
   }
 
   const normalizedSiblings = normalizeRutList(siblingRuts);
-  const candidates = normalizedSiblings.length > 0 ? normalizedSiblings : siblingRuts;
+  const candidates =
+    normalizedSiblings.length > 0 ? normalizedSiblings : siblingRuts;
 
   for (const rut of candidates) {
     if (!rut) continue;
@@ -813,7 +854,9 @@ async function syncSimpleSiblingLinks({
 
   const estudianteRut = safeNormalizeRut(estudiante.rut) ?? estudiante.rut;
   const propios = new Set(
-    normalizeRutList(Array.isArray(estudiante.hermanos) ? estudiante.hermanos : []),
+    normalizeRutList(
+      Array.isArray(estudiante.hermanos) ? estudiante.hermanos : [],
+    ),
   );
   let actualizado = false;
   for (const rut of normalizedSiblings) {
@@ -831,6 +874,7 @@ async function syncSimpleSiblingLinks({
     }
     if (!hermano) continue;
     const hermanoRut = safeNormalizeRut(hermano.rut) ?? hermano.rut;
+    void hermanoRut; // used only as intermediate reference
     const hermanosDelHermano = new Set(
       normalizeRutList(Array.isArray(hermano.hermanos) ? hermano.hermanos : []),
     );
@@ -854,10 +898,12 @@ async function syncSimpleSiblingLinks({
 function determineGuardianNameForEmail(data) {
   const candidates = [
     data.nombreResponsable,
-    data.responsableEtiqueta && data.responsableEtiqueta.toLowerCase() === "madre"
+    data.responsableEtiqueta &&
+    data.responsableEtiqueta.toLowerCase() === "madre"
       ? data.nombreMadre
       : null,
-    data.responsableEtiqueta && data.responsableEtiqueta.toLowerCase() === "padre"
+    data.responsableEtiqueta &&
+    data.responsableEtiqueta.toLowerCase() === "padre"
       ? data.nombrePadre
       : null,
     data.nombreMadre,
@@ -871,12 +917,17 @@ function determineGuardianNameForEmail(data) {
     }
   }
 
-  return cleanString(data.nombreResponsable) || cleanString(data.nombre) || null;
+  return (
+    cleanString(data.nombreResponsable) || cleanString(data.nombre) || null
+  );
 }
 
 function generateGuardianRut(email, guardianRutsInUse) {
   const normalizedEmail = cleanString(email).toLowerCase();
-  const hash = createHash("sha1").update(normalizedEmail).digest("hex").toUpperCase();
+  const hash = createHash("sha1")
+    .update(normalizedEmail)
+    .digest("hex")
+    .toUpperCase();
   let base = `${GUARDIAN_RUT_PREFIX}${hash.slice(0, 9)}`;
   if (base.length > 12) {
     base = base.slice(0, 12);
@@ -894,7 +945,8 @@ function generateGuardianRut(email, guardianRutsInUse) {
     }
   }
 
-  let fallback = `${GUARDIAN_RUT_PREFIX}${Date.now().toString().slice(-10)}`.slice(0, 12);
+  let fallback =
+    `${GUARDIAN_RUT_PREFIX}${Date.now().toString().slice(-10)}`.slice(0, 12);
   while (guardianRutsInUse.has(fallback)) {
     fallback = `${GUARDIAN_RUT_PREFIX}${Math.floor(Math.random() * 1e9)
       .toString()
@@ -920,7 +972,9 @@ async function ensureGuardianUser({
     return { user: guardianUsersCache.get(normalizedEmail), created: false };
   }
 
-  const existingUser = await userRepository.findOne({ where: { email: normalizedEmail } });
+  const existingUser = await userRepository.findOne({
+    where: { email: normalizedEmail },
+  });
   if (existingUser) {
     guardianUsersCache.set(normalizedEmail, existingUser);
     if (existingUser.rut) {
@@ -930,7 +984,9 @@ async function ensureGuardianUser({
     return { user: existingUser, created: false };
   }
 
-  const displayName = toTitleCase(cleanString(nombre)) || toTitleCase(normalizedEmail.split("@")[0]);
+  const displayName =
+    toTitleCase(cleanString(nombre)) ||
+    toTitleCase(normalizedEmail.split("@")[0]);
   const rut = generateGuardianRut(normalizedEmail, guardianRutsInUse);
   guardianRutsInUse.add(rut);
   const passwordHash = await encryptPassword(DEFAULT_GUARDIAN_PASSWORD);
@@ -976,16 +1032,24 @@ function normalizeRow(row) {
   }
 
   const rut = normalizeRut(pickValue(rowMap, COLUMN_ALIASES.rut));
-  const fechaNacimiento = parseFecha(pickValue(rowMap, COLUMN_ALIASES.fechaNacimiento));
-  const categoria = normalizeCategoria(pickValue(rowMap, COLUMN_ALIASES.categoria));
+  const fechaNacimiento = parseFecha(
+    pickValue(rowMap, COLUMN_ALIASES.fechaNacimiento),
+  );
+  const categoria = normalizeCategoria(
+    pickValue(rowMap, COLUMN_ALIASES.categoria),
+  );
   const ficha = normalizeFicha(pickValue(rowMap, COLUMN_ALIASES.ficha));
   const curso = normalizeCurso(pickValue(rowMap, COLUMN_ALIASES.curso));
 
-  const nombreMadreRaw = normalizeTexto(pickValue(rowMap, COLUMN_ALIASES.nombreMadre));
+  const nombreMadreRaw = normalizeTexto(
+    pickValue(rowMap, COLUMN_ALIASES.nombreMadre),
+  );
   const nombreMadre = nombreMadreRaw ? toTitleCase(nombreMadreRaw) : null;
   let telefonoMadre = null;
   try {
-    telefonoMadre = normalizePhone(pickValue(rowMap, COLUMN_ALIASES.telefonoMadre));
+    telefonoMadre = normalizePhone(
+      pickValue(rowMap, COLUMN_ALIASES.telefonoMadre),
+    );
   } catch (error) {
     if (nombreMadre) {
       warnings.push(`Telefono madre invalido: ${error.message}`);
@@ -998,11 +1062,15 @@ function normalizeRow(row) {
     warnings.push(`Correo madre invalido: ${error.message}`);
   }
 
-  const nombrePadreRaw = normalizeTexto(pickValue(rowMap, COLUMN_ALIASES.nombrePadre));
+  const nombrePadreRaw = normalizeTexto(
+    pickValue(rowMap, COLUMN_ALIASES.nombrePadre),
+  );
   const nombrePadre = nombrePadreRaw ? toTitleCase(nombrePadreRaw) : null;
   let telefonoPadre = null;
   try {
-    telefonoPadre = normalizePhone(pickValue(rowMap, COLUMN_ALIASES.telefonoPadre));
+    telefonoPadre = normalizePhone(
+      pickValue(rowMap, COLUMN_ALIASES.telefonoPadre),
+    );
   } catch (error) {
     if (nombrePadre) {
       warnings.push(`Telefono padre invalido: ${error.message}`);
@@ -1016,21 +1084,32 @@ function normalizeRow(row) {
   }
 
   const hermanos = parseHermanos(pickValue(rowMap, COLUMN_ALIASES.hermanos));
-  const enfermedad = normalizeTexto(pickValue(rowMap, COLUMN_ALIASES.enfermedad));
+  const enfermedad = normalizeTexto(
+    pickValue(rowMap, COLUMN_ALIASES.enfermedad),
+  );
   const talla = normalizeTalla(pickValue(rowMap, COLUMN_ALIASES.talla));
-  const dorsalNombre = normalizeTexto(pickValue(rowMap, COLUMN_ALIASES.dorsalNombre));
-  const alumnoNuevo = normalizeTexto(pickValue(rowMap, COLUMN_ALIASES.alumnoNuevo));
-  const asistencia = normalizeTexto(pickValue(rowMap, COLUMN_ALIASES.asistencia));
+  const dorsalNombre = normalizeTexto(
+    pickValue(rowMap, COLUMN_ALIASES.dorsalNombre),
+  );
+  const alumnoNuevo = normalizeTexto(
+    pickValue(rowMap, COLUMN_ALIASES.alumnoNuevo),
+  );
+  const asistencia = normalizeTexto(
+    pickValue(rowMap, COLUMN_ALIASES.asistencia),
+  );
   const pagos = buildPagos(rowMap);
   const equipamiento = buildEquipamiento(rowMap);
-  const responsableInfo = resolveResponsable(pickValue(rowMap, COLUMN_ALIASES.responsable), {
-    nombreMadre,
-    telefonoMadre,
-    emailMadre,
-    nombrePadre,
-    telefonoPadre,
-    emailPadre,
-  });
+  const responsableInfo = resolveResponsable(
+    pickValue(rowMap, COLUMN_ALIASES.responsable),
+    {
+      nombreMadre,
+      telefonoMadre,
+      emailMadre,
+      nombrePadre,
+      telefonoPadre,
+      emailPadre,
+    },
+  );
 
   if (responsableInfo.warning) {
     warnings.push(responsableInfo.warning);
@@ -1076,7 +1155,10 @@ function buildEstudiantePayload(normalized) {
   const nombreResponsable =
     normalized.nombreResponsable || normalized.responsableEtiqueta || null;
   const contactoEmergencia =
-    nombreResponsable || normalized.nombreMadre || normalized.nombrePadre || null;
+    nombreResponsable ||
+    normalized.nombreMadre ||
+    normalized.nombrePadre ||
+    null;
   const telefonoPrincipal =
     normalized.telefonoResponsable ||
     normalized.telefonoMadre ||
@@ -1129,12 +1211,18 @@ function mergeForUpdate(payload) {
   return updatePayload;
 }
 
-async function syncSiblingRelationships(siblingMap, estudianteRepository, results) {
+async function syncSiblingRelationships(
+  siblingMap,
+  estudianteRepository,
+  results,
+) {
   for (const [rut, hermanosSet] of siblingMap.entries()) {
     try {
       const estudiante = await estudianteRepository.findOne({ where: { rut } });
       if (!estudiante) continue;
-      const actuales = new Set(Array.isArray(estudiante.hermanos) ? estudiante.hermanos : []);
+      const actuales = new Set(
+        Array.isArray(estudiante.hermanos) ? estudiante.hermanos : [],
+      );
       let actualizado = false;
       hermanosSet.forEach((hermanoRut) => {
         if (!actuales.has(hermanoRut)) {
@@ -1147,9 +1235,13 @@ async function syncSiblingRelationships(siblingMap, estudianteRepository, result
         await estudianteRepository.save(estudiante);
       }
       for (const hermanoRut of hermanosSet) {
-        const hermano = await estudianteRepository.findOne({ where: { rut: hermanoRut } });
+        const hermano = await estudianteRepository.findOne({
+          where: { rut: hermanoRut },
+        });
         if (!hermano) continue;
-        const hermanoSet = new Set(Array.isArray(hermano.hermanos) ? hermano.hermanos : []);
+        const hermanoSet = new Set(
+          Array.isArray(hermano.hermanos) ? hermano.hermanos : [],
+        );
         if (!hermanoSet.has(rut)) {
           hermanoSet.add(rut);
           hermano.hermanos = Array.from(hermanoSet);
@@ -1157,7 +1249,10 @@ async function syncSiblingRelationships(siblingMap, estudianteRepository, result
         }
       }
     } catch (error) {
-      results.errores.push({ estudiante: rut, error: `Error asociando hermanos: ${error.message}` });
+      results.errores.push({
+        estudiante: rut,
+        error: `Error asociando hermanos: ${error.message}`,
+      });
     }
   }
 }
@@ -1166,7 +1261,11 @@ export async function importEstudiantesFromExcel(req, res) {
   try {
     const { estudiantes } = req.body;
 
-    if (!estudiantes || !Array.isArray(estudiantes) || estudiantes.length === 0) {
+    if (
+      !estudiantes ||
+      !Array.isArray(estudiantes) ||
+      estudiantes.length === 0
+    ) {
       return handleErrorClient(res, 400, "Lista de estudiantes es requerida");
     }
 
@@ -1185,10 +1284,10 @@ export async function importEstudiantesFromExcel(req, res) {
     const guardianUsersCache = new Map();
     const guardianRutsInUse = new Set();
     const guardianUsersByRut = new Map();
-  const guardianAssignmentsByRut = new Map();
-  const guardianSiblingUpdates = new Map();
-  const processedStudentRuts = new Set();
-  const guardianSiblingUpdateDetails = [];
+    const guardianAssignmentsByRut = new Map();
+    const guardianSiblingUpdates = new Map();
+    const processedStudentRuts = new Set();
+    const guardianSiblingUpdateDetails = [];
 
     const existingUsers = await userRepository.find();
     existingUsers.forEach((user) => {
@@ -1214,7 +1313,7 @@ export async function importEstudiantesFromExcel(req, res) {
     const guardianCreationDetails = [];
     let guardianEmailsGeneratedCount = 0;
     let guardianAccountsCreatedCount = 0;
-  let guardianSiblingLinksUpdatedCount = 0;
+    let guardianSiblingLinksUpdatedCount = 0;
 
     for (let i = 0; i < estudiantes.length; i += 1) {
       const row = estudiantes[i];
@@ -1222,7 +1321,10 @@ export async function importEstudiantesFromExcel(req, res) {
         const { data, warnings } = normalizeRow(row);
         const siblingRuts = normalizeRutList(
           Array.isArray(data.hermanos)
-            ? data.hermanos.filter((rutHermano) => typeof rutHermano === "string" && rutHermano.trim())
+            ? data.hermanos.filter(
+                (rutHermano) =>
+                  typeof rutHermano === "string" && rutHermano.trim(),
+              )
             : [],
         );
         data.hermanos = siblingRuts;
@@ -1243,9 +1345,10 @@ export async function importEstudiantesFromExcel(req, res) {
             if (!candidateRut) continue;
             const estudianteRelacionado = estudiantesMap.get(candidateRut);
             if (!estudianteRelacionado) continue;
-            const correoRelacionado = estudianteRelacionado.correoApoderadoGenerado
-              ? estudianteRelacionado.correoApoderadoGenerado.toLowerCase()
-              : null;
+            const correoRelacionado =
+              estudianteRelacionado.correoApoderadoGenerado
+                ? estudianteRelacionado.correoApoderadoGenerado.toLowerCase()
+                : null;
             if (!correoRelacionado) continue;
             cachedAssignment = {
               email: correoRelacionado,
@@ -1287,9 +1390,13 @@ export async function importEstudiantesFromExcel(req, res) {
           guardianEmailsBatch,
           existingEmail: existingGuardianEmail,
         });
-        const resolvedGuardianEmail = generatedEmail ?? existingGuardianEmail ?? null;
+        const resolvedGuardianEmail =
+          generatedEmail ?? existingGuardianEmail ?? null;
 
-        if (generatedEmail && (!existingGuardianEmail || generatedEmail !== existingGuardianEmail)) {
+        if (
+          generatedEmail &&
+          (!existingGuardianEmail || generatedEmail !== existingGuardianEmail)
+        ) {
           guardianEmailsGeneratedCount += 1;
         }
 
@@ -1321,12 +1428,15 @@ export async function importEstudiantesFromExcel(req, res) {
 
         if (guardianUser && guardianUser.rut) {
           data.rutResponsable = guardianUser.rut;
-          data.nombreResponsable = guardianUser.nombreCompleto || data.nombreResponsable;
+          data.nombreResponsable =
+            guardianUser.nombreCompleto || data.nombreResponsable;
           if (guardianUserCreated) {
             guardianAccountsCreatedCount += 1;
             guardianCreationDetails.push({
               estudianteRut: data.rut,
-              estudiantesAsociados: Array.from(new Set([data.rut, ...siblingRuts])),
+              estudiantesAsociados: Array.from(
+                new Set([data.rut, ...siblingRuts]),
+              ),
               apoderadoRut: guardianUser.rut,
               apoderadoEmail: guardianUser.email,
               apoderadoNombre: guardianUser.nombreCompleto,
@@ -1357,7 +1467,10 @@ export async function importEstudiantesFromExcel(req, res) {
           };
           const uniqueRuts = new Set(
             lookupRuts
-              .filter((rutARegistrar) => typeof rutARegistrar === "string" && rutARegistrar)
+              .filter(
+                (rutARegistrar) =>
+                  typeof rutARegistrar === "string" && rutARegistrar,
+              )
               .map((rutARegistrar) => rutARegistrar.trim())
               .filter(Boolean),
           );
@@ -1386,22 +1499,32 @@ export async function importEstudiantesFromExcel(req, res) {
           });
         }
         const payload = buildEstudiantePayload(data);
-        const [estudiante, estudianteError] = await createEstudianteService(payload);
+        const [estudiante, estudianteError] =
+          await createEstudianteService(payload);
 
         if (estudianteError) {
-          if (typeof estudianteError === "string" && estudianteError.includes("ya existe")) {
+          if (
+            typeof estudianteError === "string" &&
+            estudianteError.includes("ya existe")
+          ) {
             const [actualizado, updateError] = await updateEstudianteService(
               data.rut,
               mergeForUpdate(payload),
             );
             if (updateError) {
-              results.errores.push({ estudiante: data.rut, error: updateError });
+              results.errores.push({
+                estudiante: data.rut,
+                error: updateError,
+              });
               continue;
             }
             cacheStudentByRut(estudiantesMap, actualizado);
             results.estudiantesActualizados.push(actualizado);
           } else {
-            results.errores.push({ estudiante: data.rut, error: estudianteError });
+            results.errores.push({
+              estudiante: data.rut,
+              error: estudianteError,
+            });
             continue;
           }
         } else {
@@ -1446,7 +1569,8 @@ export async function importEstudiantesFromExcel(req, res) {
           (hermano.correoApoderadoGenerado || "").toLowerCase() !==
             updateInfo.correoApoderadoGenerado.toLowerCase()
         ) {
-          updatePayload.correoApoderadoGenerado = updateInfo.correoApoderadoGenerado;
+          updatePayload.correoApoderadoGenerado =
+            updateInfo.correoApoderadoGenerado;
         }
         if (
           updateInfo.nombreResponsable &&
@@ -1466,7 +1590,9 @@ export async function importEstudiantesFromExcel(req, res) {
         if (syncError) {
           results.advertencias.push({
             estudiante: hermanoRut,
-            detalles: [`No se pudo sincronizar apoderado para hermano: ${syncError}`],
+            detalles: [
+              `No se pudo sincronizar apoderado para hermano: ${syncError}`,
+            ],
           });
           continue;
         }
@@ -1484,7 +1610,9 @@ export async function importEstudiantesFromExcel(req, res) {
       } catch (errorSync) {
         results.advertencias.push({
           estudiante: hermanoRut,
-          detalles: [`Error sincronizando apoderado para hermano: ${errorSync.message}`],
+          detalles: [
+            `Error sincronizando apoderado para hermano: ${errorSync.message}`,
+          ],
         });
       }
     }
@@ -1520,7 +1648,11 @@ export async function importFormulariosRegistro(req, res) {
     const { formularios } = req.body;
 
     if (!Array.isArray(formularios) || formularios.length === 0) {
-      return handleErrorClient(res, 400, "No se proporcionaron formularios para importar");
+      return handleErrorClient(
+        res,
+        400,
+        "No se proporcionaron formularios para importar",
+      );
     }
 
     const estudianteRepository = AppDataSource.getRepository(Estudiante);
@@ -1537,7 +1669,9 @@ export async function importFormulariosRegistro(req, res) {
 
     existentes.forEach((estudiante) => {
       if (estudiante.correoApoderadoGenerado) {
-        guardianEmailsInUse.add(estudiante.correoApoderadoGenerado.toLowerCase());
+        guardianEmailsInUse.add(
+          estudiante.correoApoderadoGenerado.toLowerCase(),
+        );
       }
       if (estudiante.rutResponsable) {
         guardianRutsInUse.add(estudiante.rutResponsable);
@@ -1576,7 +1710,9 @@ export async function importFormulariosRegistro(req, res) {
         }
         const existingStudent = estudiantesMap.get(data.rut) ?? null;
 
-        const hermanosLista = normalizeRutList(Array.isArray(data.hermanos) ? data.hermanos : []);
+        const hermanosLista = normalizeRutList(
+          Array.isArray(data.hermanos) ? data.hermanos : [],
+        );
         data.hermanos = hermanosLista;
         const siblingGuardian = findGuardianFromSiblings({
           siblingRuts: hermanosLista,
@@ -1648,9 +1784,15 @@ export async function importFormulariosRegistro(req, res) {
         }
 
         const contactoEmergencia =
-          data.nombreResponsable || data.nombreMadre || data.nombrePadre || null;
+          data.nombreResponsable ||
+          data.nombreMadre ||
+          data.nombrePadre ||
+          null;
         const telefonoEmergencia =
-          data.telefonoResponsable || data.telefonoMadre || data.telefonoPadre || null;
+          data.telefonoResponsable ||
+          data.telefonoMadre ||
+          data.telefonoPadre ||
+          null;
         if (contactoEmergencia) {
           data.contactoEmergencia = contactoEmergencia;
         }
@@ -1681,7 +1823,9 @@ export async function importFormulariosRegistro(req, res) {
         if (data.fechaNacimiento && !data.categoria) {
           data.categoria = calcularCategoria(data.fechaNacimiento);
           if (data.categoria) {
-            console.log(`📊 Categoría asignada automáticamente: ${data.categoria} para ${data.nombre} (edad desde ${data.fechaNacimiento})`);
+            console.log(
+              `📊 Categoría asignada automáticamente: ${data.categoria} para ${data.nombre} (edad desde ${data.fechaNacimiento})`,
+            );
           }
         }
 
@@ -1690,12 +1834,18 @@ export async function importFormulariosRegistro(req, res) {
           Object.assign(existingStudent, data);
           saved = await estudianteRepository.save(existingStudent);
           cacheStudentByRut(estudiantesMap, saved);
-          results.estudiantesActualizados.push({ nombre: saved.nombre, rut: saved.rut });
+          results.estudiantesActualizados.push({
+            nombre: saved.nombre,
+            rut: saved.rut,
+          });
         } else {
           saved = estudianteRepository.create(data);
           saved = await estudianteRepository.save(saved);
           cacheStudentByRut(estudiantesMap, saved);
-          results.estudiantesCreados.push({ nombre: saved.nombre, rut: saved.rut });
+          results.estudiantesCreados.push({
+            nombre: saved.nombre,
+            rut: saved.rut,
+          });
         }
 
         if (hermanosLista.length > 0) {
@@ -1708,7 +1858,11 @@ export async function importFormulariosRegistro(req, res) {
         }
 
         if (warnings.length > 0) {
-          results.advertencias.push({ fila: filaNum, detalles: warnings, estudiante: data.rut });
+          results.advertencias.push({
+            fila: filaNum,
+            detalles: warnings,
+            estudiante: data.rut,
+          });
         }
       } catch (error) {
         console.error(`Error procesando fila ${filaNum}:`, error);

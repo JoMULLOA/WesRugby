@@ -8,7 +8,8 @@ export async function createMerchandisingService(merchandisingData) {
 
     // Crear nuevo producto
     const newMerchandising = merchandisingRepository.create(merchandisingData);
-    const savedMerchandising = await merchandisingRepository.save(newMerchandising);
+    const savedMerchandising =
+      await merchandisingRepository.save(newMerchandising);
 
     return [savedMerchandising, null];
   } catch (error) {
@@ -20,25 +21,33 @@ export async function createMerchandisingService(merchandisingData) {
 export async function getMerchandisingService(filters = {}) {
   try {
     const merchandisingRepository = AppDataSource.getRepository(Merchandising);
-    
-    const queryBuilder = merchandisingRepository.createQueryBuilder("merchandising");
+
+    const queryBuilder =
+      merchandisingRepository.createQueryBuilder("merchandising");
 
     // Filtros opcionales
     if (filters.estado) {
-      queryBuilder.andWhere("merchandising.estado = :estado", { estado: filters.estado });
+      queryBuilder.andWhere("merchandising.estado = :estado", {
+        estado: filters.estado,
+      });
     }
 
     if (filters.disponible !== undefined) {
-      queryBuilder.andWhere("merchandising.disponible = :disponible", { disponible: filters.disponible });
+      queryBuilder.andWhere("merchandising.disponible = :disponible", {
+        disponible: filters.disponible,
+      });
     }
 
     if (filters.categoria) {
-      queryBuilder.andWhere("merchandising.categoria = :categoria", { categoria: filters.categoria });
+      queryBuilder.andWhere("merchandising.categoria = :categoria", {
+        categoria: filters.categoria,
+      });
     }
 
     // Ordenar por orden y fecha de creación
-    queryBuilder.orderBy("merchandising.orden", "ASC")
-                .addOrderBy("merchandising.createdAt", "DESC");
+    queryBuilder
+      .orderBy("merchandising.orden", "ASC")
+      .addOrderBy("merchandising.createdAt", "DESC");
 
     const merchandising = await queryBuilder.getMany();
 
@@ -54,7 +63,7 @@ export async function getMerchandisingByIdService(id) {
     const merchandisingRepository = AppDataSource.getRepository(Merchandising);
 
     const merchandising = await merchandisingRepository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!merchandising) {
@@ -73,7 +82,7 @@ export async function updateMerchandisingService(id, updateData) {
     const merchandisingRepository = AppDataSource.getRepository(Merchandising);
 
     const merchandising = await merchandisingRepository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!merchandising) {
@@ -84,7 +93,8 @@ export async function updateMerchandisingService(id, updateData) {
     Object.assign(merchandising, updateData);
     merchandising.updatedAt = new Date();
 
-    const updatedMerchandising = await merchandisingRepository.save(merchandising);
+    const updatedMerchandising =
+      await merchandisingRepository.save(merchandising);
 
     return [updatedMerchandising, null];
   } catch (error) {
@@ -98,7 +108,7 @@ export async function deleteMerchandisingService(id) {
     const merchandisingRepository = AppDataSource.getRepository(Merchandising);
 
     const merchandising = await merchandisingRepository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!merchandising) {
@@ -119,7 +129,7 @@ export async function changeEstadoMerchandisingService(id, nuevoEstado) {
     const merchandisingRepository = AppDataSource.getRepository(Merchandising);
 
     const merchandising = await merchandisingRepository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!merchandising) {
@@ -135,7 +145,8 @@ export async function changeEstadoMerchandisingService(id, nuevoEstado) {
     merchandising.estado = nuevoEstado;
     merchandising.updatedAt = new Date();
 
-    const updatedMerchandising = await merchandisingRepository.save(merchandising);
+    const updatedMerchandising =
+      await merchandisingRepository.save(merchandising);
 
     return [updatedMerchandising, null];
   } catch (error) {
@@ -149,7 +160,7 @@ export async function toggleDisponibleService(id) {
     const merchandisingRepository = AppDataSource.getRepository(Merchandising);
 
     const merchandising = await merchandisingRepository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!merchandising) {
@@ -159,7 +170,8 @@ export async function toggleDisponibleService(id) {
     merchandising.disponible = !merchandising.disponible;
     merchandising.updatedAt = new Date();
 
-    const updatedMerchandising = await merchandisingRepository.save(merchandising);
+    const updatedMerchandising =
+      await merchandisingRepository.save(merchandising);
 
     return [updatedMerchandising, null];
   } catch (error) {

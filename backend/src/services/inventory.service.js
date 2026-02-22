@@ -2,7 +2,11 @@
 // Service for inventory management - products, sales and barcode generation
 import { AppDataSource } from "../config/configDb.js";
 import { In } from "typeorm";
-import { INVENTORY_PRICING_MODES, INVENTORY_PRODUCT_CATEGORIES, INVENTORY_SOURCE_TYPES } from "../entity/inventoryProduct.entity.js";
+import {
+  INVENTORY_PRICING_MODES,
+  INVENTORY_PRODUCT_CATEGORIES,
+  INVENTORY_SOURCE_TYPES,
+} from "../entity/inventoryProduct.entity.js";
 import { generateUniqueBarcode } from "../utils/inventoryBarcode.js";
 import { generateBarcodeSheet } from "../utils/inventoryPdf.js";
 
@@ -22,12 +26,36 @@ const PRODUCT_SEED = [
   { name: "Tazones", category: "otros_productos", defaultPriceCents: 6000 },
   { name: "Bolsos", category: "otros_productos", defaultPriceCents: 3000 },
   { name: "Polerones", category: "otros_productos", defaultPriceCents: 27000 },
-  { name: "Calcetas (S y M)", category: "otros_productos", defaultPriceCents: 5000 },
-  { name: "Jockey Wessex", category: "otros_productos", defaultPriceCents: 5000 },
-  { name: "Jockey Cóndores", category: "otros_productos", defaultPriceCents: 5000 },
-  { name: "Canilleras XS", category: "otros_productos", defaultPriceCents: 6000 },
-  { name: "Canilleras S", category: "otros_productos", defaultPriceCents: 6000 },
-  { name: "Canilleras M", category: "otros_productos", defaultPriceCents: 6000 },
+  {
+    name: "Calcetas (S y M)",
+    category: "otros_productos",
+    defaultPriceCents: 5000,
+  },
+  {
+    name: "Jockey Wessex",
+    category: "otros_productos",
+    defaultPriceCents: 5000,
+  },
+  {
+    name: "Jockey Cóndores",
+    category: "otros_productos",
+    defaultPriceCents: 5000,
+  },
+  {
+    name: "Canilleras XS",
+    category: "otros_productos",
+    defaultPriceCents: 6000,
+  },
+  {
+    name: "Canilleras S",
+    category: "otros_productos",
+    defaultPriceCents: 6000,
+  },
+  {
+    name: "Canilleras M",
+    category: "otros_productos",
+    defaultPriceCents: 6000,
+  },
   { name: "Coderas M", category: "otros_productos", defaultPriceCents: 5000 },
   { name: "Llavero", category: "otros_productos", defaultPriceCents: 3000 },
   { name: "Pin Rugby", category: "otros_productos", defaultPriceCents: 3000 },
@@ -167,7 +195,9 @@ export async function upsertProduct(payload) {
   if (!data.id) {
     // Verificar duplicado de barcode antes de intentar guardar
     if (data.barcode) {
-      const collision = await repo.findOne({ where: { barcode: data.barcode } });
+      const collision = await repo.findOne({
+        where: { barcode: data.barcode },
+      });
       if (collision) {
         throw new Error("BARCODE_IN_USE");
       }
@@ -178,7 +208,8 @@ export async function upsertProduct(payload) {
       sourceType: data.sourceType,
       pricingMode: data.pricingMode,
       defaultPriceCents: data.defaultPriceCents ?? null,
-      barcode: data.barcode || (await generateUniqueBarcode(repo, data.category)),
+      barcode:
+        data.barcode || (await generateUniqueBarcode(repo, data.category)),
       active: data.active !== undefined ? data.active : true,
     });
     return repo.save(entity);
@@ -235,7 +266,10 @@ export async function ensureVariosProduct() {
     });
     await repo.save(varios);
   } else {
-    if (varios.pricingMode !== "variable" || varios.defaultPriceCents !== null) {
+    if (
+      varios.pricingMode !== "variable" ||
+      varios.defaultPriceCents !== null
+    ) {
       varios.pricingMode = "variable";
       varios.defaultPriceCents = null;
       await repo.save(varios);
@@ -264,7 +298,10 @@ function resolvePrice(product, scan) {
     }
     return Math.round(scan.priceCents);
   }
-  if (product.defaultPriceCents === null || product.defaultPriceCents === undefined) {
+  if (
+    product.defaultPriceCents === null ||
+    product.defaultPriceCents === undefined
+  ) {
     throw new Error("MISSING_DEFAULT_PRICE");
   }
   return product.defaultPriceCents;
@@ -278,7 +315,9 @@ export async function processBulkScans(scans) {
 
   for (const scan of scans) {
     try {
-      const product = await repo.findOne({ where: { barcode: scan.barcode, active: true } });
+      const product = await repo.findOne({
+        where: { barcode: scan.barcode, active: true },
+      });
       if (!product) {
         rejected.push({ id: scan.id, reason: "BARCODE_NOT_MAPPED" });
         continue;
@@ -292,8 +331,14 @@ export async function processBulkScans(scans) {
         continue;
       }
 
-      const quantity = Number.isInteger(scan.quantity) && scan.quantity > 0 ? scan.quantity : 1;
-      const scannedAt = scan.scannedAt instanceof Date ? scan.scannedAt : new Date(scan.scannedAt);
+      const quantity =
+        Number.isInteger(scan.quantity) && scan.quantity > 0
+          ? scan.quantity
+          : 1;
+      const scannedAt =
+        scan.scannedAt instanceof Date
+          ? scan.scannedAt
+          : new Date(scan.scannedAt);
 
       const { saleId } = await AppDataSource.transaction(async (manager) => {
         const ingestRepo = manager.getRepository("InventoryScanIngest");
@@ -310,7 +355,10 @@ export async function processBulkScans(scans) {
           await ingestRepo.save(ingest);
         }
 
-        const existingSale = await saleRepo.findOne({ where: { ingest: { id: ingest.id } }, relations: { ingest: true } });
+        const existingSale = await saleRepo.findOne({
+          where: { ingest: { id: ingest.id } },
+          relations: { ingest: true },
+        });
         if (!existingSale) {
           const sale = saleRepo.create({
             product: { id: product.id },
@@ -341,7 +389,6 @@ export async function processBulkScans(scans) {
   return { acceptedIds, accepted, rejected };
 }
 
-
 export async function getSalesSummary(filters = {}) {
   const manager = AppDataSource.manager;
   const conditions = [];
@@ -360,7 +407,9 @@ export async function getSalesSummary(filters = {}) {
     conditions.push(`sale.product_id = $${params.length}`);
   }
 
-  const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  const whereClause = conditions.length
+    ? `WHERE ${conditions.join(" AND ")}`
+    : "";
 
   const rows = await manager.query(
     `SELECT
@@ -395,20 +444,32 @@ export async function getSalesSummary(filters = {}) {
 }
 
 export async function createVariosSale(payload) {
-  if (!payload || typeof payload.priceCents !== "number" || payload.priceCents <= 0) {
+  if (
+    !payload ||
+    typeof payload.priceCents !== "number" ||
+    payload.priceCents <= 0
+  ) {
     throw new Error("PRICE_MUST_BE_POSITIVE");
   }
   const varios = await ensureVariosProduct();
   const saleRepo = saleRepository();
   const ingestRepo = ingestRepository();
-  const scannedAt = payload.scannedAt ? new Date(payload.scannedAt) : new Date();
-  const quantity = Number.isInteger(payload.quantity) && payload.quantity > 0 ? payload.quantity : 1;
+  const scannedAt = payload.scannedAt
+    ? new Date(payload.scannedAt)
+    : new Date();
+  const quantity =
+    Number.isInteger(payload.quantity) && payload.quantity > 0
+      ? payload.quantity
+      : 1;
 
   const priceCentsToSave = Math.round(payload.priceCents);
-  
+
   // Debug: Log del valor recibido y el que se va a guardar
-  console.log('[DEBUG createVariosSale] payload.priceCents:', payload.priceCents);
-  console.log('[DEBUG createVariosSale] priceCentsToSave:', priceCentsToSave);
+  console.log(
+    "[DEBUG createVariosSale] payload.priceCents:",
+    payload.priceCents,
+  );
+  console.log("[DEBUG createVariosSale] priceCentsToSave:", priceCentsToSave);
 
   const sale = saleRepo.create({
     product: { id: varios.id },
@@ -419,9 +480,9 @@ export async function createVariosSale(payload) {
   });
 
   const saved = await saleRepo.save(sale);
-  
+
   // Debug: Log del valor guardado
-  console.log('[DEBUG createVariosSale] saved.priceCents:', saved.priceCents);
+  console.log("[DEBUG createVariosSale] saved.priceCents:", saved.priceCents);
 
   let ingestId = null;
   if (payload.recordIngest) {
@@ -451,30 +512,30 @@ export async function deleteSale(saleId) {
   if (!saleId) {
     throw new Error("SALE_ID_REQUIRED");
   }
-  
+
   const saleRepo = saleRepository();
   const ingestRepo = ingestRepository();
-  
+
   const sale = await saleRepo.findOne({
     where: { id: saleId },
     relations: { ingest: true, product: true },
   });
-  
+
   if (!sale) {
     throw new Error("SALE_NOT_FOUND");
   }
-  
+
   // Si hay un ingest asociado, también eliminarlo
   if (sale.ingest) {
     await ingestRepo.remove(sale.ingest);
   }
-  
+
   await saleRepo.remove(sale);
-  
+
   return {
     id: saleId,
     deleted: true,
-    productName: sale.product?.name || 'Unknown',
+    productName: sale.product?.name || "Unknown",
     priceCents: sale.priceCents,
     quantity: sale.quantity,
   };
@@ -487,7 +548,11 @@ export async function seedInventoryProducts() {
 
   // Desactivar productos que ya no forman parte del catálogo (excepto el registro "varios")
   for (const product of existing) {
-    if (!allowedNames.has(product.name) && product.category !== "varios" && product.active) {
+    if (
+      !allowedNames.has(product.name) &&
+      product.category !== "varios" &&
+      product.active
+    ) {
       product.active = false;
       await repo.save(product);
     }
@@ -510,4 +575,3 @@ export async function seedInventoryProducts() {
 
   await ensureVariosProduct();
 }
-

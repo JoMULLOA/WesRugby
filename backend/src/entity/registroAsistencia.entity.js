@@ -12,31 +12,31 @@ export const RegistroAsistenciaSchema = new EntitySchema({
     sesionId: {
       type: "int",
       nullable: false,
-      comment: "ID de la sesión de asistencia"
+      comment: "ID de la sesión de asistencia",
     },
     rutEstudiante: {
       type: "varchar",
       length: 15,
       nullable: false,
-      comment: "RUT del estudiante"
+      comment: "RUT del estudiante",
     },
     nombreEstudiante: {
       type: "varchar",
       length: 255,
       nullable: false,
-      comment: "Nombre completo del estudiante"
+      comment: "Nombre completo del estudiante",
     },
     estado: {
       type: "enum",
       enum: ["presente", "ausente", "justificado"],
       nullable: false,
       default: "presente",
-      comment: "Estado de asistencia"
+      comment: "Estado de asistencia",
     },
     observaciones: {
       type: "text",
       nullable: true,
-      comment: "Observaciones adicionales"
+      comment: "Observaciones adicionales",
     },
     createdAt: {
       type: "timestamp",

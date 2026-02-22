@@ -22,8 +22,16 @@ export async function createEstudiante(req, res) {
     const estudianteData = req.body;
 
     // Validaciones básicas
-    if (!estudianteData.rut || !estudianteData.nombre || !estudianteData.curso) {
-      return handleErrorClient(res, 400, "RUT, nombre y curso son obligatorios");
+    if (
+      !estudianteData.rut ||
+      !estudianteData.nombre ||
+      !estudianteData.curso
+    ) {
+      return handleErrorClient(
+        res,
+        400,
+        "RUT, nombre y curso son obligatorios",
+      );
     }
 
     const [estudiante, error] = await createEstudianteService(estudianteData);
@@ -40,20 +48,20 @@ export async function createEstudiante(req, res) {
 
 export async function getEstudiantes(req, res) {
   try {
-    console.log('📚 Controlador getEstudiantes llamado por:', req.user.email);
+    console.log("📚 Controlador getEstudiantes llamado por:", req.user.email);
     const [estudiantes, error] = await getEstudiantesService();
 
     if (error) {
-      console.log('❌ Error en servicio:', error);
+      console.log("❌ Error en servicio:", error);
       return handleErrorClient(res, 404, error);
     }
 
-    console.log('✅ Estudiantes obtenidos:', estudiantes.length);
+    console.log("✅ Estudiantes obtenidos:", estudiantes.length);
     estudiantes.length === 0
       ? handleSuccess(res, 204)
       : handleSuccess(res, 200, "Estudiantes encontrados", estudiantes);
   } catch (error) {
-    console.error('❌ Error en controlador:', error);
+    console.error("❌ Error en controlador:", error);
     handleErrorServer(res, 500, error.message);
   }
 }
@@ -68,17 +76,31 @@ export async function getEstudiantesByApoderado(req, res) {
     }
 
     // Si es apoderado, solo puede ver sus propios estudiantes
-    if (req.user.rol === "apoderado" && req.query.rut && req.query.rut !== req.user.rut) {
-      return handleErrorClient(res, 403, "Solo puedes ver tus propios estudiantes");
+    if (
+      req.user.rol === "apoderado" &&
+      req.query.rut &&
+      req.query.rut !== req.user.rut
+    ) {
+      return handleErrorClient(
+        res,
+        403,
+        "Solo puedes ver tus propios estudiantes",
+      );
     }
 
-    const [estudiantes, error] = await getEstudiantesByApoderadoService(rutApoderado);
+    const [estudiantes, error] =
+      await getEstudiantesByApoderadoService(rutApoderado);
 
     if (error) {
       return handleErrorClient(res, 404, error);
     }
 
-    handleSuccess(res, 200, "Estudiantes del apoderado encontrados", estudiantes);
+    handleSuccess(
+      res,
+      200,
+      "Estudiantes del apoderado encontrados",
+      estudiantes,
+    );
   } catch (error) {
     handleErrorServer(res, 500, error.message);
   }
@@ -90,19 +112,27 @@ export async function getMisEstudiantes(req, res) {
     const rutApoderado = req.user.rut;
 
     if (!rutApoderado) {
-      return handleErrorClient(res, 400, "Usuario no autenticado correctamente");
+      return handleErrorClient(
+        res,
+        400,
+        "Usuario no autenticado correctamente",
+      );
     }
 
     console.log("🔍 Buscando estudiantes para apoderado:", rutApoderado);
 
-    const [estudiantes, error] = await getEstudiantesByApoderadoService(rutApoderado);
+    const [estudiantes, error] =
+      await getEstudiantesByApoderadoService(rutApoderado);
 
     if (error) {
       return handleErrorClient(res, 404, error);
     }
 
     console.log("✅ Estudiantes encontrados:", estudiantes?.length || 0);
-    console.log("📊 Datos de estudiantes:", JSON.stringify(estudiantes, null, 2));
+    console.log(
+      "📊 Datos de estudiantes:",
+      JSON.stringify(estudiantes, null, 2),
+    );
 
     handleSuccess(res, 200, "Mis estudiantes encontrados", estudiantes);
   } catch (error) {
@@ -146,19 +176,23 @@ export async function updateEstudiante(req, res) {
     if (userRol === "apoderado") {
       const estudianteRepository = AppDataSource.getRepository(Estudiante);
       const estudiante = await estudianteRepository.findOne({ where: { rut } });
-      
+
       if (!estudiante) {
         return handleErrorClient(res, 404, "Estudiante no encontrado");
       }
 
       // Verificar que el usuario es responsable del estudiante
       // Puede ser por los campos rutResponsable registrados
-      const esResponsable = 
+      const esResponsable =
         estudiante.rutResponsable === userRut ||
         estudiante.rutResponsable2 === userRut;
 
       if (!esResponsable) {
-        return handleErrorClient(res, 403, "No tienes permisos para modificar este estudiante");
+        return handleErrorClient(
+          res,
+          403,
+          "No tienes permisos para modificar este estudiante",
+        );
       }
     }
 
@@ -212,14 +246,21 @@ export async function updateEstudianteFoto(req, res) {
     // Si es apoderado, verificar que puede modificar este estudiante
     if (userRol === "apoderado") {
       const [estudiante, errorEstudiante] = await getEstudianteService(rut);
-      
+
       if (errorEstudiante) {
         return handleErrorClient(res, 404, errorEstudiante);
       }
 
       // Verificar que el usuario es responsable del estudiante
-      if (estudiante.rutResponsable !== userRut && estudiante.rutResponsable2 !== userRut) {
-        return handleErrorClient(res, 403, "No tienes permisos para modificar la foto de este estudiante");
+      if (
+        estudiante.rutResponsable !== userRut &&
+        estudiante.rutResponsable2 !== userRut
+      ) {
+        return handleErrorClient(
+          res,
+          403,
+          "No tienes permisos para modificar la foto de este estudiante",
+        );
       }
     }
 
@@ -229,7 +270,12 @@ export async function updateEstudianteFoto(req, res) {
       return handleErrorClient(res, 404, error);
     }
 
-    handleSuccess(res, 200, "Foto del estudiante actualizada exitosamente", estudiante);
+    handleSuccess(
+      res,
+      200,
+      "Foto del estudiante actualizada exitosamente",
+      estudiante,
+    );
   } catch (error) {
     handleErrorServer(res, 500, error.message);
   }
@@ -243,13 +289,8 @@ export async function updateEstudianteFoto(req, res) {
 export async function recalcularCategorias(req, res) {
   try {
     const resultado = await recalcularCategoriasService();
-    
-    handleSuccess(
-      res, 
-      200, 
-      "Categorías recalculadas exitosamente", 
-      resultado
-    );
+
+    handleSuccess(res, 200, "Categorías recalculadas exitosamente", resultado);
   } catch (error) {
     handleErrorServer(res, 500, error.message);
   }

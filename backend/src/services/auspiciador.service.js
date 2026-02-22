@@ -20,17 +20,21 @@ export async function createAuspiciadorService(auspiciadorData) {
 export async function getAuspiciadoresService(filters = {}) {
   try {
     const auspiciadorRepository = AppDataSource.getRepository(Auspiciador);
-    
-    const queryBuilder = auspiciadorRepository.createQueryBuilder("auspiciador");
+
+    const queryBuilder =
+      auspiciadorRepository.createQueryBuilder("auspiciador");
 
     // Filtros opcionales
     if (filters.estado) {
-      queryBuilder.andWhere("auspiciador.estado = :estado", { estado: filters.estado });
+      queryBuilder.andWhere("auspiciador.estado = :estado", {
+        estado: filters.estado,
+      });
     }
 
     // Ordenar por orden y fecha de creación
-    queryBuilder.orderBy("auspiciador.orden", "ASC")
-                .addOrderBy("auspiciador.createdAt", "DESC");
+    queryBuilder
+      .orderBy("auspiciador.orden", "ASC")
+      .addOrderBy("auspiciador.createdAt", "DESC");
 
     const auspiciadores = await queryBuilder.getMany();
 
@@ -46,7 +50,7 @@ export async function getAuspiciadorService(id) {
     const auspiciadorRepository = AppDataSource.getRepository(Auspiciador);
 
     const auspiciador = await auspiciadorRepository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!auspiciador) {
@@ -65,7 +69,7 @@ export async function updateAuspiciadorService(id, updateData) {
     const auspiciadorRepository = AppDataSource.getRepository(Auspiciador);
 
     const auspiciador = await auspiciadorRepository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!auspiciador) {
@@ -90,7 +94,7 @@ export async function deleteAuspiciadorService(id) {
     const auspiciadorRepository = AppDataSource.getRepository(Auspiciador);
 
     const auspiciador = await auspiciadorRepository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!auspiciador) {
@@ -111,7 +115,7 @@ export async function changeEstadoAuspiciadorService(id, nuevoEstado) {
     const auspiciadorRepository = AppDataSource.getRepository(Auspiciador);
 
     const auspiciador = await auspiciadorRepository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!auspiciador) {

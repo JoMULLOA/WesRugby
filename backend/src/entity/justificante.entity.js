@@ -18,16 +18,31 @@ const JustificanteSchema = new EntitySchema({
     nombreArchivoOriginal: { type: "varchar", length: 255, nullable: true },
     tipoArchivo: { type: "varchar", length: 50, nullable: true },
     tamanoArchivo: { type: "int", nullable: true },
-    estado: { type: "varchar", length: 20, default: "pendiente", nullable: false },
+    estado: {
+      type: "varchar",
+      length: 20,
+      default: "pendiente",
+      nullable: false,
+    },
     motivoRechazo: { type: "text", nullable: true },
     observacionesDirectiva: { type: "text", nullable: true },
     revisadoPorRut: { type: "varchar", length: 12, nullable: true },
     fechaRevision: { type: "timestamp with time zone", nullable: true },
     // Meses de exención de pago asociados (array de strings YYYY-MM)
     mesesExencion: { type: "jsonb", nullable: true },
-    fechaSubida: { type: "timestamp with time zone", default: () => "CURRENT_TIMESTAMP" },
-    createdAt: { type: "timestamp with time zone", default: () => "CURRENT_TIMESTAMP" },
-    updatedAt: { type: "timestamp with time zone", default: () => "CURRENT_TIMESTAMP", onUpdate: "CURRENT_TIMESTAMP" },
+    fechaSubida: {
+      type: "timestamp with time zone",
+      default: () => "CURRENT_TIMESTAMP",
+    },
+    createdAt: {
+      type: "timestamp with time zone",
+      default: () => "CURRENT_TIMESTAMP",
+    },
+    updatedAt: {
+      type: "timestamp with time zone",
+      default: () => "CURRENT_TIMESTAMP",
+      onUpdate: "CURRENT_TIMESTAMP",
+    },
   },
   indices: [
     { name: "IDX_JUSTIFICANTE_APODERADO", columns: ["apoderadoRut"] },

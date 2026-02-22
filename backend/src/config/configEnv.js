@@ -4,7 +4,8 @@ import { fileURLToPath } from "url";
 import fs from "fs";
 
 const currentFile = fileURLToPath(import.meta.url);
-const currentDir = path.dirname(currentFile);const envFile = path.resolve(currentDir, ".env");
+const currentDir = path.dirname(currentFile);
+const envFile = path.resolve(currentDir, ".env");
 
 // Solo cargar archivo .env si existe y no estamos en producción con variables de entorno configuradas
 // En Docker, las variables vienen del entorno y no necesitamos el archivo
@@ -67,7 +68,10 @@ export const SMTP_CONFIG = {
   host: EMAIL_HOST,
   port: EMAIL_PORT,
   secure: EMAIL_PORT === 465,
-  auth: EMAIL_USER && EMAIL_PASS ? { user: EMAIL_USER, pass: EMAIL_PASS } : undefined,
+  auth:
+    EMAIL_USER && EMAIL_PASS
+      ? { user: EMAIL_USER, pass: EMAIL_PASS }
+      : undefined,
 };
 
 export const APP_CONFIG = {

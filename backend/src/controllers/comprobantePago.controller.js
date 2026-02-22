@@ -1,6 +1,6 @@
 "use strict";
 import { randomUUID } from "crypto";
-import { Brackets, In } from "typeorm";
+import { In } from "typeorm";
 import { AppDataSource } from "../config/configDb.js";
 import ComprobantePago from "../entity/comprobantePago.entity.js";
 import Justificante from "../entity/justificante.entity.js";
@@ -18,9 +18,22 @@ const justificanteRepository = AppDataSource.getRepository(Justificante);
 const estudianteRepository = AppDataSource.getRepository(Estudiante);
 const userRepository = AppDataSource.getRepository(User);
 
-const METODOS_PAGO = ["transferencia", "deposito", "efectivo", "cheque", "tarjeta"];
+const METODOS_PAGO = [
+  "transferencia",
+  "deposito",
+  "efectivo",
+  "cheque",
+  "tarjeta",
+];
 const ESTADOS_VALIDOS = ["pendiente", "validado", "rechazado", "observado"];
-const TIPOS_PAGO = ["mensualidad", "matricula", "uniforme", "evento_especial", "multa", "otro"];
+const TIPOS_PAGO = [
+  "mensualidad",
+  "matricula",
+  "uniforme",
+  "evento_especial",
+  "multa",
+  "otro",
+];
 // Máximo por definición decimal(10,2) => 8 dígitos enteros + 2 decimales
 const MAX_MONTO_TOTAL = 99999999.99;
 
@@ -60,7 +73,9 @@ function mapEstudiante(estudiante) {
     codigoAlumno: estudiante.rut,
     correoApoderadoGenerado: estudiante.correoApoderadoGenerado,
     hermanos: Array.isArray(estudiante.hermanos) ? estudiante.hermanos : [],
-    fechaInscripcion: estudiante.createdAt ? estudiante.createdAt.toISOString() : null,
+    fechaInscripcion: estudiante.createdAt
+      ? estudiante.createdAt.toISOString()
+      : null,
   };
 }
 
@@ -163,9 +178,12 @@ function isComprobanteOwnedByUser(comprobante, user) {
   if (!comprobante || !user) {
     return false;
   }
-  const matchesRut = comprobante.apoderadoRut && comprobante.apoderadoRut === user.rut;
+  const matchesRut =
+    comprobante.apoderadoRut && comprobante.apoderadoRut === user.rut;
   const matchesEmail =
-    user.email && comprobante.apoderadoEmail && comprobante.apoderadoEmail === user.email;
+    user.email &&
+    comprobante.apoderadoEmail &&
+    comprobante.apoderadoEmail === user.email;
   return Boolean(matchesRut || matchesEmail);
 }
 
@@ -261,7 +279,9 @@ function buildComprobanteDto(comprobante, estudiantesMap = new Map()) {
     rutaComprobante: resolveFileUrl(comprobante.rutaComprobante),
     tipoArchivo: comprobante.tipoArchivo,
     tamanoArchivo: comprobante.tamanoArchivo,
-    fechaSubida: comprobante.fechaSubida ? comprobante.fechaSubida.toISOString() : null,
+    fechaSubida: comprobante.fechaSubida
+      ? comprobante.fechaSubida.toISOString()
+      : null,
     fechaValidacion: comprobante.fechaValidacion
       ? comprobante.fechaValidacion.toISOString()
       : null,
@@ -303,7 +323,11 @@ export async function crearComprobantePago(req, res) {
     } = req.body;
 
     if (!estudianteRut) {
-      return handleErrorClient(res, 400, "El RUT del estudiante es obligatorio");
+      return handleErrorClient(
+        res,
+        400,
+        "El RUT del estudiante es obligatorio",
+      );
     }
 
     const metodoValido = ensureMetodoPago(metodoPago);
@@ -320,13 +344,13 @@ export async function crearComprobantePago(req, res) {
     if (monto === null || monto <= 0) {
       return handleErrorClient(res, 400, "Monto total inválido");
     }
-      if (monto > MAX_MONTO_TOTAL) {
-        return handleErrorClient(
-          res,
-          400,
-          `Monto excede el máximo permitido (${MAX_MONTO_TOTAL}). Ajuste el valor.`,
-        );
-      }
+    if (monto > MAX_MONTO_TOTAL) {
+      return handleErrorClient(
+        res,
+        400,
+        `Monto excede el máximo permitido (${MAX_MONTO_TOTAL}). Ajuste el valor.`,
+      );
+    }
 
     const fechaPagoDate = parseFecha(fechaPago);
     if (!fechaPagoDate) {
@@ -379,7 +403,9 @@ export async function crearComprobantePago(req, res) {
     });
 
     const guardado = await comprobanteRepository.save(comprobante);
-    const estudiantesMap = new Map([[estudianteRut, mapEstudiante(estudiante)]]);
+    const estudiantesMap = new Map([
+      [estudianteRut, mapEstudiante(estudiante)],
+    ]);
     handleSuccess(
       res,
       201,
@@ -481,7 +507,13 @@ export async function obtenerComprobantesPago(req, res) {
         rut,
         email: req.user.email,
         total,
-        registros: registros.map((r) => ({ id: r.id, estado: r.estado, estudianteRut: r.estudianteRut, apoderadoRut: r.apoderadoRut, apoderadoEmail: r.apoderadoEmail })),
+        registros: registros.map((r) => ({
+          id: r.id,
+          estado: r.estado,
+          estudianteRut: r.estudianteRut,
+          apoderadoRut: r.apoderadoRut,
+          apoderadoEmail: r.apoderadoEmail,
+        })),
       });
     }
 
@@ -494,10 +526,15 @@ export async function obtenerComprobantesPago(req, res) {
         })
       : [];
     const estudiantesMap = new Map(
-      estudiantes.map((estudiante) => [estudiante.rut, mapEstudiante(estudiante)]),
+      estudiantes.map((estudiante) => [
+        estudiante.rut,
+        mapEstudiante(estudiante),
+      ]),
     );
 
-    const data = registros.map((registro) => buildComprobanteDto(registro, estudiantesMap));
+    const data = registros.map((registro) =>
+      buildComprobanteDto(registro, estudiantesMap),
+    );
 
     handleSuccess(res, 200, "Comprobantes obtenidos exitosamente", {
       comprobantes: data,
@@ -517,14 +554,17 @@ export async function obtenerComprobantesPago(req, res) {
 export async function obtenerComprobantePorId(req, res) {
   try {
     const { id } = req.params;
-    const { rol, rut } = req.user;
+    const { rol } = req.user;
 
     const comprobante = await comprobanteRepository.findOne({ where: { id } });
     if (!comprobante) {
       return handleErrorClient(res, 404, "Comprobante no encontrado");
     }
 
-    if (rol === "apoderado" && !isComprobanteOwnedByUser(comprobante, req.user)) {
+    if (
+      rol === "apoderado" &&
+      !isComprobanteOwnedByUser(comprobante, req.user)
+    ) {
       return handleErrorClient(res, 403, "No autorizado");
     }
 
@@ -584,8 +624,10 @@ export async function validarComprobante(req, res) {
     // Si se aprobó (validado), actualizar pagos de todos los estudiantes
     if (estadoValido === "validado") {
       try {
-        console.log(`💰 Procesando aprobación de comprobante ${actualizado.numeroComprobante}`);
-        
+        console.log(
+          `💰 Procesando aprobación de comprobante ${actualizado.numeroComprobante}`,
+        );
+
         // Función para extraer año y mes de formato "YYYY-MM" o "Nombre Año"
         const extraerAnioYMes = (mesValue) => {
           // Formato YYYY-MM (ej: "2026-03")
@@ -593,19 +635,39 @@ export async function validarComprobante(req, res) {
           if (matchYYYYMM) {
             const anio = parseInt(matchYYYYMM[1]);
             const mesNum = parseInt(matchYYYYMM[2]);
-            const nombresMeses = ["enero", "febrero", "marzo", "abril", "mayo", "junio",
-                                 "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+            const nombresMeses = [
+              "enero",
+              "febrero",
+              "marzo",
+              "abril",
+              "mayo",
+              "junio",
+              "julio",
+              "agosto",
+              "septiembre",
+              "octubre",
+              "noviembre",
+              "diciembre",
+            ];
             return { anio, nombreMes: nombresMeses[mesNum - 1] };
           }
-          
+
           // Formato "Nombre Año" (ej: "Marzo 2026")
           const mesesNombres = {
-            "enero": "enero", "febrero": "febrero", "marzo": "marzo",
-            "abril": "abril", "mayo": "mayo", "junio": "junio",
-            "julio": "julio", "agosto": "agosto", "septiembre": "septiembre",
-            "octubre": "octubre", "noviembre": "noviembre", "diciembre": "diciembre",
+            enero: "enero",
+            febrero: "febrero",
+            marzo: "marzo",
+            abril: "abril",
+            mayo: "mayo",
+            junio: "junio",
+            julio: "julio",
+            agosto: "agosto",
+            septiembre: "septiembre",
+            octubre: "octubre",
+            noviembre: "noviembre",
+            diciembre: "diciembre",
           };
-          
+
           const mesValueLower = mesValue.toLowerCase();
           for (const [nombre, key] of Object.entries(mesesNombres)) {
             if (mesValueLower.includes(nombre)) {
@@ -615,24 +677,31 @@ export async function validarComprobante(req, res) {
               return { anio, nombreMes: key };
             }
           }
-          
+
           return null;
         };
-        
+
         // Si hay detallesPago (pago agrupado), procesar cada estudiante
-        if (actualizado.detallesPago && typeof actualizado.detallesPago === 'object') {
-          console.log(`📦 Pago agrupado detectado con ${Object.keys(actualizado.detallesPago).length} estudiantes`);
-          
-          for (const [estudianteRut, detalles] of Object.entries(actualizado.detallesPago)) {
-            const estudiante = await estudianteRepository.findOne({ 
-              where: { rut: estudianteRut } 
+        if (
+          actualizado.detallesPago &&
+          typeof actualizado.detallesPago === "object"
+        ) {
+          console.log(
+            `📦 Pago agrupado detectado con ${Object.keys(actualizado.detallesPago).length} estudiantes`,
+          );
+
+          for (const [estudianteRut, detalles] of Object.entries(
+            actualizado.detallesPago,
+          )) {
+            const estudiante = await estudianteRepository.findOne({
+              where: { rut: estudianteRut },
             });
-            
+
             if (!estudiante) {
               console.warn(`⚠️ Estudiante no encontrado: ${estudianteRut}`);
               continue;
             }
-            
+
             // Inicializar pagos si no existe
             if (!estudiante.pagos) {
               estudiante.pagos = {};
@@ -640,23 +709,28 @@ export async function validarComprobante(req, res) {
             if (!estudiante.pagosPorAnio) {
               estudiante.pagosPorAnio = {};
             }
-            
+
             if (actualizado.tipoPago === "mensualidad") {
               const meses = detalles.meses || [];
               const montoTotalEstudiante = detalles.monto || 0;
-              
+
               // Dividir el monto total entre la cantidad de meses
               const cantidadMeses = meses.length;
-              const montoPorMes = cantidadMeses > 0 ? montoTotalEstudiante / cantidadMeses : montoTotalEstudiante;
-              
-              console.log(`   Estudiante ${estudianteRut}: ${cantidadMeses} meses, monto total $${montoTotalEstudiante}, por mes $${montoPorMes.toFixed(0)}`);
-              
+              const montoPorMes =
+                cantidadMeses > 0
+                  ? montoTotalEstudiante / cantidadMeses
+                  : montoTotalEstudiante;
+
+              console.log(
+                `   Estudiante ${estudianteRut}: ${cantidadMeses} meses, monto total $${montoTotalEstudiante}, por mes $${montoPorMes.toFixed(0)}`,
+              );
+
               for (const mesValue of meses) {
                 const resultado = extraerAnioYMes(mesValue);
-                
+
                 if (resultado) {
                   const { anio, nombreMes } = resultado;
-                  
+
                   // Inicializar estructura por año si no existe
                   if (!estudiante.pagosPorAnio[anio]) {
                     estudiante.pagosPorAnio[anio] = { meses: {} };
@@ -664,51 +738,58 @@ export async function validarComprobante(req, res) {
                   if (!estudiante.pagosPorAnio[anio].meses) {
                     estudiante.pagosPorAnio[anio].meses = {};
                   }
-                  
-                  estudiante.pagosPorAnio[anio].meses[nombreMes] = Math.round(montoPorMes).toString();
-                  console.log(`      ✓ ${nombreMes} ${anio}: $${Math.round(montoPorMes)}`);
-                  
+
+                  estudiante.pagosPorAnio[anio].meses[nombreMes] =
+                    Math.round(montoPorMes).toString();
+                  console.log(
+                    `      ✓ ${nombreMes} ${anio}: $${Math.round(montoPorMes)}`,
+                  );
+
                   // También guardar en estructura legacy para 2025
                   if (anio === 2025) {
                     if (!estudiante.pagos.meses) {
                       estudiante.pagos.meses = {};
                     }
-                    estudiante.pagos.meses[nombreMes] = Math.round(montoPorMes).toString();
+                    estudiante.pagos.meses[nombreMes] =
+                      Math.round(montoPorMes).toString();
                   }
                 } else {
                   console.warn(`⚠️ No se pudo mapear mes: ${mesValue}`);
                 }
               }
-              
+
               await estudianteRepository.save(estudiante);
             } else if (actualizado.tipoPago === "matricula") {
               const montoPorEstudiante = detalles.monto || 0;
-              
+
               // Extraer año del comprobante (debería venir en anioMatricula)
               const anio = actualizado.anioMatricula || 2025;
-              
+
               if (!estudiante.pagosPorAnio[anio]) {
                 estudiante.pagosPorAnio[anio] = {};
               }
-              estudiante.pagosPorAnio[anio].matricula = montoPorEstudiante.toString();
-              
+              estudiante.pagosPorAnio[anio].matricula =
+                montoPorEstudiante.toString();
+
               // También guardar en estructura legacy para 2025
               if (anio === 2025) {
                 estudiante.pagos.matricula = montoPorEstudiante.toString();
               }
-              
+
               await estudianteRepository.save(estudiante);
-              console.log(`✅ ${estudianteRut}: Matrícula ${anio} = ${montoPorEstudiante}`);
+              console.log(
+                `✅ ${estudianteRut}: Matrícula ${anio} = ${montoPorEstudiante}`,
+              );
             }
           }
         } else {
           // Pago simple (un estudiante, un mes) - lógica original
           console.log(`📦 Pago simple: ${actualizado.estudianteRut}`);
-          
-          const estudiante = await estudianteRepository.findOne({ 
-            where: { rut: actualizado.estudianteRut } 
+
+          const estudiante = await estudianteRepository.findOne({
+            where: { rut: actualizado.estudianteRut },
           });
-          
+
           if (estudiante) {
             if (!estudiante.pagos) {
               estudiante.pagos = {};
@@ -716,13 +797,13 @@ export async function validarComprobante(req, res) {
             if (!estudiante.pagosPorAnio) {
               estudiante.pagosPorAnio = {};
             }
-            
+
             if (actualizado.tipoPago === "mensualidad") {
               const resultado = extraerAnioYMes(actualizado.mesCorrespondiente);
-              
+
               if (resultado) {
                 const { anio, nombreMes } = resultado;
-                
+
                 // Inicializar estructura por año si no existe
                 if (!estudiante.pagosPorAnio[anio]) {
                   estudiante.pagosPorAnio[anio] = { meses: {} };
@@ -730,40 +811,51 @@ export async function validarComprobante(req, res) {
                 if (!estudiante.pagosPorAnio[anio].meses) {
                   estudiante.pagosPorAnio[anio].meses = {};
                 }
-                
-                estudiante.pagosPorAnio[anio].meses[nombreMes] = actualizado.montoTotal.toString();
-                
+
+                estudiante.pagosPorAnio[anio].meses[nombreMes] =
+                  actualizado.montoTotal.toString();
+
                 // También guardar en estructura legacy para 2025
                 if (anio === 2025) {
                   if (!estudiante.pagos.meses) {
                     estudiante.pagos.meses = {};
                   }
-                  estudiante.pagos.meses[nombreMes] = actualizado.montoTotal.toString();
+                  estudiante.pagos.meses[nombreMes] =
+                    actualizado.montoTotal.toString();
                 }
-                
+
                 await estudianteRepository.save(estudiante);
-                console.log(`✅ Mensualidad registrada: ${nombreMes} ${anio} = ${actualizado.montoTotal}`);
+                console.log(
+                  `✅ Mensualidad registrada: ${nombreMes} ${anio} = ${actualizado.montoTotal}`,
+                );
               } else {
-                console.warn(`⚠️ Mes no reconocido: ${actualizado.mesCorrespondiente}`);
+                console.warn(
+                  `⚠️ Mes no reconocido: ${actualizado.mesCorrespondiente}`,
+                );
               }
             } else if (actualizado.tipoPago === "matricula") {
               const anio = actualizado.anioMatricula || 2025;
-              
+
               if (!estudiante.pagosPorAnio[anio]) {
                 estudiante.pagosPorAnio[anio] = {};
               }
-              estudiante.pagosPorAnio[anio].matricula = actualizado.montoTotal.toString();
-              
+              estudiante.pagosPorAnio[anio].matricula =
+                actualizado.montoTotal.toString();
+
               // También guardar en estructura legacy para 2025
               if (anio === 2025) {
                 estudiante.pagos.matricula = actualizado.montoTotal.toString();
               }
-              
+
               await estudianteRepository.save(estudiante);
-              console.log(`✅ Matrícula ${anio} registrada: ${actualizado.montoTotal}`);
+              console.log(
+                `✅ Matrícula ${anio} registrada: ${actualizado.montoTotal}`,
+              );
             }
           } else {
-            console.warn(`⚠️ Estudiante no encontrado: ${actualizado.estudianteRut}`);
+            console.warn(
+              `⚠️ Estudiante no encontrado: ${actualizado.estudianteRut}`,
+            );
           }
         }
       } catch (pagoError) {
@@ -773,7 +865,9 @@ export async function validarComprobante(req, res) {
     }
 
     const estudiante = actualizado.estudianteRut
-      ? await estudianteRepository.findOne({ where: { rut: actualizado.estudianteRut } })
+      ? await estudianteRepository.findOne({
+          where: { rut: actualizado.estudianteRut },
+        })
       : null;
     const estudiantesMap = estudiante
       ? new Map([[estudiante.rut, mapEstudiante(estudiante)]])
@@ -799,9 +893,12 @@ export async function actualizarComprobante(req, res) {
       return handleErrorClient(res, 404, "Comprobante no encontrado");
     }
 
-    const { rol, rut } = req.user;
+    const { rol } = req.user;
 
-    if (rol === "apoderado" && !isComprobanteOwnedByUser(comprobante, req.user)) {
+    if (
+      rol === "apoderado" &&
+      !isComprobanteOwnedByUser(comprobante, req.user)
+    ) {
       return handleErrorClient(res, 403, "No autorizado");
     }
 
@@ -820,9 +917,13 @@ export async function actualizarComprobante(req, res) {
       if (monto === null || monto <= 0) {
         return handleErrorClient(res, 400, "Monto total inválido");
       }
-        if (monto > MAX_MONTO_TOTAL) {
-          return handleErrorClient(res, 400, `Monto excede el máximo permitido (${MAX_MONTO_TOTAL}).`);
-        }
+      if (monto > MAX_MONTO_TOTAL) {
+        return handleErrorClient(
+          res,
+          400,
+          `Monto excede el máximo permitido (${MAX_MONTO_TOTAL}).`,
+        );
+      }
       comprobante.montoTotal = monto;
     }
 
@@ -855,7 +956,8 @@ export async function actualizarComprobante(req, res) {
     }
 
     if (payload.observacionesApoderado !== undefined) {
-      comprobante.observacionesApoderado = payload.observacionesApoderado || null;
+      comprobante.observacionesApoderado =
+        payload.observacionesApoderado || null;
     }
 
     if (rol !== "apoderado") {
@@ -882,7 +984,8 @@ export async function actualizarComprobante(req, res) {
       }
 
       if (payload.observacionesTesorera !== undefined) {
-        comprobante.observacionesTesorera = payload.observacionesTesorera || null;
+        comprobante.observacionesTesorera =
+          payload.observacionesTesorera || null;
       }
 
       if (payload.motivoRechazo !== undefined) {
@@ -922,7 +1025,9 @@ export async function actualizarComprobante(req, res) {
     const guardado = await comprobanteRepository.save(comprobante);
 
     const estudiante = guardado.estudianteRut
-      ? await estudianteRepository.findOne({ where: { rut: guardado.estudianteRut } })
+      ? await estudianteRepository.findOne({
+          where: { rut: guardado.estudianteRut },
+        })
       : null;
     const estudiantesMap = estudiante
       ? new Map([[estudiante.rut, mapEstudiante(estudiante)]])
@@ -984,22 +1089,32 @@ export async function obtenerEstadisticasPagos(req, res) {
     for (const registro of registros) {
       const estadoActual = registro.estado;
       const metodoActual = registro.metodoPago;
-      const mesPago = registro.mesCorrespondiente || formatDateOnly(registro.fechaPago);
+      const mesPago =
+        registro.mesCorrespondiente || formatDateOnly(registro.fechaPago);
       const monto = Number(registro.montoTotal) || 0;
 
-      const estadoStats = resumenEstados.get(estadoActual) || { cantidad: 0, montoTotal: 0 };
+      const estadoStats = resumenEstados.get(estadoActual) || {
+        cantidad: 0,
+        montoTotal: 0,
+      };
       estadoStats.cantidad += 1;
       estadoStats.montoTotal += monto;
       resumenEstados.set(estadoActual, estadoStats);
 
       if (estadoActual === "validado") {
-        const metodoStats = resumenMetodos.get(metodoActual) || { cantidad: 0, montoTotal: 0 };
+        const metodoStats = resumenMetodos.get(metodoActual) || {
+          cantidad: 0,
+          montoTotal: 0,
+        };
         metodoStats.cantidad += 1;
         metodoStats.montoTotal += monto;
         resumenMetodos.set(metodoActual, metodoStats);
 
         if (mesPago) {
-          const mesStats = ingresosMensuales.get(mesPago) || { ingresos: 0, cantidad: 0 };
+          const mesStats = ingresosMensuales.get(mesPago) || {
+            ingresos: 0,
+            cantidad: 0,
+          };
           mesStats.ingresos += monto;
           mesStats.cantidad += 1;
           ingresosMensuales.set(mesPago, mesStats);
@@ -1015,16 +1130,20 @@ export async function obtenerEstadisticasPagos(req, res) {
         totalIngresosValidados,
       },
       distribucion: {
-        porEstado: Array.from(resumenEstados.entries()).map(([estadoKey, data]) => ({
-          estado: estadoKey,
-          cantidad: data.cantidad,
-          montoTotal: data.montoTotal,
-        })),
-        porMetodoPago: Array.from(resumenMetodos.entries()).map(([metodoKey, data]) => ({
-          metodo: metodoKey,
-          cantidad: data.cantidad,
-          montoTotal: data.montoTotal,
-        })),
+        porEstado: Array.from(resumenEstados.entries()).map(
+          ([estadoKey, data]) => ({
+            estado: estadoKey,
+            cantidad: data.cantidad,
+            montoTotal: data.montoTotal,
+          }),
+        ),
+        porMetodoPago: Array.from(resumenMetodos.entries()).map(
+          ([metodoKey, data]) => ({
+            metodo: metodoKey,
+            cantidad: data.cantidad,
+            montoTotal: data.montoTotal,
+          }),
+        ),
       },
       tendencias: {
         ingresosMensuales: Array.from(ingresosMensuales.entries())
@@ -1104,10 +1223,14 @@ export async function subirVoucherMensualidadApoderado(req, res) {
     let detallesPagoRecibido = null;
     if (detallesPagoRaw) {
       try {
-        detallesPagoRecibido = typeof detallesPagoRaw === "string" 
-          ? JSON.parse(detallesPagoRaw) 
-          : detallesPagoRaw;
-        console.log("📦 detallesPago recibido desde frontend:", JSON.stringify(detallesPagoRecibido, null, 2));
+        detallesPagoRecibido =
+          typeof detallesPagoRaw === "string"
+            ? JSON.parse(detallesPagoRaw)
+            : detallesPagoRaw;
+        console.log(
+          "📦 detallesPago recibido desde frontend:",
+          JSON.stringify(detallesPagoRecibido, null, 2),
+        );
       } catch (parseError) {
         console.error("❌ Error parseando detallesPago:", parseError);
         await cleanupUploadedAsset(file);
@@ -1131,10 +1254,10 @@ export async function subirVoucherMensualidadApoderado(req, res) {
       await cleanupUploadedAsset(file);
       return handleErrorClient(res, 400, "Monto total inválido");
     }
-      if (monto > MAX_MONTO_TOTAL) {
-        await cleanupUploadedAsset(file);
-        return handleErrorClient(res, 400, "Monto excede el máximo permitido.");
-      }
+    if (monto > MAX_MONTO_TOTAL) {
+      await cleanupUploadedAsset(file);
+      return handleErrorClient(res, 400, "Monto excede el máximo permitido.");
+    }
 
     const fechaPagoDate = parseFecha(fechaPago);
     if (!fechaPagoDate) {
@@ -1157,10 +1280,8 @@ export async function subirVoucherMensualidadApoderado(req, res) {
       mesValido = "Multiple";
     }
 
-    const [estudianteSeleccionado, errorEstudiante] = await ensureEstudiantePropietario(
-      inscripcionId,
-      apoderadoRut,
-    );
+    const [estudianteSeleccionado, errorEstudiante] =
+      await ensureEstudiantePropietario(inscripcionId, apoderadoRut);
     if (errorEstudiante) {
       await cleanupUploadedAsset(file);
       return handleErrorClient(res, 403, errorEstudiante);
@@ -1169,7 +1290,11 @@ export async function subirVoucherMensualidadApoderado(req, res) {
     const dependientes = await getDependientes(apoderadoRut);
     if (!dependientes.length) {
       await cleanupUploadedAsset(file);
-      return handleErrorClient(res, 400, "No se encontraron estudiantes asociados");
+      return handleErrorClient(
+        res,
+        400,
+        "No se encontraron estudiantes asociados",
+      );
     }
 
     const dependientesMap = new Map(
@@ -1181,13 +1306,16 @@ export async function subirVoucherMensualidadApoderado(req, res) {
     let seleccionManual = [];
     if (seleccionRaw) {
       try {
-        const parsed = typeof seleccionRaw === "string" ? JSON.parse(seleccionRaw) : seleccionRaw;
+        const parsed =
+          typeof seleccionRaw === "string"
+            ? JSON.parse(seleccionRaw)
+            : seleccionRaw;
         if (Array.isArray(parsed)) {
           seleccionManual = parsed
             .map((item) => (typeof item === "string" ? item : String(item)))
             .filter(Boolean);
         }
-      } catch (parseError) {
+      } catch {
         seleccionManual = String(seleccionRaw)
           .split(",")
           .map((item) => item.trim())
@@ -1202,10 +1330,16 @@ export async function subirVoucherMensualidadApoderado(req, res) {
       const seleccionUnica = Array.from(new Set(seleccionManual));
       if (!seleccionUnica.length) {
         await cleanupUploadedAsset(file);
-        return handleErrorClient(res, 400, "Debe seleccionar al menos un alumno");
+        return handleErrorClient(
+          res,
+          400,
+          "Debe seleccionar al menos un alumno",
+        );
       }
 
-      const invalidos = seleccionUnica.filter((rutSeleccionado) => !dependientesMap.has(rutSeleccionado));
+      const invalidos = seleccionUnica.filter(
+        (rutSeleccionado) => !dependientesMap.has(rutSeleccionado),
+      );
       if (invalidos.length) {
         await cleanupUploadedAsset(file);
         return handleErrorClient(
@@ -1223,19 +1357,27 @@ export async function subirVoucherMensualidadApoderado(req, res) {
 
     if (!estudiantesDestino?.length) {
       await cleanupUploadedAsset(file);
-      return handleErrorClient(res, 400, "No hay alumnos válidos para registrar el pago");
+      return handleErrorClient(
+        res,
+        400,
+        "No hay alumnos válidos para registrar el pago",
+      );
     }
 
-    if (!estudiantesDestino.some((dependiente) => dependiente.rut === estudianteSeleccionado.rut)) {
+    if (
+      !estudiantesDestino.some(
+        (dependiente) => dependiente.rut === estudianteSeleccionado.rut,
+      )
+    ) {
       estudiantesDestino.unshift(estudianteSeleccionado);
     }
 
     const fileInfo = file
       ? {
           rutaComprobante:
-            file.location || 
-            file.key || 
-            (file.filename ? `uploads/${file.filename}` : null) || 
+            file.location ||
+            file.key ||
+            (file.filename ? `uploads/${file.filename}` : null) ||
             file.path,
           nombreArchivoOriginal: file.originalname,
           tipoArchivo: file.mimetype,
@@ -1245,17 +1387,17 @@ export async function subirVoucherMensualidadApoderado(req, res) {
 
     // Crear UN SOLO comprobante agrupado con todos los estudiantes
     const numeroComprobante = await generateNumeroComprobante();
-    
+
     // Usar detallesPago del frontend si está disponible, sino construirlo
     let detallesPago;
     let estudiantesRuts;
     let mesesCorrespondientes;
-    
+
     if (detallesPagoRecibido) {
       // Pago agrupado desde frontend (múltiples estudiantes y/o meses)
       detallesPago = detallesPagoRecibido;
       estudiantesRuts = Object.keys(detallesPago);
-      
+
       // Extraer todos los meses únicos del detallesPago
       const mesesSet = new Set();
       Object.values(detallesPago).forEach((detalle) => {
@@ -1264,18 +1406,21 @@ export async function subirVoucherMensualidadApoderado(req, res) {
         }
       });
       mesesCorrespondientes = Array.from(mesesSet);
-      
+
       console.log("✅ Usando detallesPago recibido desde frontend");
       console.log(`   Estudiantes: ${estudiantesRuts.length}`);
-      console.log(`   Meses únicos: ${mesesCorrespondientes.join(', ')}`);
+      console.log(`   Meses únicos: ${mesesCorrespondientes.join(", ")}`);
     } else {
       // Pago simple (construcción legacy)
       detallesPago = {};
       estudiantesRuts = [];
       mesesCorrespondientes = [mesValido];
-      
-      const montoIndividual = estudiantesDestino.length > 0 ? monto / estudiantesDestino.length : monto;
-      
+
+      const montoIndividual =
+        estudiantesDestino.length > 0
+          ? monto / estudiantesDestino.length
+          : monto;
+
       estudiantesDestino.forEach((dependiente) => {
         estudiantesRuts.push(dependiente.rut);
         detallesPago[dependiente.rut] = {
@@ -1283,10 +1428,10 @@ export async function subirVoucherMensualidadApoderado(req, res) {
           monto: montoIndividual,
         };
       });
-      
+
       console.log("✅ Construyendo detallesPago desde lógica legacy");
     }
-    
+
     const comprobante = comprobanteRepository.create({
       apoderadoRut,
       apoderadoEmail: req.user.email,
@@ -1308,17 +1453,23 @@ export async function subirVoucherMensualidadApoderado(req, res) {
       detallesPago,
       ...fileInfo,
     });
-    
+
     const guardado = await comprobanteRepository.save(comprobante);
     console.log(`✅ Comprobante agrupado guardado: ${numeroComprobante}`);
-    console.log(`   Total estudiantes: ${estudiantesRuts.length}, Total meses: ${mesesCorrespondientes.length}`);
+    console.log(
+      `   Total estudiantes: ${estudiantesRuts.length}, Total meses: ${mesesCorrespondientes.length}`,
+    );
     console.log(`   Monto total: $${monto}`);
 
     const estudiantesMap = new Map(
-      estudiantesDestino.map((dependiente) => [dependiente.rut, mapEstudiante(dependiente)]),
+      estudiantesDestino.map((dependiente) => [
+        dependiente.rut,
+        mapEstudiante(dependiente),
+      ]),
     );
 
-    const alumnoPrincipal = dependientesMap.get(inscripcionId) || estudiantesDestino[0];
+    const alumnoPrincipal =
+      dependientesMap.get(inscripcionId) || estudiantesDestino[0];
 
     handleSuccess(res, 201, "Voucher registrado exitosamente", {
       comprobante: buildComprobanteDto(guardado, estudiantesMap),
@@ -1364,10 +1515,10 @@ export async function subirVoucherMatriculaApoderado(req, res) {
       await cleanupUploadedAsset(file);
       return handleErrorClient(res, 400, "Monto total inválido");
     }
-      if (monto > MAX_MONTO_TOTAL) {
-        await cleanupUploadedAsset(file);
-        return handleErrorClient(res, 400, "Monto excede el máximo permitido.");
-      }
+    if (monto > MAX_MONTO_TOTAL) {
+      await cleanupUploadedAsset(file);
+      return handleErrorClient(res, 400, "Monto excede el máximo permitido.");
+    }
 
     const fechaPagoDate = parseFecha(fechaPago);
     if (!fechaPagoDate) {
@@ -1379,13 +1530,15 @@ export async function subirVoucherMatriculaApoderado(req, res) {
     // Permitir años desde 2025 (datos históricos del Excel) hasta 2030
     if (!anio || anio < 2025 || anio > 2030) {
       await cleanupUploadedAsset(file);
-      return handleErrorClient(res, 400, "Año de matrícula inválido (debe estar entre 2025 y 2030)");
+      return handleErrorClient(
+        res,
+        400,
+        "Año de matrícula inválido (debe estar entre 2025 y 2030)",
+      );
     }
 
-    const [estudianteSeleccionado, errorEstudiante] = await ensureEstudiantePropietario(
-      inscripcionId,
-      apoderadoRut,
-    );
+    const [estudianteSeleccionado, errorEstudiante] =
+      await ensureEstudiantePropietario(inscripcionId, apoderadoRut);
     if (errorEstudiante) {
       await cleanupUploadedAsset(file);
       return handleErrorClient(res, 403, errorEstudiante);
@@ -1402,15 +1555,19 @@ export async function subirVoucherMatriculaApoderado(req, res) {
     });
     if (existente) {
       await cleanupUploadedAsset(file);
-      return handleErrorClient(res, 409, "Ya existe un comprobante de matrícula para ese año");
+      return handleErrorClient(
+        res,
+        409,
+        "Ya existe un comprobante de matrícula para ese año",
+      );
     }
 
     const fileInfo = file
       ? {
           rutaComprobante:
-            file.location || 
-            file.key || 
-            (file.filename ? `uploads/${file.filename}` : null) || 
+            file.location ||
+            file.key ||
+            (file.filename ? `uploads/${file.filename}` : null) ||
             file.path,
           nombreArchivoOriginal: file.originalname,
           tipoArchivo: file.mimetype,
@@ -1439,9 +1596,19 @@ export async function subirVoucherMatriculaApoderado(req, res) {
     });
     const guardado = await comprobanteRepository.save(comprobante);
 
-    const respuesta = buildComprobanteDto(guardado, new Map([[estudianteSeleccionado.rut, mapEstudiante(estudianteSeleccionado)]]));
+    const respuesta = buildComprobanteDto(
+      guardado,
+      new Map([
+        [estudianteSeleccionado.rut, mapEstudiante(estudianteSeleccionado)],
+      ]),
+    );
 
-    handleSuccess(res, 201, "Voucher matrícula registrado exitosamente", respuesta);
+    handleSuccess(
+      res,
+      201,
+      "Voucher matrícula registrado exitosamente",
+      respuesta,
+    );
   } catch (error) {
     await cleanupUploadedAsset(req.file);
     console.error("Error subiendo voucher matrícula:", error);
@@ -1496,8 +1663,20 @@ export async function obtenerHistorialApoderado(req, res) {
       return handleSuccess(res, 200, "No tiene hijos registrados", {
         comprobantes: [],
         inscripciones: [],
-        paginacion: { total: 0, pagina: currentPage, limite: take, totalPaginas: 1 },
-        estadisticas: { totalPagado: 0, totalComprobantes: 0, pendientes: 0, validados: 0, rechazados: 0, observados: 0 },
+        paginacion: {
+          total: 0,
+          pagina: currentPage,
+          limite: take,
+          totalPaginas: 1,
+        },
+        estadisticas: {
+          totalPagado: 0,
+          totalComprobantes: 0,
+          pendientes: 0,
+          validados: 0,
+          rechazados: 0,
+          observados: 0,
+        },
       });
     }
 
@@ -1514,12 +1693,22 @@ export async function obtenerHistorialApoderado(req, res) {
     });
 
     const estudiantesMap = new Map(
-      dependientes.map((estudiante) => [estudiante.rut, mapEstudiante(estudiante)])
+      dependientes.map((estudiante) => [
+        estudiante.rut,
+        mapEstudiante(estudiante),
+      ]),
     );
-    const comprobantes = registros.map((registro) => buildComprobanteDto(registro, estudiantesMap));
+    const comprobantes = registros.map((registro) =>
+      buildComprobanteDto(registro, estudiantesMap),
+    );
 
     // Estadísticas por estado
-    const countByEstado = { pendientes: 0, validados: 0, rechazados: 0, observados: 0 };
+    const countByEstado = {
+      pendientes: 0,
+      validados: 0,
+      rechazados: 0,
+      observados: 0,
+    };
     let totalPagado = 0;
     for (const registro of registros) {
       if (registro.estado === "validado") {
@@ -1532,7 +1721,9 @@ export async function obtenerHistorialApoderado(req, res) {
 
     handleSuccess(res, 200, "Historial obtenido exitosamente", {
       comprobantes,
-      inscripciones: dependientes.map((estudiante) => mapEstudiante(estudiante)),
+      inscripciones: dependientes.map((estudiante) =>
+        mapEstudiante(estudiante),
+      ),
       paginacion: {
         total,
         pagina: currentPage,
@@ -1556,7 +1747,6 @@ export async function obtenerHistorialApoderado(req, res) {
 
 export async function reenviarComprobanteApoderado(req, res) {
   try {
-    const apoderadoRut = req.user.rut;
     const { id } = req.params;
 
     const comprobante = await comprobanteRepository.findOne({ where: { id } });
@@ -1585,18 +1775,21 @@ export async function obtenerMesesNoPagados2025(req, res) {
   try {
     const apoderadoRut = req.user.rut;
     const { rutEstudiantes, anio } = req.query;
-    
+
     // Si se especifica un año, devolver solo ese año (compatibilidad)
     // Si no, devolver TODOS los años con meses pendientes
     const consultarTodosLosAnios = !anio;
-    const aniosAConsultar = consultarTodosLosAnios 
-      ? [2025, 2026, 2027, 2028, 2029, 2030] 
+    const aniosAConsultar = consultarTodosLosAnios
+      ? [2025, 2026, 2027, 2028, 2029, 2030]
       : [parseInt(anio, 10)];
-    
-    if (!consultarTodosLosAnios && (aniosAConsultar[0] < 2025 || aniosAConsultar[0] > 2030)) {
+
+    if (
+      !consultarTodosLosAnios &&
+      (aniosAConsultar[0] < 2025 || aniosAConsultar[0] > 2030)
+    ) {
       return handleErrorClient(res, 400, "Año debe estar entre 2025 y 2030");
     }
-    
+
     let dependientes = await getDependientes(apoderadoRut);
 
     if (!dependientes || dependientes.length === 0) {
@@ -1606,19 +1799,24 @@ export async function obtenerMesesNoPagados2025(req, res) {
         anios: aniosAConsultar,
       });
     }
-    
+
     // Si se especificaron RUTs, filtrar solo esos estudiantes
     if (rutEstudiantes) {
-      const rutsArray = rutEstudiantes.split(',').map(r => r.trim());
-      console.log(`🔍 Filtrando por RUTs específicos: ${rutsArray.join(', ')}`);
-      dependientes = dependientes.filter(d => rutsArray.includes(d.rut));
-      
+      const rutsArray = rutEstudiantes.split(",").map((r) => r.trim());
+      console.log(`🔍 Filtrando por RUTs específicos: ${rutsArray.join(", ")}`);
+      dependientes = dependientes.filter((d) => rutsArray.includes(d.rut));
+
       if (dependientes.length === 0) {
-        return handleSuccess(res, 200, "No se encontraron estudiantes con los RUTs especificados", {
-          estudiantes: [],
-          mesesComunes: [],
-          anios: aniosAConsultar,
-        });
+        return handleSuccess(
+          res,
+          200,
+          "No se encontraron estudiantes con los RUTs especificados",
+          {
+            estudiantes: [],
+            mesesComunes: [],
+            anios: aniosAConsultar,
+          },
+        );
       }
     }
 
@@ -1636,8 +1834,10 @@ export async function obtenerMesesNoPagados2025(req, res) {
       { num: "12", nombre: "Diciembre", key: "diciembre" },
     ];
 
-    console.log(`🔍 Obteniendo meses no pagados para apoderado: ${apoderadoRut}`);
-    console.log(`📅 Años a consultar: ${aniosAConsultar.join(', ')}`);
+    console.log(
+      `🔍 Obteniendo meses no pagados para apoderado: ${apoderadoRut}`,
+    );
+    console.log(`📅 Años a consultar: ${aniosAConsultar.join(", ")}`);
     console.log(`📊 Total de estudiantes: ${dependientes.length}`);
 
     // Obtener justificantes aprobados
@@ -1656,7 +1856,10 @@ export async function obtenerMesesNoPagados2025(req, res) {
         const actuales = mesesExencionPorRut.get(j.estudianteRut) || new Set();
         j.mesesExencion.forEach((m) => {
           // Considerar formato canonical YYYY-MM de cualquier año
-          if (typeof m === "string" && /^(202[5-9]|2030)-(0[1-9]|1[0-2])$/u.test(m)) {
+          if (
+            typeof m === "string" &&
+            /^(202[5-9]|2030)-(0[1-9]|1[0-2])$/u.test(m)
+          ) {
             actuales.add(m);
           }
         });
@@ -1666,13 +1869,13 @@ export async function obtenerMesesNoPagados2025(req, res) {
 
     // Generar todos los meses de todos los años
     const todosMesesTodosAnios = [];
-    aniosAConsultar.forEach(anio => {
-      MESES_NOMBRES.forEach(m => {
+    aniosAConsultar.forEach((anio) => {
+      MESES_NOMBRES.forEach((m) => {
         todosMesesTodosAnios.push({
           value: `${anio}-${m.num}`,
           label: `${m.nombre} ${anio}`,
           mes: m.key,
-          anio: anio
+          anio: anio,
         });
       });
     });
@@ -1687,7 +1890,8 @@ export async function obtenerMesesNoPagados2025(req, res) {
       console.log(`\n👤 Estudiante: ${estudiante.nombre} (${estudiante.rut})`);
       console.log(`   Pagos en base de datos:`, mesesPagos);
 
-      const mesesExentosSet = mesesExencionPorRut.get(estudiante.rut) || new Set();
+      const mesesExentosSet =
+        mesesExencionPorRut.get(estudiante.rut) || new Set();
 
       todosMesesTodosAnios.forEach((mesInfo) => {
         // Si el mes está marcado como exento por justificante aprobado
@@ -1696,28 +1900,31 @@ export async function obtenerMesesNoPagados2025(req, res) {
           console.log(`   ${mesInfo.label}: EXENTO (justificante aprobado) 🟡`);
           return;
         }
-        
+
         // IMPORTANTE: Los pagos del Excel (mesesPagos) solo aplican al año 2025
         // Para años 2026-2030, todos los meses están disponibles (no pagados aún)
         let estaNoPagado;
-        
+
         if (mesInfo.anio === 2025) {
           // Para 2025: verificar contra los pagos del Excel
           const estadoPago = mesesPagos[mesInfo.mes];
           // Solo está no pagado si el valor es exactamente "no pagado" (case insensitive)
           // Cualquier otro valor (número, texto, etc.) significa que está pagado
-          estaNoPagado = !estadoPago || 
-                        estadoPago.toString().trim().toLowerCase() === "no pagado";
+          estaNoPagado =
+            !estadoPago ||
+            estadoPago.toString().trim().toLowerCase() === "no pagado";
         } else {
           // Para 2026-2030: todos los meses están disponibles (no hay pagos registrados)
           estaNoPagado = true;
         }
-        
+
         if (estaNoPagado) {
           mesesNoPagados.push(mesInfo.value);
           console.log(`   ${mesInfo.label}: NO PAGADO ❌`);
         } else {
-          console.log(`   ${mesInfo.label}: PAGADO ✅ (${mesesPagos[mesInfo.mes]})`);
+          console.log(
+            `   ${mesInfo.label}: PAGADO ✅ (${mesesPagos[mesInfo.mes]})`,
+          );
         }
       });
 
@@ -1738,21 +1945,30 @@ export async function obtenerMesesNoPagados2025(req, res) {
     } else {
       // Intersección: solo meses que están en TODOS los estudiantes
       mesesComunes = estudiantesConMeses[0].mesesNoPagados.filter((mes) =>
-        estudiantesConMeses.every((est) => est.mesesNoPagados.includes(mes))
+        estudiantesConMeses.every((est) => est.mesesNoPagados.includes(mes)),
       );
-      console.log(`\n🔄 Intersección (meses que TODOS no han pagado): ${mesesComunes.length} meses`);
+      console.log(
+        `\n🔄 Intersección (meses que TODOS no han pagado): ${mesesComunes.length} meses`,
+      );
     }
 
     // Convertir de vuelta a objetos con label
     const mesesComunesDetalle = todosMesesTodosAnios.filter((mesInfo) =>
-      mesesComunes.includes(mesInfo.value)
+      mesesComunes.includes(mesInfo.value),
     );
 
-    console.log(`\n✅ Total de meses disponibles para pagar: ${mesesComunesDetalle.length}`);
-    console.log(`   Por año:`, aniosAConsultar.map(a => {
-      const count = mesesComunesDetalle.filter(m => m.anio === a).length;
-      return `${a}: ${count} meses`;
-    }).join(', '));
+    console.log(
+      `\n✅ Total de meses disponibles para pagar: ${mesesComunesDetalle.length}`,
+    );
+    console.log(
+      `   Por año:`,
+      aniosAConsultar
+        .map((a) => {
+          const count = mesesComunesDetalle.filter((m) => m.anio === a).length;
+          return `${a}: ${count} meses`;
+        })
+        .join(", "),
+    );
 
     handleSuccess(res, 200, "Meses no pagados obtenidos exitosamente", {
       estudiantes: estudiantesConMeses,
@@ -1761,9 +1977,9 @@ export async function obtenerMesesNoPagados2025(req, res) {
       anios: aniosAConsultar,
       totalMesesDisponibles: mesesComunesDetalle.length,
       // Para facilitar UI: listado de meses exentos por estudiante
-      mesesExentosGlobal: Array.from(new Set(
-        estudiantesConMeses.flatMap((e) => e.mesesExentos)
-      )),
+      mesesExentosGlobal: Array.from(
+        new Set(estudiantesConMeses.flatMap((e) => e.mesesExentos)),
+      ),
     });
   } catch (error) {
     console.error("Error obteniendo meses no pagados:", error);

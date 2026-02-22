@@ -3,21 +3,21 @@
 export const handleSuccess = (res, statusCode, message, data = null) => {
   const response = {
     success: true,
-    message: message
+    message: message,
   };
-  
+
   if (data !== null && data !== undefined) {
     response.data = data;
   }
-  
+
   return res.status(statusCode).json(response);
 };
 
-export function handleErrorClient(res, statusCode, message, details= {}) {
+export function handleErrorClient(res, statusCode, message, details = {}) {
   return res.status(statusCode).json({
     status: "Client error",
     message,
-    details
+    details,
   });
 }
 

@@ -16,15 +16,12 @@ import cookieParser from "cookie-parser";
 import session from "express-session";
 import passport from "passport";
 import express, { json, urlencoded } from "express";
-import cron from "node-cron";
-import http from "http";
 import fs from "fs";
 import indexRoutes from "./routes/index.routes.js";
 import { cookieKey, HOST, PORT } from "./config/configEnv.js";
 import { connectDB } from "./config/configDb.js";
 import { createInitialData } from "./config/initialSetup.js";
 import { passportJwtSetup } from "./auth/passport.auth.js";
-
 
 async function setupServer() {
   try {
@@ -34,15 +31,19 @@ async function setupServer() {
     app.set("trust proxy", true);
 
     // Middleware de configuración
-    app.use(cors({
-      credentials: true,
-      origin: true,
-    }));
+    app.use(
+      cors({
+        credentials: true,
+        origin: true,
+      }),
+    );
 
-    app.use(urlencoded({
-      extended: true,
-      limit: "5mb",
-    }));
+    app.use(
+      urlencoded({
+        extended: true,
+        limit: "5mb",
+      }),
+    );
 
     app.use(
       json({
@@ -85,12 +86,12 @@ async function setupServer() {
     // Inicialización de Passport para autenticación
     app.use(passport.initialize());
     app.use(passport.session());
-    
+
     // Registro de rutas
     app.use("/api", indexRoutes);
 
     // Inicio del servidor HTTP básico
-    app.listen(PORT, '0.0.0.0', () => {
+    app.listen(PORT, "0.0.0.0", () => {
       console.log(`Corriendo en ${HOST}:${PORT}/api`);
     });
   } catch (error) {
@@ -100,11 +101,11 @@ async function setupServer() {
 
 async function setupAPI() {
   try {
-    await connectDB();            // Postgres 
-    
+    await connectDB(); // Postgres
+
     // Configurar Passport después de que la base de datos esté conectada
     passportJwtSetup();
-    
+
     await setupServer();
     await createInitialData();
   } catch (error) {

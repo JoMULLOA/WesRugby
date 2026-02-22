@@ -16,7 +16,7 @@ export async function getUserService(query) {
 
     if (!userFound) return [null, "Usuario no encontrado"];
 
-    const { password, ...userData } = userFound;
+    const { password: _pw, ...userData } = userFound;
 
     return [userData, null];
   } catch (error) {
@@ -115,11 +115,11 @@ export async function updateUserService(query, body) {
     // Si solo se está actualizando el saldo, hacer actualización directa
     if (body.saldo !== undefined && Object.keys(body).length === 1) {
       await userRepository.update(
-        { rut: userFound.rut }, 
-        { 
+        { rut: userFound.rut },
+        {
           saldo: body.saldo,
-          updatedAt: new Date() 
-        }
+          updatedAt: new Date(),
+        },
       );
 
       const userData = await userRepository.findOne({
@@ -137,11 +137,11 @@ export async function updateUserService(query, body) {
     // Si se están actualizando tarjetas, hacer actualización directa
     if (body.tarjetas !== undefined && Object.keys(body).length === 1) {
       await userRepository.update(
-        { rut: userFound.rut }, 
-        { 
+        { rut: userFound.rut },
+        {
           tarjetas: body.tarjetas,
-          updatedAt: new Date() 
-        }
+          updatedAt: new Date(),
+        },
       );
 
       const userData = await userRepository.findOne({
@@ -208,11 +208,17 @@ export async function updateUserService(query, body) {
   }
 }
 
-export function calcularCalificacionBayesiana(promedioUsuario, cantidadValoraciones, promedioGlobal, minimoValoraciones) {
+export function calcularCalificacionBayesiana(
+  promedioUsuario,
+  cantidadValoraciones,
+  promedioGlobal,
+  minimoValoraciones,
+) {
   try {
     // Fórmula bayesiana
-    const calificacionAjustada = 
-      ((cantidadValoraciones * promedioUsuario) + (minimoValoraciones * promedioGlobal)) / 
+    const calificacionAjustada =
+      (cantidadValoraciones * promedioUsuario +
+        minimoValoraciones * promedioGlobal) /
       (cantidadValoraciones + minimoValoraciones);
 
     return calificacionAjustada;
@@ -236,32 +242,35 @@ export async function deleteUserService(query) {
     if (!userFound) return [null, "Usuario no encontrado"];
 
     // Verificar que no sea un administrador (opcional - medida de seguridad)
-    if (userFound.rol === 'administrador') {
+    if (userFound.rol === "administrador") {
       return [null, "No se puede eliminar un usuario administrador"];
     }
 
     // Importar las entidades relacionadas
     const Amistad = await import("../entity/amistad.entity.js");
-    const SolicitudAmistad = await import("../entity/solicitudAmistad.entity.js");
+    const SolicitudAmistad = await import(
+      "../entity/solicitudAmistad.entity.js"
+    );
     const Notificacion = await import("../entity/notificacion.entity.js");
     const Vehiculo = await import("../entity/vehiculo.entity.js");
 
     // Obtener los repositorios
     const amistadRepository = AppDataSource.getRepository(Amistad.default);
-    const solicitudRepository = AppDataSource.getRepository(SolicitudAmistad.default);
-    const notificacionRepository = AppDataSource.getRepository(Notificacion.default);
+    const solicitudRepository = AppDataSource.getRepository(
+      SolicitudAmistad.default,
+    );
+    const notificacionRepository = AppDataSource.getRepository(
+      Notificacion.default,
+    );
     const vehiculoRepository = AppDataSource.getRepository(Vehiculo.default);
 
     console.log(`🗑️ Eliminando relaciones del usuario: ${userFound.rut}`);
 
     // 1. Eliminar amistades donde el usuario sea participante
     const amistades = await amistadRepository.find({
-      where: [
-        { rutUsuario1: userFound.rut },
-        { rutUsuario2: userFound.rut }
-      ]
+      where: [{ rutUsuario1: userFound.rut }, { rutUsuario2: userFound.rut }],
     });
-    
+
     if (amistades.length > 0) {
       await amistadRepository.remove(amistades);
       console.log(`✅ Eliminadas ${amistades.length} amistades`);
@@ -269,10 +278,7 @@ export async function deleteUserService(query) {
 
     // 2. Eliminar solicitudes de amistad (enviadas y recibidas)
     const solicitudes = await solicitudRepository.find({
-      where: [
-        { rutEmisor: userFound.rut },
-        { rutReceptor: userFound.rut }
-      ]
+      where: [{ rutEmisor: userFound.rut }, { rutReceptor: userFound.rut }],
     });
 
     if (solicitudes.length > 0) {
@@ -282,10 +288,7 @@ export async function deleteUserService(query) {
 
     // 3. Eliminar notificaciones del usuario (como receptor y emisor)
     const notificaciones = await notificacionRepository.find({
-      where: [
-        { rutReceptor: userFound.rut },
-        { rutEmisor: userFound.rut }
-      ]
+      where: [{ rutReceptor: userFound.rut }, { rutEmisor: userFound.rut }],
     });
 
     if (notificaciones.length > 0) {
@@ -298,8 +301,8 @@ export async function deleteUserService(query) {
     // pero podemos hacerlo explícitamente para mayor seguridad
     try {
       const vehiculos = await vehiculoRepository.find({
-        relations: ['propietario'],
-        where: { propietario: { rut: userFound.rut } }
+        relations: ["propietario"],
+        where: { propietario: { rut: userFound.rut } },
       });
 
       if (vehiculos.length > 0) {
@@ -333,9 +336,9 @@ export async function obtenerPromedioGlobalService() {
     // Obtener todos los usuarios que tienen clasificación (usando sintaxis correcta para PostgreSQL)
     const usuarios = await userRepository.find({
       where: {
-        clasificacion: Not(IsNull()) // Sintaxis correcta de TypeORM para "no es null"
+        clasificacion: Not(IsNull()), // Sintaxis correcta de TypeORM para "no es null"
       },
-      select: ['clasificacion'] // Solo necesitamos la clasificación para calcular el promedio
+      select: ["clasificacion"], // Solo necesitamos la clasificación para calcular el promedio
     });
 
     if (!usuarios || usuarios.length === 0) {
@@ -344,10 +347,11 @@ export async function obtenerPromedioGlobalService() {
     }
 
     // Filtrar usuarios que realmente tengan clasificación válida
-    const usuariosConClasificacion = usuarios.filter(user => 
-      user.clasificacion !== null && 
-      user.clasificacion !== undefined && 
-      !isNaN(user.clasificacion)
+    const usuariosConClasificacion = usuarios.filter(
+      (user) =>
+        user.clasificacion !== null &&
+        user.clasificacion !== undefined &&
+        !isNaN(user.clasificacion),
     );
 
     if (usuariosConClasificacion.length === 0) {
@@ -355,14 +359,20 @@ export async function obtenerPromedioGlobalService() {
     }
 
     // Calcular la suma de todas las clasificaciones
-    const sumaClasificaciones = usuariosConClasificacion.reduce((suma, user) => {
-      return suma + parseFloat(user.clasificacion);
-    }, 0);
+    const sumaClasificaciones = usuariosConClasificacion.reduce(
+      (suma, user) => {
+        return suma + parseFloat(user.clasificacion);
+      },
+      0,
+    );
 
     // Calcular el promedio
-    const promedioGlobal = sumaClasificaciones / usuariosConClasificacion.length;
+    const promedioGlobal =
+      sumaClasificaciones / usuariosConClasificacion.length;
 
-    console.log(`Promedio global calculado: ${promedioGlobal} de ${usuariosConClasificacion.length} usuarios`);
+    console.log(
+      `Promedio global calculado: ${promedioGlobal} de ${usuariosConClasificacion.length} usuarios`,
+    );
 
     return [promedioGlobal, null];
   } catch (error) {
@@ -378,7 +388,7 @@ export async function actualizarTokenFCMService(rut, fcmToken) {
 
     // Buscar el usuario por RUT
     const user = await userRepository.findOne({
-      where: { rut: rut }
+      where: { rut: rut },
     });
 
     if (!user) {
@@ -387,7 +397,7 @@ export async function actualizarTokenFCMService(rut, fcmToken) {
 
     // Actualizar el token FCM
     user.fcmToken = fcmToken;
-    
+
     await userRepository.save(user);
 
     console.log(`✅ Token FCM actualizado para usuario ${rut}`);
@@ -403,7 +413,7 @@ export async function obtenerUserByRut(rut) {
     const userRepository = AppDataSource.getRepository(User);
 
     const user = await userRepository.findOne({
-      where: { rut: rut }
+      where: { rut: rut },
     });
 
     if (!user) {

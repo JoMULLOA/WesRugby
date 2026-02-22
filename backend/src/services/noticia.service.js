@@ -20,30 +20,39 @@ export async function createNoticiaService(noticiaData) {
 export async function getNoticiasService(filters = {}) {
   try {
     const noticiaRepository = AppDataSource.getRepository(Noticia);
-    
+
     const queryBuilder = noticiaRepository.createQueryBuilder("noticia");
 
     // Filtros opcionales
     if (filters.estado) {
-      queryBuilder.andWhere("noticia.estado = :estado", { estado: filters.estado });
+      queryBuilder.andWhere("noticia.estado = :estado", {
+        estado: filters.estado,
+      });
     }
 
     if (filters.destacada !== undefined) {
-      queryBuilder.andWhere("noticia.destacada = :destacada", { destacada: filters.destacada });
+      queryBuilder.andWhere("noticia.destacada = :destacada", {
+        destacada: filters.destacada,
+      });
     }
 
     if (filters.fechaDesde) {
-      queryBuilder.andWhere("noticia.fechaPublicacion >= :fechaDesde", { fechaDesde: filters.fechaDesde });
+      queryBuilder.andWhere("noticia.fechaPublicacion >= :fechaDesde", {
+        fechaDesde: filters.fechaDesde,
+      });
     }
 
     if (filters.fechaHasta) {
-      queryBuilder.andWhere("noticia.fechaPublicacion <= :fechaHasta", { fechaHasta: filters.fechaHasta });
+      queryBuilder.andWhere("noticia.fechaPublicacion <= :fechaHasta", {
+        fechaHasta: filters.fechaHasta,
+      });
     }
 
     // Ordenar por fecha descendente y orden
-    queryBuilder.orderBy("noticia.fechaPublicacion", "DESC")
-                .addOrderBy("noticia.orden", "ASC")
-                .addOrderBy("noticia.createdAt", "DESC");
+    queryBuilder
+      .orderBy("noticia.fechaPublicacion", "DESC")
+      .addOrderBy("noticia.orden", "ASC")
+      .addOrderBy("noticia.createdAt", "DESC");
 
     const noticias = await queryBuilder.getMany();
 
@@ -59,7 +68,7 @@ export async function getNoticiaService(id) {
     const noticiaRepository = AppDataSource.getRepository(Noticia);
 
     const noticia = await noticiaRepository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!noticia) {
@@ -78,7 +87,7 @@ export async function updateNoticiaService(id, updateData) {
     const noticiaRepository = AppDataSource.getRepository(Noticia);
 
     const noticia = await noticiaRepository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!noticia) {
@@ -103,7 +112,7 @@ export async function deleteNoticiaService(id) {
     const noticiaRepository = AppDataSource.getRepository(Noticia);
 
     const noticia = await noticiaRepository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!noticia) {
@@ -124,7 +133,7 @@ export async function changeEstadoNoticiaService(id, nuevoEstado) {
     const noticiaRepository = AppDataSource.getRepository(Noticia);
 
     const noticia = await noticiaRepository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!noticia) {
@@ -154,7 +163,7 @@ export async function toggleDestacadaService(id) {
     const noticiaRepository = AppDataSource.getRepository(Noticia);
 
     const noticia = await noticiaRepository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!noticia) {

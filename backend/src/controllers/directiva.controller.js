@@ -17,8 +17,12 @@ export async function crearMiembroDirectiva(req, res) {
     const userRole = req.user.rol;
 
     if (userRole !== "directiva") {
-      return handleErrorClient(res, 403, "No autorizado", 
-        "Solo directiva puede agregar miembros");
+      return handleErrorClient(
+        res,
+        403,
+        "No autorizado",
+        "Solo directiva puede agregar miembros",
+      );
     }
 
     const {
@@ -33,7 +37,7 @@ export async function crearMiembroDirectiva(req, res) {
       fechaNacimiento,
       experienciaAnterior,
       observaciones,
-      activo = true
+      activo = true,
     } = req.body;
 
     // Verificar que el usuario existe
@@ -44,22 +48,31 @@ export async function crearMiembroDirectiva(req, res) {
 
     // Verificar que no exista ya un miembro activo con el mismo cargo
     const cargoExistente = await directivaRepository.findOne({
-      where: { cargo, activo: true }
+      where: { cargo, activo: true },
     });
 
-    if (cargoExistente && cargo !== "vocal") { // Puede haber múltiples vocales
-      return handleErrorClient(res, 400, "Cargo ocupado", 
-        `Ya existe un miembro activo con el cargo ${cargo}`);
+    if (cargoExistente && cargo !== "vocal") {
+      // Puede haber múltiples vocales
+      return handleErrorClient(
+        res,
+        400,
+        "Cargo ocupado",
+        `Ya existe un miembro activo con el cargo ${cargo}`,
+      );
     }
 
     // Verificar que el usuario no esté ya en directiva activa
     const miembroExistente = await directivaRepository.findOne({
-      where: { rut, activo: true }
+      where: { rut, activo: true },
     });
 
     if (miembroExistente) {
-      return handleErrorClient(res, 400, "Miembro existente", 
-        "El usuario ya es miembro activo de la directiva");
+      return handleErrorClient(
+        res,
+        400,
+        "Miembro existente",
+        "El usuario ya es miembro activo de la directiva",
+      );
     }
 
     const nuevoMiembro = directivaRepository.create({
@@ -75,18 +88,22 @@ export async function crearMiembroDirectiva(req, res) {
       experienciaAnterior,
       observaciones,
       activo,
-      registradoPorRut: req.user.rut
+      registradoPorRut: req.user.rut,
     });
 
     const miembroGuardado = await directivaRepository.save(nuevoMiembro);
 
     const miembroCompleto = await directivaRepository.findOne({
       where: { id: miembroGuardado.id },
-      relations: ["usuario", "registradoPor"]
+      relations: ["usuario", "registradoPor"],
     });
 
-    handleSuccess(res, 201, "Miembro de directiva creado exitosamente", miembroCompleto);
-
+    handleSuccess(
+      res,
+      201,
+      "Miembro de directiva creado exitosamente",
+      miembroCompleto,
+    );
   } catch (error) {
     console.error("Error creando miembro directiva:", error);
     handleErrorServer(res, 500, "Error interno del servidor", error.message);
@@ -97,15 +114,15 @@ export async function crearMiembroDirectiva(req, res) {
 export async function obtenerMiembrosDirectiva(req, res) {
   try {
     const userRole = req.user.rol;
-    const { activo, cargo, periodo } = req.query;
+    const { activo, cargo } = req.query;
 
     // Solo roles administrativos pueden ver información completa
     const puedeVerCompleto = ["directiva", "tesorera"].includes(userRole);
 
-    let whereCondition = {};
+    const whereCondition = {};
 
     if (activo !== undefined) {
-      whereCondition.activo = activo === 'true';
+      whereCondition.activo = activo === "true";
     }
 
     if (cargo) {
@@ -120,12 +137,12 @@ export async function obtenerMiembrosDirectiva(req, res) {
     const miembros = await directivaRepository.find({
       where: whereCondition,
       relations: ["usuario"],
-      order: { cargo: "ASC", fechaInicio: "DESC" }
+      order: { cargo: "ASC", fechaInicio: "DESC" },
     });
 
     // Filtrar información sensible para roles no administrativos
     if (!puedeVerCompleto) {
-      miembros.forEach(miembro => {
+      miembros.forEach((miembro) => {
         delete miembro.telefono;
         delete miembro.email;
         delete miembro.direccion;
@@ -136,8 +153,12 @@ export async function obtenerMiembrosDirectiva(req, res) {
       });
     }
 
-    handleSuccess(res, 200, "Miembros de directiva obtenidos exitosamente", miembros);
-
+    handleSuccess(
+      res,
+      200,
+      "Miembros de directiva obtenidos exitosamente",
+      miembros,
+    );
   } catch (error) {
     console.error("Error obteniendo miembros:", error);
     handleErrorServer(res, 500, "Error interno del servidor", error.message);
@@ -152,7 +173,7 @@ export async function obtenerMiembroPorId(req, res) {
 
     const miembro = await directivaRepository.findOne({
       where: { id },
-      relations: ["usuario", "registradoPor"]
+      relations: ["usuario", "registradoPor"],
     });
 
     if (!miembro) {
@@ -172,8 +193,12 @@ export async function obtenerMiembroPorId(req, res) {
       delete miembro.registradoPor;
     }
 
-    handleSuccess(res, 200, "Miembro de directiva obtenido exitosamente", miembro);
-
+    handleSuccess(
+      res,
+      200,
+      "Miembro de directiva obtenido exitosamente",
+      miembro,
+    );
   } catch (error) {
     console.error("Error obteniendo miembro:", error);
     handleErrorServer(res, 500, "Error interno del servidor", error.message);
@@ -187,8 +212,12 @@ export async function actualizarMiembroDirectiva(req, res) {
     const userRole = req.user.rol;
 
     if (userRole !== "directiva") {
-      return handleErrorClient(res, 403, "No autorizado", 
-        "Solo directiva puede actualizar miembros");
+      return handleErrorClient(
+        res,
+        403,
+        "No autorizado",
+        "Solo directiva puede actualizar miembros",
+      );
     }
 
     const miembro = await directivaRepository.findOneBy({ id });
@@ -199,44 +228,62 @@ export async function actualizarMiembroDirectiva(req, res) {
     const datosActualizacion = req.body;
 
     // Verificar cambio de cargo si aplica
-    if (datosActualizacion.cargo && datosActualizacion.cargo !== miembro.cargo) {
+    if (
+      datosActualizacion.cargo &&
+      datosActualizacion.cargo !== miembro.cargo
+    ) {
       const cargoExistente = await directivaRepository.findOne({
-        where: { 
-          cargo: datosActualizacion.cargo, 
+        where: {
+          cargo: datosActualizacion.cargo,
           activo: true,
-          id: { $ne: id } // Excluir el miembro actual
-        }
+          id: { $ne: id }, // Excluir el miembro actual
+        },
       });
 
       if (cargoExistente && datosActualizacion.cargo !== "vocal") {
-        return handleErrorClient(res, 400, "Cargo ocupado", 
-          `Ya existe un miembro activo con el cargo ${datosActualizacion.cargo}`);
+        return handleErrorClient(
+          res,
+          400,
+          "Cargo ocupado",
+          `Ya existe un miembro activo con el cargo ${datosActualizacion.cargo}`,
+        );
       }
     }
 
     // Campos permitidos para actualización
     const camposPermitidos = [
-      'cargo', 'descripcionCargo', 'fechaFin', 'telefono', 'email',
-      'direccion', 'experienciaAnterior', 'observaciones', 'activo'
+      "cargo",
+      "descripcionCargo",
+      "fechaFin",
+      "telefono",
+      "email",
+      "direccion",
+      "experienciaAnterior",
+      "observaciones",
+      "activo",
     ];
 
-    camposPermitidos.forEach(campo => {
+    camposPermitidos.forEach((campo) => {
       if (datosActualizacion[campo] !== undefined) {
         miembro[campo] = datosActualizacion[campo];
       }
     });
 
     miembro.updatedAt = new Date();
-    
+
     const miembroActualizado = await directivaRepository.save(miembro);
 
     const miembroCompleto = await directivaRepository.findOne({
       where: { id: miembroActualizado.id },
-      relations: ["usuario", "registradoPor"]
+      relations: ["usuario", "registradoPor"],
     });
 
-    handleSuccess(res, 200, "Miembro de directiva actualizado exitosamente", miembroCompleto);
-
+    handleSuccess(
+      res,
+      200,
+      "Miembro de directiva actualizado exitosamente",
+      miembroCompleto,
+    );
   } catch (error) {
     console.error("Error actualizando miembro:", error);
     handleErrorServer(res, 500, "Error interno del servidor", error.message);
@@ -251,8 +298,12 @@ export async function desactivarMiembroDirectiva(req, res) {
     const userRole = req.user.rol;
 
     if (userRole !== "directiva") {
-      return handleErrorClient(res, 403, "No autorizado", 
-        "Solo directiva puede desactivar miembros");
+      return handleErrorClient(
+        res,
+        403,
+        "No autorizado",
+        "Solo directiva puede desactivar miembros",
+      );
     }
 
     const miembro = await directivaRepository.findOneBy({ id });
@@ -263,16 +314,20 @@ export async function desactivarMiembroDirectiva(req, res) {
     // No permitir que se desactive a sí mismo si es el único directiva
     if (miembro.rut === req.user.rut) {
       const otrosDirectiva = await directivaRepository.count({
-        where: { 
+        where: {
           cargo: "presidente",
           activo: true,
-          id: { $ne: id }
-        }
+          id: { $ne: id },
+        },
       });
 
       if (otrosDirectiva === 0) {
-        return handleErrorClient(res, 400, "Acción no permitida", 
-          "No puede desactivarse siendo el único presidente activo");
+        return handleErrorClient(
+          res,
+          400,
+          "Acción no permitida",
+          "No puede desactivarse siendo el único presidente activo",
+        );
       }
     }
 
@@ -280,16 +335,20 @@ export async function desactivarMiembroDirectiva(req, res) {
     miembro.fechaFin = new Date();
     miembro.motivoCese = motivoCese;
     miembro.updatedAt = new Date();
-    
+
     const miembroDesactivado = await directivaRepository.save(miembro);
 
     const miembroCompleto = await directivaRepository.findOne({
       where: { id: miembroDesactivado.id },
-      relations: ["usuario"]
+      relations: ["usuario"],
     });
 
-    handleSuccess(res, 200, "Miembro de directiva desactivado exitosamente", miembroCompleto);
-
+    handleSuccess(
+      res,
+      200,
+      "Miembro de directiva desactivado exitosamente",
+      miembroCompleto,
+    );
   } catch (error) {
     console.error("Error desactivando miembro:", error);
     handleErrorServer(res, 500, "Error interno del servidor", error.message);
@@ -302,7 +361,7 @@ export async function obtenerEstructuraOrganizacional(req, res) {
     const miembrosActivos = await directivaRepository.find({
       where: { activo: true },
       relations: ["usuario"],
-      order: { cargo: "ASC" }
+      order: { cargo: "ASC" },
     });
 
     // Agrupar por cargo
@@ -317,22 +376,22 @@ export async function obtenerEstructuraOrganizacional(req, res) {
     // Definir jerarquía de cargos
     const jerarquia = [
       "presidente",
-      "vicepresidente", 
+      "vicepresidente",
       "secretario",
       "tesorero",
       "vocal",
-      "asesor"
+      "asesor",
     ];
 
     const estructuraOrdenada = {};
-    jerarquia.forEach(cargo => {
+    jerarquia.forEach((cargo) => {
       if (estructura[cargo]) {
         estructuraOrdenada[cargo] = estructura[cargo];
       }
     });
 
     // Agregar cualquier cargo no contemplado en la jerarquía
-    Object.keys(estructura).forEach(cargo => {
+    Object.keys(estructura).forEach((cargo) => {
       if (!jerarquia.includes(cargo)) {
         estructuraOrdenada[cargo] = estructura[cargo];
       }
@@ -340,9 +399,8 @@ export async function obtenerEstructuraOrganizacional(req, res) {
 
     handleSuccess(res, 200, "Estructura organizacional obtenida exitosamente", {
       totalMiembros: miembrosActivos.length,
-      estructura: estructuraOrdenada
+      estructura: estructuraOrdenada,
     });
-
   } catch (error) {
     console.error("Error obteniendo estructura:", error);
     handleErrorServer(res, 500, "Error interno del servidor", error.message);
@@ -360,12 +418,12 @@ export async function obtenerHistorialDirectiva(req, res) {
 
     const { año, cargo } = req.query;
 
-    let whereCondition = {};
+    const whereCondition = {};
 
     if (año) {
       whereCondition.fechaInicio = {
         $gte: `${año}-01-01`,
-        $lte: `${año}-12-31`
+        $lte: `${año}-12-31`,
       };
     }
 
@@ -376,11 +434,15 @@ export async function obtenerHistorialDirectiva(req, res) {
     const historial = await directivaRepository.find({
       where: whereCondition,
       relations: ["usuario", "registradoPor"],
-      order: { fechaInicio: "DESC", cargo: "ASC" }
+      order: { fechaInicio: "DESC", cargo: "ASC" },
     });
 
-    handleSuccess(res, 200, "Historial de directiva obtenido exitosamente", historial);
-
+    handleSuccess(
+      res,
+      200,
+      "Historial de directiva obtenido exitosamente",
+      historial,
+    );
   } catch (error) {
     console.error("Error obteniendo historial:", error);
     handleErrorServer(res, 500, "Error interno del servidor", error.message);
@@ -397,11 +459,11 @@ export async function obtenerEstadisticasDirectiva(req, res) {
     }
 
     const totalMiembros = await directivaRepository.count();
-    const miembrosActivos = await directivaRepository.count({ 
-      where: { activo: true } 
+    const miembrosActivos = await directivaRepository.count({
+      where: { activo: true },
     });
-    const miembrosInactivos = await directivaRepository.count({ 
-      where: { activo: false } 
+    const miembrosInactivos = await directivaRepository.count({
+      where: { activo: false },
     });
 
     // Miembros por cargo
@@ -416,7 +478,10 @@ export async function obtenerEstadisticasDirectiva(req, res) {
     // Duración promedio de mandatos
     const duracionMandatos = await directivaRepository
       .createQueryBuilder("directiva")
-      .select("AVG(DATEDIFF(COALESCE(directiva.fechaFin, NOW()), directiva.fechaInicio))", "promediodias")
+      .select(
+        "AVG(DATEDIFF(COALESCE(directiva.fechaFin, NOW()), directiva.fechaInicio))",
+        "promediodias",
+      )
       .where("directiva.fechaFin IS NOT NULL")
       .getRawOne();
 
@@ -434,19 +499,23 @@ export async function obtenerEstadisticasDirectiva(req, res) {
       resumen: {
         totalMiembros,
         miembrosActivos,
-        miembrosInactivos
+        miembrosInactivos,
       },
       distribucion: {
-        porCargo
+        porCargo,
       },
       tendencias: {
         duracionPromediaDias: duracionMandatos?.promedioidas || 0,
-        renovacionAnual
-      }
+        renovacionAnual,
+      },
     };
 
-    handleSuccess(res, 200, "Estadísticas de directiva obtenidas exitosamente", estadisticas);
-
+    handleSuccess(
+      res,
+      200,
+      "Estadísticas de directiva obtenidas exitosamente",
+      estadisticas,
+    );
   } catch (error) {
     console.error("Error obteniendo estadísticas:", error);
     handleErrorServer(res, 500, "Error interno del servidor", error.message);
@@ -463,9 +532,9 @@ export async function transferirCargo(req, res) {
       return handleErrorClient(res, 403, "No autorizado");
     }
 
-    const miembroActual = await directivaRepository.findOneBy({ 
-      id: idActual, 
-      activo: true 
+    const miembroActual = await directivaRepository.findOneBy({
+      id: idActual,
+      activo: true,
     });
 
     if (!miembroActual) {
@@ -479,7 +548,7 @@ export async function transferirCargo(req, res) {
 
     // Verificar que el nuevo usuario no esté ya en directiva activa
     const yaEsMiembro = await directivaRepository.findOne({
-      where: { rut: rutNuevo, activo: true }
+      where: { rut: rutNuevo, activo: true },
     });
 
     if (yaEsMiembro) {
@@ -499,21 +568,20 @@ export async function transferirCargo(req, res) {
       descripcionCargo: miembroActual.descripcionCargo,
       fechaInicio: new Date(),
       activo: true,
-      registradoPorRut: req.user.rut
+      registradoPorRut: req.user.rut,
     });
 
     const miembroCreado = await directivaRepository.save(nuevoMiembro);
 
     const miembroCompleto = await directivaRepository.findOne({
       where: { id: miembroCreado.id },
-      relations: ["usuario", "registradoPor"]
+      relations: ["usuario", "registradoPor"],
     });
 
     handleSuccess(res, 200, "Cargo transferido exitosamente", {
       miembroAnterior: miembroActual,
-      miembroNuevo: miembroCompleto
+      miembroNuevo: miembroCompleto,
     });
-
   } catch (error) {
     console.error("Error transfiriendo cargo:", error);
     handleErrorServer(res, 500, "Error interno del servidor", error.message);

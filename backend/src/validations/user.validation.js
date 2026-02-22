@@ -4,10 +4,10 @@ import Joi from "joi";
 const domainEmailValidator = (value, helper) => {
   const allowedDomains = ["@alumnos.ubiobio.cl", "@ubiobio.cl", "wessex.cl"]; // Lista de dominios permitidos
 
-  const isValidDomain = allowedDomains.some(domain => value.endsWith(domain));
+  const isValidDomain = allowedDomains.some((domain) => value.endsWith(domain));
   if (!isValidDomain) {
     return helper.message(
-      `El correo electrónico debe ser de uno de los siguientes dominios: ${allowedDomains.join(", ")}`
+      `El correo electrónico debe ser de uno de los siguientes dominios: ${allowedDomains.join(", ")}`,
     );
   }
   return value;
@@ -17,13 +17,16 @@ export const userQueryValidation = Joi.object({
   rut: Joi.string()
     .min(9)
     .max(12)
-    .pattern(/^(?:(?:[1-9]\d{0}|[1-2]\d{1})(\.\d{3}){2}|[1-9]\d{6}|[1-2]\d{7}|29\.999\.999|29999999)-[\dkK]$/)
+    .pattern(
+      /^(?:(?:[1-9]\d{0}|[1-2]\d{1})(\.\d{3}){2}|[1-9]\d{6}|[1-2]\d{7}|29\.999\.999|29999999)-[\dkK]$/,
+    )
     .messages({
       "string.empty": "El rut no puede estar vacío.",
       "string.base": "El rut debe ser de tipo string.",
       "string.min": "El rut debe tener como mínimo 9 caracteres.",
       "string.max": "El rut debe tener como máximo 12 caracteres.",
-      "string.pattern.base": "Formato rut inválido, debe ser xx.xxx.xxx-x o xxxxxxxx-x.",
+      "string.pattern.base":
+        "Formato rut inválido, debe ser xx.xxx.xxx-x o xxxxxxxx-x.",
     }),
   email: Joi.string()
     .min(15)
@@ -40,12 +43,11 @@ export const userQueryValidation = Joi.object({
     })
     .custom(domainEmailValidator, "Validación dominio email"),
 })
-  .or("rut", "email","carrera")
+  .or("rut", "email", "carrera")
   .unknown(false)
   .messages({
     "object.unknown": "No se permiten propiedades adicionales.",
-    "object.missing":
-      "Debes proporcionar al menos un parámetro: email o rut.",
+    "object.missing": "Debes proporcionar al menos un parámetro: email o rut.",
   });
 
 export const userBodyValidation = Joi.object({
@@ -103,31 +105,24 @@ export const userBodyValidation = Joi.object({
   rut: Joi.string()
     .min(9)
     .max(12)
-    .pattern(/^(?:(?:[1-9]\d{0}|[1-2]\d{1})(\.\d{3}){2}|[1-9]\d{6}|[1-2]\d{7}|29\.999\.999|29999999)-[\dkK]$/)
+    .pattern(
+      /^(?:(?:[1-9]\d{0}|[1-2]\d{1})(\.\d{3}){2}|[1-9]\d{6}|[1-2]\d{7}|29\.999\.999|29999999)-[\dkK]$/,
+    )
     .messages({
       "string.empty": "El rut no puede estar vacío.",
       "string.base": "El rut debe ser de tipo string.",
       "string.min": "El rut debe tener como mínimo 9 caracteres.",
       "string.max": "El rut debe tener como máximo 12 caracteres.",
-      "string.pattern.base": "Formato rut inválido, debe ser xx.xxx.xxx-x o xxxxxxxx-x.",
+      "string.pattern.base":
+        "Formato rut inválido, debe ser xx.xxx.xxx-x o xxxxxxxx-x.",
     }),
-  rol: Joi.string()
-    .min(4)
-    .max(15)
-    .messages({
-      "string.base": "El rol debe ser de tipo string.",
-      "string.min": "El rol debe tener como mínimo 4 caracteres.",
-      "string.max": "El rol debe tener como máximo 15 caracteres.",
-    }),
+  rol: Joi.string().min(4).max(15).messages({
+    "string.base": "El rol debe ser de tipo string.",
+    "string.min": "El rol debe tener como mínimo 4 caracteres.",
+    "string.max": "El rol debe tener como máximo 15 caracteres.",
+  }),
 })
-  .or(
-    "nombreCompleto",
-    "email",
-    "password",
-    "newPassword",
-    "rut",
-    "rol",
-  )
+  .or("nombreCompleto", "email", "password", "newPassword", "rut", "rol")
   .unknown(false)
   .messages({
     "object.unknown": "No se permiten propiedades adicionales.",

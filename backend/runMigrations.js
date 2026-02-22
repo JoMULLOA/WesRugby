@@ -8,7 +8,9 @@ async function runMigrations() {
     console.log("✅ Conexión establecida");
 
     console.log("🔄 Ejecutando migraciones pendientes...");
-    const migrations = await AppDataSource.runMigrations({ transaction: "all" });
+    const migrations = await AppDataSource.runMigrations({
+      transaction: "all",
+    });
 
     if (migrations.length === 0) {
       console.log("ℹ️  No hay migraciones pendientes");

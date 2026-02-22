@@ -18,7 +18,9 @@ export async function setup() {
   // Solo necesitamos hacer esto una vez para toda la suite.
   if (!AppDataSource.isInitialized) {
     await AppDataSource.initialize();
-    console.log("\n[globalSetup] ✅ Base de datos inicializada para integración");
+    console.log(
+      "\n[globalSetup] ✅ Base de datos inicializada para integración",
+    );
   }
 
   // Registrar estrategia JWT en Passport (idempotente)
