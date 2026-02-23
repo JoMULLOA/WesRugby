@@ -187,14 +187,20 @@ jobs:
         ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'ENDSSH'
           set -e
 
-          echo "📁 Actualizando código del backend..."
+          echo "� Verificando docker compose plugin..."
+          if ! docker compose version &>/dev/null; then
+            echo "⬇️ Instalando docker compose plugin..."
+            curl -fsSL https://get.docker.com | sh
+          fi
+
+          echo "�📁 Actualizando código del backend..."
           cd ~/WesRugby
           git fetch --all
           # Reset duro: descarta cambios locales del servidor y aplica el remoto
           git reset --hard origin/mainProduccion
 
           echo "🐳 Reconstruyendo y levantando servicios Docker..."
-          sudo docker-compose up -d --build
+          sudo docker compose up -d --build
 
           echo "⏳ Esperando a que el backend esté listo (15s)..."
           sleep 15
@@ -209,7 +215,7 @@ jobs:
           sudo find ~/WesRugby/frontend/build/web -type f -exec chmod 644 {} \;
 
           echo "🔄 Recargando nginx..."
-          sudo docker-compose exec -T nginx nginx -s reload
+          sudo docker compose exec -T nginx nginx -s reload
 
           echo "✅ Health check..."
           curl --fail --silent http://localhost/health || (echo "❌ Health check falló" && exit 1)
@@ -221,7 +227,7 @@ jobs:
       if: always()
       run: |
         ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
-          "cd ~/WesRugby && sudo docker-compose ps"
+          "cd ~/WesRugby && sudo docker compose ps"
 
     - name: 🔄 Rollback del backend en caso de fallo
       if: failure()
@@ -230,6 +236,6 @@ jobs:
           cd ~/WesRugby
           echo "⚠️ Fallo detectado — revirtiendo backend al commit anterior..."
           git reset --hard HEAD~1
-          sudo docker-compose up -d --build backend
+          sudo docker compose up -d --build backend
           echo "⚠️ Rollback completado — frontend no revertido (manual requerido)"
         ENDSSH
