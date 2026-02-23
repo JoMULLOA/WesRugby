@@ -13,7 +13,6 @@ class AdminNavbar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color primario = Color(0xFF6B3B2D);
-    final Color secundario = Color(0xFF8D4F3A);
 
     return BottomNavigationBar(
       currentIndex: currentIndex,
