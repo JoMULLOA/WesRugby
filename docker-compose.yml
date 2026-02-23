@@ -72,6 +72,8 @@ services:
       - ./frontend/build/web:/usr/share/nginx/html:ro
       - ./backend/uploads:/var/www/uploads:ro
       - nginx_logs:/var/log/nginx
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot:ro
     ports:
       - "80:80"
       - "443:443"

@@ -9,7 +9,7 @@ class confGlobal {
   // 🔧 CAMBIAR SEGÚN ENTORNO:
   // Para pruebas locales: "http://localhost"
   // Para producción: "https://wesrugby.site"
-  static const String _prodHost = "http://localhost"; // 👈 CAMBIAR ANTES DE DESPLEGAR
+  static const String _prodHost = "https://wesrugby.site"; // 👈 CAMBIAR ANTES DE DESPLEGAR
   
   static const String _basePath = "/api";
 

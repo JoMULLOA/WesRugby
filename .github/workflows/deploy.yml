@@ -1,0 +1,235 @@
+name: CI/CD → Production
+
+on:
+  push:
+    branches: [ main, mainProduccion ]
+  workflow_dispatch:  # Permite ejecutarlo manualmente desde GitHub
+
+# Evita deployments paralelos: si hay otro en curso lo cancela
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  # ─── 1. Tests del Backend ─────────────────────────────────────────────────
+  test-backend:
+    name: 🧪 Backend Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: wesrugby_test
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - name: 📥 Checkout
+      uses: actions/checkout@v4
+
+    - name: 🟢 Node.js 20
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        cache-dependency-path: backend/package-lock.json
+
+    - name: 📦 Instalar dependencias
+      working-directory: ./backend
+      run: npm ci
+
+    - name: 🔍 Lint
+      working-directory: ./backend
+      run: npm run lint --if-present
+      continue-on-error: true
+
+    - name: 🧪 Tests unitarios
+      working-directory: ./backend
+      run: npm test
+      env:
+        IS_DOCKER: "false"
+        NODE_ENV: test
+        HOST: 0.0.0.0
+        PORT: 3000
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_USERNAME: postgres
+        PASSWORD: postgres
+        DATABASE: wesrugby_test
+        ACCESS_TOKEN_SECRET: ci_secret_key_solo_para_tests_no_usar_en_prod
+        COOKIE_KEY: ci_cookie_key_solo_para_tests
+        EMAIL_HOST: localhost
+        EMAIL_PORT: 587
+        EMAIL_USER: test@test.com
+        EMAIL_PASS: test_pass
+
+    - name: 🧪 Tests de integración
+      working-directory: ./backend
+      run: npm run test:integration
+      env:
+        IS_DOCKER: "false"
+        NODE_ENV: test
+        HOST: 0.0.0.0
+        PORT: 3000
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_USERNAME: postgres
+        PASSWORD: postgres
+        DATABASE: wesrugby_test
+        ACCESS_TOKEN_SECRET: ci_secret_key_solo_para_tests_no_usar_en_prod
+        COOKIE_KEY: ci_cookie_key_solo_para_tests
+        EMAIL_HOST: localhost
+        EMAIL_PORT: 587
+        EMAIL_USER: test@test.com
+        EMAIL_PASS: test_pass
+
+  # ─── 2. Tests del Frontend ────────────────────────────────────────────────
+  test-frontend:
+    name: 🎯 Frontend Tests
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 📥 Checkout
+      uses: actions/checkout@v4
+
+    - name: 📱 Flutter stable
+      uses: subosito/flutter-action@v2
+      with:
+        channel: 'stable'
+
+    - name: 📦 Dependencias
+      working-directory: ./frontend
+      run: flutter pub get
+
+    - name: 🔍 Análisis de código
+      working-directory: ./frontend
+      run: flutter analyze
+      continue-on-error: true  # warnings no bloquean pipeline
+
+    - name: 🧪 Tests unitarios
+      working-directory: ./frontend
+      run: flutter test
+
+  # ─── 3. Build Flutter Web ─────────────────────────────────────────────────
+  # Solo se ejecuta si ambos test jobs pasan
+  build-frontend:
+    name: 🏗️ Build Flutter Web
+    runs-on: ubuntu-latest
+    needs: [test-backend, test-frontend]
+
+    steps:
+    - name: 📥 Checkout
+      uses: actions/checkout@v4
+
+    - name: 📱 Flutter stable
+      uses: subosito/flutter-action@v2
+      with:
+        channel: 'stable'
+
+    - name: 📦 Dependencias
+      working-directory: ./frontend
+      run: flutter pub get
+
+    - name: 🏗️ Build web (release)
+      working-directory: ./frontend
+      run: flutter build web --release
+
+    - name: 📤 Guardar build como artefacto
+      uses: actions/upload-artifact@v4
+      with:
+        name: flutter-web-build
+        path: frontend/build/web/
+        retention-days: 1  # Solo necesario durante el job de deploy
+
+  # ─── 4. Deploy a Producción ───────────────────────────────────────────────
+  deploy:
+    name: 🚀 Deploy to Production
+    runs-on: ubuntu-latest
+    needs: build-frontend
+    environment:
+      name: production
+      url: https://wesrugby.site
+
+    steps:
+    - name: 📥 Checkout (para tener el código del backend actualizado)
+      uses: actions/checkout@v4
+
+    - name: 📥 Descargar Flutter build
+      uses: actions/download-artifact@v4
+      with:
+        name: flutter-web-build
+        path: flutter-web-build/
+
+    - name: 🔐 Configurar SSH
+      uses: webfactory/ssh-agent@v0.9.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    - name: 📝 Agregar servidor a known_hosts
+      run: ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+    - name: 📦 Comprimir frontend build
+      run: zip -r frontend-build.zip flutter-web-build/
+
+    - name: 📤 Subir build al servidor
+      run: |
+        scp frontend-build.zip ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~/frontend-build.zip
+
+    - name: 🚀 Deploy en el servidor
+      run: |
+        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'ENDSSH'
+          set -e
+
+          echo "📁 Actualizando código del backend..."
+          cd ~/WesRugby
+          git fetch --all
+          git pull origin mainProduccion
+
+          echo "🐳 Reconstruyendo y levantando servicios Docker..."
+          sudo docker-compose up -d --build
+
+          echo "⏳ Esperando a que el backend esté listo (15s)..."
+          sleep 15
+
+          echo "🌐 Desplegando frontend..."
+          sudo unzip -o ~/frontend-build.zip -d /tmp/frontend-deploy/
+          sudo rsync -av --delete /tmp/frontend-deploy/flutter-web-build/ ~/WesRugby/frontend/build/web/
+          sudo rm -rf /tmp/frontend-deploy/ ~/frontend-build.zip
+
+          echo "🔒 Corrigiendo permisos..."
+          sudo find ~/WesRugby/frontend/build/web -type d -exec chmod 755 {} \;
+          sudo find ~/WesRugby/frontend/build/web -type f -exec chmod 644 {} \;
+
+          echo "🔄 Recargando nginx..."
+          sudo docker-compose exec -T nginx nginx -s reload
+
+          echo "✅ Health check..."
+          curl --fail --silent http://localhost/health || (echo "❌ Health check falló" && exit 1)
+
+          echo "🎉 Deployment completado! → https://wesrugby.site"
+        ENDSSH
+
+    - name: 📊 Estado de los servicios
+      if: always()
+      run: |
+        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
+          "cd ~/WesRugby && sudo docker-compose ps"
+
+    - name: 🔄 Rollback del backend en caso de fallo
+      if: failure()
+      run: |
+        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'ENDSSH'
+          cd ~/WesRugby
+          echo "⚠️ Fallo detectado — revirtiendo backend al commit anterior..."
+          git reset --hard HEAD~1
+          sudo docker-compose up -d --build backend
+          echo "⚠️ Rollback completado — frontend no revertido (manual requerido)"
+        ENDSSH
