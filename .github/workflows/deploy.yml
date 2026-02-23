@@ -111,8 +111,7 @@ jobs:
 
     - name: 🔍 Análisis de código
       working-directory: ./frontend
-      run: flutter analyze
-      continue-on-error: true  # warnings no bloquean pipeline
+      run: flutter analyze || true  # warnings no bloquean pipeline
 
     - name: 🧪 Tests unitarios
       working-directory: ./frontend
@@ -191,7 +190,8 @@ jobs:
           echo "📁 Actualizando código del backend..."
           cd ~/WesRugby
           git fetch --all
-          git pull origin mainProduccion
+          # Reset duro: descarta cambios locales del servidor y aplica el remoto
+          git reset --hard origin/mainProduccion
 
           echo "🐳 Reconstruyendo y levantando servicios Docker..."
           sudo docker-compose up -d --build
