@@ -3,6 +3,8 @@
 import { DataSource } from "typeorm";
 import { DATABASE, DB_HOST, DB_USERNAME, PASSWORD } from "./configEnv.js";
 
+const isProduction = process.env.NODE_ENV === "production";
+
 export const AppDataSource = new DataSource({
   type: "postgres",
   host: DB_HOST,
@@ -18,8 +20,10 @@ export const AppDataSource = new DataSource({
   migrations: ["migrations/**/*.js"],
   migrationsTableName: "migrations_history",
 
-  synchronize: true,
-  dropSchema: true,
+  // En producción, usar migraciones en lugar de synchronize
+  synchronize: !isProduction,
+  // NUNCA dropSchema en producción — borra todos los datos
+  dropSchema: !isProduction,
   logging: false,
   ssl: false,
 
