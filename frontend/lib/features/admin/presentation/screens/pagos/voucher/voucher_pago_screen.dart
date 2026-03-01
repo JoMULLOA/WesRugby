@@ -33,8 +33,9 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
   bool _isLoadingMeses = true;
   bool _isLoadingPrecios = true;
   bool _aplicarATodos = true;
-  int _anioSeleccionado = 2025;
-  int _anioMatricula = 2025; // Año para matrícula
+  int _anioSeleccionado = DateTime.now().year;
+  int _anioMatricula = DateTime.now().year; // Año para matrícula
+  int _anioPrecios = DateTime.now().year; // Año para el que se cargaron los precios
   Map<String, dynamic>? _userData;
   final EstudianteService _estudianteService = EstudianteService();
   List<Map<String, dynamic>> _misEstudiantes = [];
@@ -69,15 +70,15 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
     });
   }
 
-  Future<void> _cargarPrecios() async {
+  Future<void> _cargarPrecios([int? anio]) async {
+    final anioACargar = anio ?? _anioSeleccionado;
     setState(() {
       _isLoadingPrecios = true;
     });
 
     try {
-      final anioActual = DateTime.now().year;
       final response = await ConfiguracionPrecioService.obtenerPreciosPorAnio(
-        anioActual,
+        anioACargar,
       );
 
       if (response.statusCode == 200 && mounted) {
@@ -85,6 +86,7 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
         
         if (data != null) {
           setState(() {
+            _anioPrecios = anioACargar;
             _precioMensualidad = data['precioMensualidad']?.toDouble();
             _precioMatricula = data['precioMatricula']?.toDouble();
             _descuentoMensualidad2 = data['descuentoMensualidad2'] ?? 0;
@@ -93,6 +95,7 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
             _descuentoMatricula3Plus = data['descuentoMatricula3Plus'] ?? 0;
             _isLoadingPrecios = false;
           });
+          _actualizarMontoConDescuento();
           print('✅ Precios cargados: Mensualidad=\$$_precioMensualidad, Matrícula=\$$_precioMatricula');
           print('✅ Descuentos: Men2=$_descuentoMensualidad2%, Men3+=$_descuentoMensualidad3Plus%, Mat2=$_descuentoMatricula2%, Mat3+=$_descuentoMatricula3Plus%');
         } else {
@@ -370,6 +373,7 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
       // Pasar los RUTs de estudiantes seleccionados
       final rutSeleccionados = _estudiantesSeleccionados.toList();
       final response = await PagosService.obtenerMesesNoPagados(
+        anio: _anioSeleccionado,
         rutEstudiantes: rutSeleccionados.isNotEmpty ? rutSeleccionados : null,
       );
       print('📡 [VOUCHER] Respuesta completa: $response');
@@ -1090,7 +1094,7 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
                                 color: WessexColors.deepRoyalBlue,
                               ),
                             ),
-                            items: List.generate(6, (index) => 2025 + index)
+                            items: List.generate(7, (index) => DateTime.now().year - 1 + index)
                                 .map((year) {
                               return DropdownMenuItem<int>(
                                 value: year,
@@ -1105,6 +1109,7 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
                                   _mesesDisponibles = [];
                                 });
                                 _cargarMesesNoPagados();
+                                _cargarPrecios(value);
                               }
                             },
                           ),
@@ -1123,7 +1128,7 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
                                 color: WessexColors.deepRoyalBlue,
                               ),
                             ),
-                            items: List.generate(6, (index) => 2025 + index)
+                            items: List.generate(7, (index) => DateTime.now().year - 1 + index)
                                 .map((year) {
                               return DropdownMenuItem<int>(
                                 value: year,
@@ -1136,6 +1141,7 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
                                   _anioMatricula = value;
                                 });
                                 _verificarMatriculaPagada();
+                                _cargarPrecios(value);
                               }
                             },
                           ),
@@ -1273,7 +1279,7 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
                             items: _mesesDisponibles
                                 .map(
                                   (mes) => DropdownMenuItem(
-                                    value: mes['label'] as String,
+                                    value: mes['value'] as String, // código canónico "2026-07"
                                     child: Text(mes['label'] as String),
                                   ),
                                 )
@@ -1310,7 +1316,7 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Precios configurados para ${DateTime.now().year}:',
+                                        'Precios configurados para $_anioPrecios:',
                                         style: TextStyle(
                                           color: WessexColors.deepRoyalBlue,
                                           fontSize: 12,
@@ -1778,9 +1784,9 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
           .where((rut) => rut.isNotEmpty)
           .toList();
 
-      // Usar el primer estudiante disponible como inscripcionId
-      final inscripcionId = _misEstudiantes.isNotEmpty 
-          ? _misEstudiantes.first['rut']?.toString() ?? ''
+      // Usar el primer estudiante SELECCIONADO como inscripcionId
+      final inscripcionId = seleccionados.isNotEmpty
+          ? seleccionados.first['rut']?.toString() ?? ''
           : '';
       
       if (inscripcionId.isEmpty) {
@@ -1808,21 +1814,13 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
             _descuentoMensualidad3Plus,
           );
           
-          // Convertir todos los meses no pagados a labels
-          final List<String> mesesLabels = mesesNoPagados.map((mesValue) {
-            final mesData = _mesesDisponibles.firstWhere(
-              (m) => m['value'] == mesValue,
-              orElse: () => {'label': mesValue.toString()},
-            );
-            return mesData['label'] as String;
-          }).toList();
-          
-          // Calcular monto para este estudiante (precio por mes * cantidad de meses)
+          // Usar los meses directamente en formato canónico "2026-07"
+          // (mesesNoPagados ya contiene los códigos canónicos del backend)
           final montoEstudiante = precioMes * mesesNoPagados.length;
           montoTotalComprobante += montoEstudiante;
           
           detallesPago[rut] = {
-            'meses': mesesLabels,
+            'meses': List<String>.from(mesesNoPagados), // Códigos canónicos "2026-07"
             'monto': montoEstudiante,
           };
         }
@@ -1873,23 +1871,47 @@ class _VoucherPagoScreenState extends State<VoucherPagoScreen> {
         } else {
           throw Exception(response.message ?? 'Error al enviar comprobante agrupado');
         }
-      } else {
-        // Pago de un solo mes (lógica original)
-        final response = await PagosService.subirVoucherMensualidadWeb(
+      } else if (_selectedTipoPago == 'Matrícula') {
+        // Pago de matrícula → endpoint dedicado
+        final response = await PagosService.subirVoucherMatriculaWeb(
           inscripcionId: inscripcionId,
-          // Convertir etiqueta UI al código esperado por backend
           metodoPago: _mapMetodoPago(_selectedMetodoPago!),
           montoTotal: double.parse(_montoController.text),
           fechaPago: DateTime.now(),
-          // Solo enviar mes si es Mensualidad
-          mesCorrespondiente: _selectedTipoPago == 'Mensualidad' ? _selectedMonth! : null,
-          anioMatricula: _selectedTipoPago == 'Matrícula' ? _anioMatricula : null,
+          anioMatricula: _anioMatricula,
+          bancoOrigen: null,
+          numeroOperacion: null,
+          observacionesApoderado: _descripcionController.text.isNotEmpty
+              ? _descripcionController.text
+              : null,
+          archivoBytes: _webFile,
+          nombreArchivo: _archivoNombre,
+        );
+
+        setState(() {
+          _isUploading = false;
+        });
+
+        if (response.success) {
+          print('✅ Voucher matrícula enviado al backend exitosamente');
+          _showSuccessDialog();
+        } else {
+          throw Exception(response.message ?? 'Error al enviar voucher de matrícula');
+        }
+      } else {
+        // Pago de un solo mes de mensualidad
+        final response = await PagosService.subirVoucherMensualidadWeb(
+          inscripcionId: inscripcionId,
+          metodoPago: _mapMetodoPago(_selectedMetodoPago!),
+          montoTotal: double.parse(_montoController.text),
+          fechaPago: DateTime.now(),
+          mesCorrespondiente: _selectedMonth!,
           estudiantesSeleccionados: estudiantesRuts,
           aplicarATodos: _aplicarATodos,
           bancoOrigen: null,
           numeroOperacion: null,
-          observacionesApoderado: _descripcionController.text.isNotEmpty 
-              ? _descripcionController.text 
+          observacionesApoderado: _descripcionController.text.isNotEmpty
+              ? _descripcionController.text
               : null,
           archivoBytes: _webFile,
           nombreArchivo: _archivoNombre,

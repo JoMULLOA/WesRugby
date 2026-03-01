@@ -46,6 +46,7 @@ services:
       EMAIL_PORT: ${EMAIL_PORT:-587}
       EMAIL_USER: ${EMAIL_USER}
       EMAIL_PASS: ${EMAIL_PASS}
+      BACKEND_URL: ${BACKEND_URL:-https://wesrugby.site}
     volumes:
       - ./backend/uploads:/app/uploads
       - backend_logs:/app/logs

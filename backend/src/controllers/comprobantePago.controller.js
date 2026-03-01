@@ -288,6 +288,10 @@ function buildComprobanteDto(comprobante, estudiantesMap = new Map()) {
     apoderadoRut: comprobante.apoderadoRut,
     apoderadoEmail: comprobante.apoderadoEmail,
     estudianteRut: comprobante.estudianteRut,
+    estudiantesRuts: comprobante.estudiantesRuts ?? null,
+    mesesCorrespondientes: comprobante.mesesCorrespondientes ?? null,
+    detallesPago: comprobante.detallesPago ?? null,
+    anioMatricula: comprobante.anioMatricula ?? null,
     validadoPorRut: comprobante.validadoPorRut,
     subidoPorRut: comprobante.subidoPorRut,
     alumno,
@@ -492,15 +496,54 @@ export async function obtenerComprobantesPago(req, res) {
     const currentPage = Math.max(Number.parseInt(pagina, 10) || 1, 1);
     const skip = (currentPage - 1) * take;
 
-    const [registros, total] = await comprobanteRepository.findAndCount({
-      where: whereConditions,
-      order: {
-        fechaPago: "DESC",
-        createdAt: "DESC",
-      },
-      take,
-      skip,
-    });
+    let registros, total;
+
+    // Para roles no-apoderado con filtro estudianteRut: usar QueryBuilder para buscar
+    // en la columna estudianteRut Y en el arreglo JSONB estudiantesRuts
+    if (estudianteRut && rol !== "apoderado") {
+      const { estudianteRut: _ignored, ...filtersWithoutRut } = filters;
+      const qb = comprobanteRepository
+        .createQueryBuilder("c")
+        .where(
+          "(c.estudianteRut = :rut OR c.estudiantesRuts @> :rutArray::jsonb)",
+          { rut: estudianteRut, rutArray: JSON.stringify([estudianteRut]) },
+        );
+
+      if (apoderadoRut) {
+        qb.andWhere("c.apoderadoRut = :apRut", { apRut: apoderadoRut });
+      }
+      // Aplicar filtros restantes (estado, metodoPago — sin mesCorrespondiente en este path)
+      if (filtersWithoutRut.estado) {
+        qb.andWhere("c.estado = :estado", { estado: filtersWithoutRut.estado });
+      }
+      if (filtersWithoutRut.metodoPago) {
+        qb.andWhere("c.metodoPago = :metodoPago", {
+          metodoPago: filtersWithoutRut.metodoPago,
+        });
+      }
+      if (filtersWithoutRut.mesCorrespondiente) {
+        qb.andWhere("c.mesCorrespondiente = :mes", {
+          mes: filtersWithoutRut.mesCorrespondiente,
+        });
+      }
+
+      qb.orderBy("c.fechaPago", "DESC")
+        .addOrderBy("c.createdAt", "DESC")
+        .take(take)
+        .skip(skip);
+
+      [registros, total] = await qb.getManyAndCount();
+    } else {
+      [registros, total] = await comprobanteRepository.findAndCount({
+        where: whereConditions,
+        order: {
+          fechaPago: "DESC",
+          createdAt: "DESC",
+        },
+        take,
+        skip,
+      });
+    }
 
     if (rol === "apoderado") {
       console.log("[VOUCHERS][DEBUG] Resultado para apoderado", {

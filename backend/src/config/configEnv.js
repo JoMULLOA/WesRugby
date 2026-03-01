@@ -11,9 +11,9 @@ const envFile = path.resolve(currentDir, ".env");
 // En Docker, las variables vienen del entorno y no necesitamos el archivo
 if (fs.existsSync(envFile) && !process.env.IS_DOCKER) {
   loadEnv({ path: envFile });
-  console.log("📄 Cargando configuración desde archivo .env local");
+  console.log("Cargando configuración desde archivo .env local");
 } else {
-  console.log("🐳 Usando variables de entorno del sistema (Docker/producción)");
+  console.log("Usando variables de entorno del sistema (Docker/producción)");
 }
 
 const env = process.env;

@@ -392,59 +392,6 @@ class _TesoreraDashboardState extends State<TesoreraDashboard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Header de bienvenida con diseño Wessex
-                WessexCard(
-                  margin: const EdgeInsets.only(bottom: 32),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: EdgeInsets.all(
-                          isDesktop ? 20 : (isTablet ? 16 : 12),
-                        ),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              WessexColors.crimsonAlert,
-                              WessexColors.deepRoyalBlue,
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Icon(
-                          Icons.account_balance_wallet,
-                          color: WessexColors.white,
-                          size: isDesktop ? 48 : (isTablet ? 40 : 32),
-                        ),
-                      ),
-                      SizedBox(width: isDesktop ? 24 : (isTablet ? 20 : 16)),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '¡Bienvenido Tesorera!',
-                              style: TextStyle(
-                                color: WessexColors.darkGrape,
-                                fontSize: isDesktop ? 28 : (isTablet ? 24 : 22),
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Panel de gestión financiera\nWessex Rugby Club',
-                              style: TextStyle(
-                                color: WessexColors.darkGrape.withOpacity(0.7),
-                                fontSize: isDesktop ? 16 : (isTablet ? 15 : 14),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
 
                 // Sección: Gestión Financiera
                 const WessexSectionTitle(

@@ -18,6 +18,7 @@ import 'package:wesrugby/features/inventory/presentation/screens/management/inve
 import 'package:wesrugby/features/auth/presentation/screens/simple_login/simple_login.dart' as login;
 import 'package:wesrugby/features/admin/presentation/screens/terminos/terminos_gestion_screen.dart';
 import 'package:wesrugby/features/admin/presentation/screens/asistencia/estadisticas/estadisticas_asistencia_screen.dart';
+import 'package:wesrugby/features/admin/presentation/screens/configuracion/configuracion_fondo_screen.dart';
 
 class DirectivaDashboard extends StatefulWidget {
   const DirectivaDashboard({super.key});
@@ -404,59 +405,6 @@ class _DirectivaDashboardState extends State<DirectivaDashboard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Header de bienvenida con diseño Wessex
-                WessexCard(
-                  margin: const EdgeInsets.only(bottom: 32),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: EdgeInsets.all(
-                          isDesktop ? 20 : (isTablet ? 16 : 12),
-                        ),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              WessexColors.secondaryAction,
-                              WessexColors.primaryAction,
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Icon(
-                          Icons.admin_panel_settings,
-                          color: WessexColors.white,
-                          size: isDesktop ? 48 : (isTablet ? 40 : 32),
-                        ),
-                      ),
-                      SizedBox(width: isDesktop ? 24 : (isTablet ? 20 : 16)),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '¡Bienvenido Directiva!',
-                              style: TextStyle(
-                                color: WessexColors.crestShadow,
-                                fontSize: isDesktop ? 28 : (isTablet ? 24 : 22),
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Panel de administración\nWessex Rugby Club',
-                              style: TextStyle(
-                                color: WessexColors.crestSlate.withOpacity(0.75),
-                                fontSize: isDesktop ? 16 : (isTablet ? 15 : 14),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
 
                 // Sección: Gestión Administrativa
                 const WessexSectionTitle(
@@ -655,6 +603,21 @@ class _DirectivaDashboardState extends State<DirectivaDashboard> {
                         context,
                         MaterialPageRoute(
                           builder: (context) => const TerminosGestionScreen(),
+                        ),
+                      ),
+                      isDesktop: isDesktop,
+                      isTablet: isTablet,
+                    ),
+                    _buildActionCard(
+                      'Fondo de la App',
+                      'Personalizar imagen de fondo de la aplicación',
+                      Icons.wallpaper,
+                      WessexColors.accentAction,
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              const ConfiguracionFondoScreen(),
                         ),
                       ),
                       isDesktop: isDesktop,

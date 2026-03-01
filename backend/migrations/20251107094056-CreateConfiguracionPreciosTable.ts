@@ -85,12 +85,12 @@ export class CreateConfiguracionPreciosTable20251107094056 implements MigrationI
       })
     );
 
-    console.log("✅ Tabla configuracion_precios creada exitosamente");
+    console.log("Tabla configuracion_precios creada exitosamente");
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.dropIndex("configuracion_precios", "IDX_CONFIGURACION_PRECIO_ANIO");
     await queryRunner.dropTable("configuracion_precios");
-    console.log("✅ Tabla configuracion_precios eliminada exitosamente");
+    console.log("Tabla configuracion_precios eliminada exitosamente");
   }
 }

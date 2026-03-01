@@ -179,7 +179,7 @@ const ComprobantePagoSchema = new EntitySchema({
     mesesCorrespondientes: {
       type: "jsonb",
       nullable: true,
-      comment: "Array de meses incluidos en el pago (formato YYYY-MM o label)",
+      comment: "Array de meses incluidos en el pago (formato canónico YYYY-MM, ej: 2026-07)",
     },
     detallesPago: {
       type: "jsonb",

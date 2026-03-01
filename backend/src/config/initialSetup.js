@@ -192,7 +192,7 @@ async function ensureSampleEntrenadores(userRepository) {
         );
       }
     }
-    console.log("✅ Entrenadores de ejemplo verificados/creados");
+    console.log("Entrenadores de ejemplo verificados/creados");
   } catch (error) {
     console.error("Error asegurando entrenadores de ejemplo:", error);
   }

@@ -22,6 +22,9 @@ let clubWessexInfo = {
   direccion: "The Wessex School, Camino El Venado 950, San Pedro.",
 };
 
+// URL del fondo de la aplicación (almacenado en memoria)
+let backgroundImageUrl = null;
+
 // Endpoint público para obtener toda la información de la página de inicio
 export async function getHomepage(req, res) {
   try {
@@ -143,6 +146,31 @@ router.post("/club-info", authenticateJwt, isDirectiva, (req, res) => {
       "Información actualizada exitosamente",
       clubWessexInfo,
     );
+  } catch (error) {
+    handleErrorServer(res, 500, error.message);
+  }
+});
+
+// Obtener URL del fondo de la aplicación (público)
+router.get("/background", (req, res) => {
+  try {
+    handleSuccess(res, 200, "URL del fondo obtenida exitosamente", {
+      backgroundImageUrl,
+    });
+  } catch (error) {
+    handleErrorServer(res, 500, error.message);
+  }
+});
+
+// Actualizar URL del fondo de la aplicación (solo directiva)
+router.post("/background", authenticateJwt, isDirectiva, (req, res) => {
+  try {
+    const { url } = req.body;
+    backgroundImageUrl = url || null;
+    console.log("Fondo de la aplicación actualizado:", backgroundImageUrl);
+    handleSuccess(res, 200, "Fondo actualizado exitosamente", {
+      backgroundImageUrl,
+    });
   } catch (error) {
     handleErrorServer(res, 500, error.message);
   }

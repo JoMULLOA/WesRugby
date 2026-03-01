@@ -3,6 +3,11 @@ import 'package:wesrugby/core/config/colors.dart';
 import 'package:wesrugby/data/services/estudiante_service.dart';
 import 'package:wesrugby/data/services/notificacion_service.dart';
 import 'package:wesrugby/shared/widgets/layout/wessex_widgets.dart';
+import 'package:flutter/foundation.dart';
+import 'package:wesrugby/data/services/pagos_service.dart';
+// ignore: avoid_web_libraries_in_flutter
+import 'package:wesrugby/core/utils/html.dart' as html;
+import 'package:wesrugby/core/utils/platform_view_registry.dart';
 
 // Función para ordenar categorías alfanuméricamente (M6, M8, M10, M12, etc.)
 int _ordenarCategoriasAlfanumericamente(String a, String b) {
@@ -50,6 +55,21 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
     'noviembre',
     'diciembre',
   ];
+
+  /// Mapeo de nombre de mes (clave interna) a número de mes con cero a la izquierda.
+  /// Usado para construir el código YYYY-MM al buscar comprobantes.
+  static const Map<String, String> _mesNumero = {
+    'marzo': '03',
+    'abril': '04',
+    'mayo': '05',
+    'junio': '06',
+    'julio': '07',
+    'agosto': '08',
+    'septiembre': '09',
+    'octubre': '10',
+    'noviembre': '11',
+    'diciembre': '12',
+  };
 
   List<Map<String, dynamic>> _todosEstudiantes = [];
   List<Map<String, dynamic>> _estudiantesFiltrados = [];
@@ -175,17 +195,25 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
   }
 
   bool _tienePagosPendientes(Map<String, dynamic> estudiante) {
+    final currentYear = DateTime.now().year;
     final pagos = (estudiante['pagos'] as Map<String, dynamic>?) ?? const {};
-    if (_esPendiente(pagos['matricula'])) {
+    final pagosPorAnio = (estudiante['pagosPorAnio'] as Map<String, dynamic>?) ?? {};
+
+    // Obtener pagos del año actual: legacy para 2025, pagosPorAnio para otros años
+    final Map<String, dynamic> pagosActuales = currentYear == 2025
+        ? pagos
+        : (pagosPorAnio[currentYear.toString()] as Map<String, dynamic>?) ?? {};
+
+    if (_esPendiente(pagosActuales['matricula'])) {
       return true;
     }
-    final meses = (pagos['meses'] as Map<String, dynamic>?) ?? const {};
+    final meses = (pagosActuales['meses'] as Map<String, dynamic>?) ?? const {};
     for (final mes in _meses) {
       if (_esPendiente(_obtenerValorMes(meses, mes))) {
         return true;
       }
     }
-    if (_esPendiente(pagos['totalAnio'])) {
+    if (_esPendiente(pagosActuales['totalAnio'])) {
       return true;
     }
     return false;
@@ -236,14 +264,17 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
   int get _totalPendientes =>
       _estudiantesFiltrados.where(_tienePagosPendientes).length;
 
-  int get _totalMatriculaAlDia =>
-      _estudiantesFiltrados
-          .where(
-            (estudiante) => _esPagado(
-              ((estudiante['pagos'] ?? const {}) as Map)['matricula'],
-            ),
-          )
-          .length;
+  int get _totalMatriculaAlDia {
+    final currentYear = DateTime.now().year;
+    return _estudiantesFiltrados.where((estudiante) {
+      final pagos = (estudiante['pagos'] as Map<String, dynamic>?) ?? {};
+      final pagosPorAnio = (estudiante['pagosPorAnio'] as Map<String, dynamic>?) ?? {};
+      final matricula = currentYear == 2025
+          ? pagos['matricula']
+          : (pagosPorAnio[currentYear.toString()] as Map<String, dynamic>?)?['matricula'];
+      return _esPagado(matricula);
+    }).length;
+  }
 
   void _onCursoChanged(String? value) {
     setState(() {
@@ -327,7 +358,7 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
   String _notificacionCategoria = 'Pagos'; // Pagos, Equipamiento
   String _notificacionSubcategoria = 'Matrícula'; // Matrícula, Mensualidad (solo si es Pagos)
   String _notificacionMes = 'marzo'; // Solo si es Mensualidad
-  int _notificacionAnio = 2025; // Año de la deuda (2025-2030)
+  int _notificacionAnio = DateTime.now().year; // Año de la deuda (2025-2030)
   bool _enviandoNotificaciones = false;
 
   Widget _buildNotificacionesTab() {
@@ -338,13 +369,24 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
       if (_notificacionSubcategoria == 'Matrícula') {
         deudores = _todosEstudiantes.where((e) {
           final pagos = (e['pagos'] as Map<String, dynamic>?) ?? {};
-          return _esPendiente(pagos['matricula']);
+          final pagosPorAnio = (e['pagosPorAnio'] as Map<String, dynamic>?) ?? {};
+          final matricula = _notificacionAnio == 2025
+              ? pagos['matricula']
+              : (pagosPorAnio[_notificacionAnio.toString()] as Map<String, dynamic>?)?['matricula'];
+          return _esPendiente(matricula);
         }).toList();
       } else {
         // Mensualidad
         deudores = _todosEstudiantes.where((e) {
           final pagos = (e['pagos'] as Map<String, dynamic>?) ?? {};
-          final meses = (pagos['meses'] as Map<String, dynamic>?) ?? {};
+          final pagosPorAnio = (e['pagosPorAnio'] as Map<String, dynamic>?) ?? {};
+          final Map<String, dynamic> meses;
+          if (_notificacionAnio == 2025) {
+            meses = (pagos['meses'] as Map<String, dynamic>?) ?? {};
+          } else {
+            final pagosAnio = (pagosPorAnio[_notificacionAnio.toString()] as Map<String, dynamic>?) ?? {};
+            meses = (pagosAnio['meses'] as Map<String, dynamic>?) ?? {};
+          }
           return _esPendiente(_obtenerValorMes(meses, _notificacionMes));
         }).toList();
       }
@@ -1003,6 +1045,380 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
     );
   }
 
+  // ─── Detalle de comprobante por mes / matrícula (solo años > 2025) ─────────
+
+  Future<void> _mostrarDetalleVoucher({
+    required String estudianteRut,
+    required String nombreEstudiante,
+    required int anio,
+    String? mes, // null = Matrícula; non-null = clave de mes, ej: 'julio'
+  }) async {
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      List<Map<String, dynamic>> comprobantes = [];
+
+      // Traer TODOS los comprobantes del estudiante sin filtrar por mes en el backend.
+      // El backend filtra por estudianteRut incluyendo pagos donde aparece en
+      // estudiantesRuts (JSONB). El filtrado por mes/tipo se hace aquí.
+      final response = await PagosService.obtenerComprobantes(
+        estudianteRut: estudianteRut,
+        limite: 100,
+      );
+
+      if (response.success && response.data != null) {
+        // El backend envuelve con handleSuccess → { success, message, data: { comprobantes: [...] } }
+        // ApiService almacena el body completo en response.data, así que hay que bajar un nivel.
+        final inner = (response.data is Map && response.data['data'] != null)
+            ? response.data['data']
+            : response.data;
+        final raw = (inner is Map)
+            ? (inner['comprobantes'] ?? inner)
+            : inner;
+        if (raw is List) {
+          final todos = raw.cast<Map<String, dynamic>>();
+
+          if (mes != null) {
+            // MENSUALIDAD: buscar comprobantes que incluyan este mes en cualquier campo
+            final mesNum = _mesNumero[mes];
+            if (mesNum == null) {
+              if (mounted) Navigator.pop(context);
+              return;
+            }
+            final mesCode = '$anio-$mesNum'; // ej: "2026-07"
+
+            comprobantes = todos.where((c) {
+              // 1. Campo mesCorrespondiente directo
+              if ((c['mesCorrespondiente'] ?? '').toString() == mesCode) {
+                return true;
+              }
+              // 2. Array mesesCorrespondientes (pagos agrupados)
+              final mesesArr = c['mesesCorrespondientes'];
+              if (mesesArr is List && mesesArr.contains(mesCode)) return true;
+              // 3. detallesPago[rut].meses contiene mesCode
+              final detalles = c['detallesPago'];
+              if (detalles is Map) {
+                for (final detalle in detalles.values) {
+                  if (detalle is Map) {
+                    final mesesDetalle = detalle['meses'];
+                    if (mesesDetalle is List && mesesDetalle.contains(mesCode)) {
+                      return true;
+                    }
+                  }
+                }
+              }
+              return false;
+            }).toList();
+          } else {
+            // MATRÍCULA: buscar comprobantes tipo 'matricula' del año correcto
+            comprobantes = todos.where((c) {
+              final tipo = (c['tipoPago'] ?? '').toString().toLowerCase();
+              if (tipo != 'matricula') return false;
+              // Verificar año
+              final anioC = c['anioMatricula'];
+              if (anioC != null) return anioC.toString() == anio.toString();
+              // Fallback: año en fechaPago
+              return (c['fechaPago'] ?? '').toString().startsWith(anio.toString());
+            }).toList();
+          }
+        }
+      }
+
+      if (!mounted) return;
+      Navigator.pop(context); // cerrar loading
+
+      final titulo = mes != null
+          ? '${_mesTitulo(mes)} $anio — $nombreEstudiante'
+          : 'Matrícula $anio — $nombreEstudiante';
+
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (ctx) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Container(
+            width: 600,
+            constraints: const BoxConstraints(maxHeight: 520),
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        titulo,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: WessexColors.darkGrape,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      icon: const Icon(Icons.close),
+                      tooltip: 'Cerrar',
+                    ),
+                  ],
+                ),
+                const Divider(),
+                if (comprobantes.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.receipt_long_outlined,
+                            size: 48,
+                            color: WessexColors.maximumGrayMint,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'No se encontró ningún comprobante para este período.',
+                            style: TextStyle(
+                              color: WessexColors.darkGrape.withOpacity(0.7),
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  Flexible(
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: comprobantes.length,
+                      separatorBuilder: (_, __) => const Divider(height: 24),
+                      itemBuilder: (_, i) =>
+                          _buildComprobanteItem(ctx, comprobantes[i]),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) Navigator.pop(context);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al cargar el comprobante: $e'),
+          backgroundColor: WessexColors.crimsonAlert,
+        ),
+      );
+    }
+  }
+
+  Widget _buildComprobanteItem(
+    BuildContext ctx,
+    Map<String, dynamic> c,
+  ) {
+    final estado = (c['estado'] ?? 'pendiente').toString();
+    final archivoUrl =
+        (c['archivoUrl'] ?? c['rutaComprobante'] ?? '').toString();
+
+    Color estadoColor;
+    switch (estado.toLowerCase()) {
+      case 'validado':
+        estadoColor = WessexColors.leafGreen;
+        break;
+      case 'rechazado':
+        estadoColor = WessexColors.crimsonAlert;
+        break;
+      case 'observado':
+        estadoColor = WessexColors.deepRoyalBlue;
+        break;
+      default:
+        estadoColor = Colors.orange;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 12,
+          runSpacing: 8,
+          children: [
+            _infoChip(
+              Icons.tag,
+              'N° ${(c['numeroComprobante'] ?? 'S/N')}',
+              WessexColors.darkGrape,
+            ),
+            _infoChip(
+              Icons.payment,
+              PagosService.formatearMetodoPago(
+                (c['metodoPago'] ?? '').toString(),
+              ),
+              WessexColors.deepRoyalBlue,
+            ),
+            _infoChip(
+              Icons.attach_money,
+              '\$${c['montoTotal']?.toString() ?? ''}',
+              WessexColors.leafGreen,
+            ),
+            _infoChip(
+              Icons.calendar_today,
+              (c['fechaPago'] ?? '').toString(),
+              WessexColors.darkGrape,
+            ),
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: estadoColor.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: estadoColor.withOpacity(0.4)),
+              ),
+              child: Text(
+                estado.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: estadoColor,
+                ),
+              ),
+            ),
+          ],
+        ),
+        if ((c['observacionesTesorera'] ?? '').toString().isNotEmpty) ...[  
+          const SizedBox(height: 8),
+          Text(
+            'Obs. Tesorera: ${c['observacionesTesorera']}',
+            style: TextStyle(
+              fontSize: 12,
+              color: WessexColors.darkGrape.withOpacity(0.7),
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+        if (archivoUrl.isNotEmpty) ...[  
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            onPressed: () => _mostrarVisorVoucher(
+              ctx: ctx,
+              url: archivoUrl,
+              tipoArchivo: (c['tipoArchivo'] ?? '').toString(),
+              nombreArchivo: (c['nombreArchivoOriginal'] ?? 'voucher').toString(),
+              numeroComprobante: (c['numeroComprobante'] ?? '').toString(),
+            ),
+            icon: const Icon(Icons.visibility_outlined, size: 16),
+            label: const Text('Ver Voucher'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: WessexColors.deepRoyalBlue,
+              side: const BorderSide(color: WessexColors.deepRoyalBlue),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _infoChip(IconData icon, String text, Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: color),
+        const SizedBox(width: 4),
+        Text(
+          text,
+          style: TextStyle(fontSize: 12, color: WessexColors.darkGrape),
+        ),
+      ],
+    );
+  }
+
+  void _mostrarVisorVoucher({
+    required BuildContext ctx,
+    required String url,
+    String tipoArchivo = '',
+    String nombreArchivo = 'voucher',
+    String numeroComprobante = '',
+  }) {
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (_) => _VoucherViewerDialog(
+        url: url,
+        tipoArchivo: tipoArchivo,
+        nombreArchivo: nombreArchivo,
+        numeroComprobante: numeroComprobante,
+      ),
+    );
+  }
+
+  /// Construye la celda de un mes dentro del grid de pagos.
+  /// Si [onTap] no es null, la celda es presionable (cursor pointer + ripple).
+  Widget _buildMesCelda({
+    required String mes,
+    required String valor,
+    required Color color,
+    VoidCallback? onTap,
+  }) {
+    Widget cell = Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Expanded(
+                child: Text(
+                  _mesTitulo(mes),
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: WessexColors.darkGrape,
+                  ),
+                ),
+              ),
+              if (onTap != null)
+                Icon(
+                  Icons.search,
+                  size: 13,
+                  color: WessexColors.deepRoyalBlue.withOpacity(0.6),
+                ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            valor,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: WessexColors.darkGrape,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (onTap != null) {
+      cell = MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(onTap: onTap, child: cell),
+      );
+    }
+    return cell;
+  }
+
   Widget _buildTarjetaEstudiante(Map<String, dynamic> estudiante) {
     final pagos = (estudiante['pagos'] as Map<String, dynamic>?) ?? const {};
     final pagosMeses = (pagos['meses'] as Map<String, dynamic>?) ?? const {};
@@ -1014,23 +1430,41 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
     final pagosExpanded = _pagosExpandidos[rutKey] ?? false;
     final equipamientoExpanded = _equipamientoExpandido[rutKey] ?? false;
     
-    // Obtener año seleccionado para este estudiante
-    final anioEstudiante = _aniosPorEstudiante[rutKey] ?? 2025;
+    // Obtener año seleccionado para este estudiante (por defecto: año actual)
+    final anioEstudiante = _aniosPorEstudiante[rutKey] ?? DateTime.now().year;
     
     // Obtener pagos por año (nueva estructura)
     final pagosPorAnio = (estudiante['pagosPorAnio'] as Map<String, dynamic>?) ?? {};
     final pagosDelAnio = (pagosPorAnio[anioEstudiante.toString()] as Map<String, dynamic>?) ?? {};
     
     // Si el año es 2025, usar datos del Excel (estructura legacy), sino usar pagosPorAnio
-    final matricula = anioEstudiante == 2025 
-        ? _formatearValor(pagos['matricula']) 
+    final matricula = anioEstudiante == 2025
+        ? _formatearValor(pagos['matricula'])
         : _formatearValor(pagosDelAnio['matricula']);
-    final totalAnio = anioEstudiante == 2025 
-        ? _formatearValor(pagos['totalAnio']) 
-        : 'Sin información';
-    final mesesAMostrar = anioEstudiante == 2025 
-        ? pagosMeses 
+    final mesesAMostrar = anioEstudiante == 2025
+        ? pagosMeses
         : (pagosDelAnio['meses'] as Map<String, dynamic>?) ?? {};
+
+    // Calcular total del año: suma de matrícula + todos los meses pagados
+    final String totalAnio;
+    if (anioEstudiante == 2025) {
+      totalAnio = _formatearValor(pagos['totalAnio']);
+    } else {
+      double total = 0.0;
+      bool hayDatos = false;
+      // Sumar matrícula
+      final matriculaRaw = pagosDelAnio['matricula'];
+      if (matriculaRaw != null) {
+        final v = double.tryParse(matriculaRaw.toString());
+        if (v != null && v > 0) { total += v; hayDatos = true; }
+      }
+      // Sumar meses
+      for (final val in mesesAMostrar.values) {
+        final v = double.tryParse(val?.toString() ?? '');
+        if (v != null && v > 0) { total += v; hayDatos = true; }
+      }
+      totalAnio = hayDatos ? total.toStringAsFixed(0) : 'Sin información';
+    }
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -1203,7 +1637,7 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
               
               // Selector de año individual
               DropdownButtonFormField<int>(
-                value: _aniosPorEstudiante[rutKey] ?? 2025,
+                value: _aniosPorEstudiante[rutKey] ?? DateTime.now().year,
                 onChanged: (int? value) {
                   if (value != null) {
                     setState(() {
@@ -1230,12 +1664,30 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
                 spacing: 12,
                 runSpacing: 12,
                 children: [
-                  _buildPagoEstatusChip('Matrícula', matricula),
+                  anioEstudiante > 2025 && matricula != 'Sin información'
+                    ? MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        child: GestureDetector(
+                          onTap: () => _mostrarDetalleVoucher(
+                            estudianteRut: rutKey,
+                            nombreEstudiante:
+                                estudiante['nombre']?.toString() ?? '',
+                            anio: anioEstudiante,
+                          ),
+                          child: _buildPagoEstatusChip('Matrícula', matricula),
+                        ),
+                      )
+                    : _buildPagoEstatusChip('Matrícula', matricula),
                   _buildPagoEstatusChip('Total año', totalAnio),
                 ],
               ),
               const SizedBox(height: 16),
-              _buildMesesGrid(mesesAMostrar, anioEstudiante),
+              _buildMesesGrid(
+                mesesAMostrar,
+                anioEstudiante,
+                estudianteRut: rutKey,
+                nombreEstudiante: estudiante['nombre']?.toString() ?? '',
+              ),
             ],
             
             // Contenido de Equipamiento (desplegable)
@@ -1303,7 +1755,15 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
     );
   }
 
-  Widget _buildMesesGrid(Map<String, dynamic> meses, int anioSeleccionado) {
+  Widget _buildMesesGrid(
+    Map<String, dynamic> meses,
+    int anioSeleccionado, {
+    String estudianteRut = '',
+    String nombreEstudiante = '',
+  }) {
+    // Los meses son presionables a partir del año 2026
+    final esTappable = anioSeleccionado > 2025;
+
     return WessexCard(
       padding: const EdgeInsets.all(16),
       backgroundColor: Colors.white,
@@ -1314,39 +1774,22 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
             children: _meses.take(5).map((mes) {
               final valor = _obtenerValorMes(meses, mes);
               final color = _colorEstado(valor);
+              final tieneDatos = valor != 'Sin información';
               return Expanded(
                 child: Padding(
                   padding: const EdgeInsets.only(right: 8, bottom: 8),
-                  child: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: color.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: color.withOpacity(0.3)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _mesTitulo(mes),
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: WessexColors.darkGrape,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          valor,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: WessexColors.darkGrape,
-                          ),
-                        ),
-                      ],
-                    ),
+                  child: _buildMesCelda(
+                    mes: mes,
+                    valor: valor,
+                    color: color,
+                    onTap: esTappable && tieneDatos
+                        ? () => _mostrarDetalleVoucher(
+                              estudianteRut: estudianteRut,
+                              nombreEstudiante: nombreEstudiante,
+                              anio: anioSeleccionado,
+                              mes: mes,
+                            )
+                        : null,
                   ),
                 ),
               );
@@ -1357,39 +1800,22 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
             children: _meses.skip(5).map((mes) {
               final valor = _obtenerValorMes(meses, mes);
               final color = _colorEstado(valor);
+              final tieneDatos = valor != 'Sin información';
               return Expanded(
                 child: Padding(
                   padding: const EdgeInsets.only(right: 8),
-                  child: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: color.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: color.withOpacity(0.3)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _mesTitulo(mes),
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: WessexColors.darkGrape,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          valor,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: WessexColors.darkGrape,
-                          ),
-                        ),
-                      ],
-                    ),
+                  child: _buildMesCelda(
+                    mes: mes,
+                    valor: valor,
+                    color: color,
+                    onTap: esTappable && tieneDatos
+                        ? () => _mostrarDetalleVoucher(
+                              estudianteRut: estudianteRut,
+                              nombreEstudiante: nombreEstudiante,
+                              anio: anioSeleccionado,
+                              mes: mes,
+                            )
+                        : null,
                   ),
                 ),
               );
@@ -1445,6 +1871,13 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
     if (texto.toLowerCase() == 'n/a' || texto.toLowerCase() == 'null') {
       return 'Sin información';
     }
+    // Si es un número, mostrar sin decimales innecesarios (ej: "20000.0" → "20000")
+    final numero = double.tryParse(texto);
+    if (numero != null) {
+      return numero == numero.truncateToDouble()
+          ? numero.toInt().toString()
+          : texto;
+    }
     return texto;
   }
 
@@ -1475,6 +1908,231 @@ class _PagosResumenScreenState extends State<PagosResumenScreen> {
             style: TextStyle(color: WessexColors.darkGrape.withOpacity(0.7)),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Visualizador de voucher inline (imagen con zoom o PDF en iframe)
+// ─────────────────────────────────────────────────────────────
+
+class _VoucherViewerDialog extends StatefulWidget {
+  final String url;
+  final String tipoArchivo;
+  final String nombreArchivo;
+  final String numeroComprobante;
+
+  const _VoucherViewerDialog({
+    required this.url,
+    required this.tipoArchivo,
+    required this.nombreArchivo,
+    required this.numeroComprobante,
+  });
+
+  @override
+  State<_VoucherViewerDialog> createState() => _VoucherViewerDialogState();
+}
+
+class _VoucherViewerDialogState extends State<_VoucherViewerDialog> {
+  late final String _viewId;
+  bool _imageError = false;
+
+  bool get _esPdf {
+    final tipo = widget.tipoArchivo.toLowerCase();
+    if (tipo.contains('pdf')) return true;
+    return widget.url.toLowerCase().endsWith('.pdf');
+  }
+
+  bool get _esImagen {
+    final tipo = widget.tipoArchivo.toLowerCase();
+    if (tipo.startsWith('image/')) return true;
+    final url = widget.url.toLowerCase();
+    return url.endsWith('.jpg') ||
+        url.endsWith('.jpeg') ||
+        url.endsWith('.png') ||
+        url.endsWith('.gif') ||
+        url.endsWith('.webp');
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _viewId = 'voucher-${DateTime.now().millisecondsSinceEpoch}';
+    if (kIsWeb && _esPdf) {
+      registerViewFactory(_viewId, (int id) {
+        // ignore: avoid_web_libraries_in_flutter
+        final iframe = html.IFrameElement()
+          ..src = widget.url
+          ..style.border = 'none'
+          ..style.width = '100%'
+          ..style.height = '100%'
+          ..allowFullscreen = true;
+        return iframe;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.all(16),
+      child: Container(
+        width: size.width * 0.9,
+        height: size.height * 0.9,
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A1A2E),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          children: [
+            // ── Barra superior ──
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: const BoxDecoration(
+                color: Color(0xFF16213E),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.receipt_long, color: Colors.white70, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.numeroComprobante.isNotEmpty
+                              ? 'Comprobante N° ${widget.numeroComprobante}'
+                              : 'Visor de voucher',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        if (widget.nombreArchivo.isNotEmpty)
+                          Text(
+                            widget.nombreArchivo,
+                            style: const TextStyle(
+                                color: Colors.white54, fontSize: 11),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                      ],
+                    ),
+                  ),
+                  // Fallback: abrir en nueva pestaña
+                  TextButton.icon(
+                    onPressed: () {
+                      if (kIsWeb) html.window.open(widget.url, '_blank');
+                    },
+                    icon: const Icon(Icons.open_in_new,
+                        size: 14, color: Colors.white54),
+                    label: const Text('Nueva pestaña',
+                        style: TextStyle(color: Colors.white54, fontSize: 12)),
+                    style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4)),
+                  ),
+                  const SizedBox(width: 4),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    tooltip: 'Cerrar',
+                    iconSize: 20,
+                  ),
+                ],
+              ),
+            ),
+            // ── Contenido ──
+            Expanded(
+              child: ClipRRect(
+                borderRadius:
+                    const BorderRadius.vertical(bottom: Radius.circular(16)),
+                child: _buildContent(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContent() {
+    // PDF: iframe nativo del navegador
+    if (_esPdf && kIsWeb) {
+      return HtmlElementView(viewType: _viewId);
+    }
+    // Imagen: con zoom interactivo
+    if (_esImagen) {
+      return Container(
+        color: const Color(0xFF0F3460),
+        child: InteractiveViewer(
+          minScale: 0.5,
+          maxScale: 5.0,
+          child: Center(
+            child: _imageError
+                ? _fallbackWidget()
+                : Image.network(
+                    widget.url,
+                    fit: BoxFit.contain,
+                    loadingBuilder: (_, child, progress) {
+                      if (progress == null) return child;
+                      return Center(
+                        child: CircularProgressIndicator(
+                          value: progress.expectedTotalBytes != null
+                              ? progress.cumulativeBytesLoaded /
+                                  progress.expectedTotalBytes!
+                              : null,
+                          color: Colors.white,
+                        ),
+                      );
+                    },
+                    errorBuilder: (_, __, ___) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) setState(() => _imageError = true);
+                      });
+                      return _fallbackWidget();
+                    },
+                  ),
+          ),
+        ),
+      );
+    }
+    // Tipo desconocido
+    return _fallbackWidget();
+  }
+
+  Widget _fallbackWidget() {
+    return Container(
+      color: const Color(0xFF0F3460),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.insert_drive_file_outlined,
+                color: Colors.white54, size: 64),
+            const SizedBox(height: 16),
+            const Text(
+              'No se puede previsualizar este archivo',
+              style: TextStyle(color: Colors.white70, fontSize: 14),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              onPressed: () {
+                if (kIsWeb) html.window.open(widget.url, '_blank');
+              },
+              icon: const Icon(Icons.open_in_new, size: 16),
+              label: const Text('Abrir en nueva pestaña'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: WessexColors.deepRoyalBlue,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

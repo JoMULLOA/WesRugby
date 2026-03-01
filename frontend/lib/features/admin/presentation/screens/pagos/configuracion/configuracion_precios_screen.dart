@@ -260,9 +260,9 @@ class _ConfiguracionPreciosScreenState
                                 ),
                               ),
                               items: List.generate(
-                                10,
+                                11,
                                 (index) {
-                                  final year = DateTime.now().year + index;
+                                  final year = DateTime.now().year - 1 + index;
                                   return DropdownMenuItem(
                                     value: year,
                                     child: Text(year.toString()),

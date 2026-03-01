@@ -1,4 +1,5 @@
 ﻿import 'package:flutter/material.dart';
+import 'dart:async' show unawaited;
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:wesrugby/features/auth/presentation/screens/simple_login/simple_login.dart';
 import 'package:wesrugby/features/home/presentation/screens/home/home_screen.dart';
@@ -10,9 +11,12 @@ import 'package:wesrugby/features/admin/presentation/screens/rama_externa/rama_e
 import 'package:wesrugby/features/inventory/presentation/screens/management/inventory_management_screen.dart';
 // import 'package:wesrugby/features/inventory/presentation/screens/simulator/inventory_simulator_screen.dart';
 import 'package:wesrugby/core/config/colors.dart';
+import 'package:wesrugby/data/services/background_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Cargar fondo personalizado desde el servidor antes de lanzar la app
+  unawaited(BackgroundService.instance.cargar());
   runApp(const MyApp());
 }
 

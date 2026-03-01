@@ -20,7 +20,7 @@ export class AddDetallesPagoToComprobantes20251120100000 {
         name: "meses_correspondientes",
         type: "jsonb",
         isNullable: true,
-        comment: "Array de meses incluidos en el pago (formato YYYY-MM o label)",
+        comment: "Array de meses incluidos en el pago (formato canónico YYYY-MM, ej: 2026-07)",
       })
     );
 

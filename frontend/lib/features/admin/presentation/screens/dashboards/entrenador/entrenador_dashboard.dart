@@ -408,54 +408,6 @@ class _EntrenadorDashboardState extends State<EntrenadorDashboard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header de bienvenida con diseño Wessex
-                WessexCard(
-                  margin: EdgeInsets.only(bottom: isDesktop ? 28 : 20),
-                  padding: EdgeInsets.symmetric(
-                    horizontal: isDesktop ? 20 : 16,
-                    vertical: isDesktop ? 18 : 14,
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: isDesktop ? 48 : 42,
-                        height: isDesktop ? 48 : 42,
-                        decoration: BoxDecoration(
-                          color: WessexColors.deepRoyalBlue.withOpacity(0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.sports_rugby,
-                          color: WessexColors.deepRoyalBlue,
-                        ),
-                      ),
-                      SizedBox(width: isDesktop ? 18 : 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Bienvenido, ${_userName ?? "Entrenador"}',
-                              style: TextStyle(
-                                color: WessexColors.darkGrape,
-                                fontSize: isDesktop ? 18 : 16,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Panel deportivo Wessex Rugby',
-                              style: TextStyle(
-                                color: WessexColors.darkGrape.withOpacity(0.7),
-                                fontSize: isDesktop ? 14 : 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
 
                 // Sección: Gestión de Asistencia
                 const WessexSectionTitle(

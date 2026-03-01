@@ -120,6 +120,12 @@ const EstudianteSchema = new EntitySchema({
       nullable: true,
       comment: "Información de matrícula, mensualidades y total anual",
     },
+    pagosPorAnio: {
+      type: "jsonb",
+      nullable: true,
+      default: {},
+      comment: "Pagos organizados por año: { '2026': { matricula: '...', meses: { marzo: '...', ... } }, ... }",
+    },
     equipamiento: {
       type: "jsonb",
       nullable: true,

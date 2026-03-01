@@ -358,6 +358,89 @@ class PagosService {
     }
   }
 
+  /// Subir voucher de matrícula (Web - acepta Uint8List)
+  static Future<ApiResponse> subirVoucherMatriculaWeb({
+    required String inscripcionId,
+    required String metodoPago,
+    required double montoTotal,
+    required DateTime fechaPago,
+    required int anioMatricula,
+    String? bancoOrigen,
+    String? numeroOperacion,
+    String? observacionesApoderado,
+    Uint8List? archivoBytes,
+    String? nombreArchivo,
+  }) async {
+    try {
+      const endpoint = '/comprobantes-pago/apoderado/voucher-matricula';
+
+      print('🔍 DEBUG subirVoucherMatriculaWeb:');
+      print('  - inscripcionId: $inscripcionId');
+      print('  - metodoPago: $metodoPago');
+      print('  - montoTotal: $montoTotal');
+      print('  - fechaPago: ${fechaPago.toIso8601String()}');
+      print('  - anioMatricula: $anioMatricula');
+      print('  - nombreArchivo: $nombreArchivo');
+
+      if (archivoBytes != null && nombreArchivo != null) {
+        var request = http.MultipartRequest(
+          'POST',
+          Uri.parse('${ApiService.baseUrl}$endpoint'),
+        );
+
+        final token = await TokenManager.getToken();
+        if (token != null) {
+          request.headers['Authorization'] = 'Bearer $token';
+        }
+
+        request.fields['inscripcionId'] = inscripcionId;
+        request.fields['metodoPago'] = metodoPago;
+        request.fields['montoTotal'] = montoTotal.toString();
+        request.fields['fechaPago'] = fechaPago.toIso8601String().split('T')[0];
+        request.fields['anioMatricula'] = anioMatricula.toString();
+
+        if (bancoOrigen != null) request.fields['bancoOrigen'] = bancoOrigen;
+        if (numeroOperacion != null) request.fields['numeroOperacion'] = numeroOperacion;
+        if (observacionesApoderado != null) {
+          request.fields['observacionesApoderado'] = observacionesApoderado;
+        }
+
+        var multipartFile = http.MultipartFile.fromBytes(
+          'voucher',
+          archivoBytes,
+          filename: nombreArchivo,
+        );
+        request.files.add(multipartFile);
+
+        var streamedResponse = await request.send();
+        var response = await http.Response.fromStream(streamedResponse);
+
+        print('🔍 DEBUG Response:');
+        print('  - statusCode: ${response.statusCode}');
+        print('  - body: ${response.body}');
+
+        final data = response.body.isNotEmpty ? response.body : null;
+        return ApiResponse(
+          statusCode: response.statusCode,
+          data: data,
+          message: response.statusCode == 200 || response.statusCode == 201
+              ? 'Voucher matrícula subido exitosamente'
+              : 'Error subiendo voucher de matrícula',
+        );
+      } else {
+        return ApiResponse(
+          statusCode: 400,
+          message: 'Se requiere archivo y nombre de archivo',
+        );
+      }
+    } catch (e) {
+      return ApiResponse(
+        statusCode: 500,
+        message: 'Error subiendo voucher de matrícula: $e',
+      );
+    }
+  }
+
   /// Obtener historial de pagos del apoderado
   static Future<ApiResponse> obtenerHistorialApoderado({
     int limite = 20,
@@ -564,5 +647,23 @@ class PagosService {
   /// Formatear monto en pesos chilenos
   static String formatearMonto(double monto) {
     return '\$${monto.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')} CLP';
+  }
+
+  /// Obtener comprobantes de pago con filtros opcionales.
+  /// Usado por la pantalla de resumen para mostrar el detalle de comprobante
+  /// al presionar un mes o la matrícula.
+  static Future<ApiResponse> obtenerComprobantes({
+    String? estudianteRut,
+    String? mesCorrespondiente,
+    int limite = 20,
+  }) async {
+    final params = <String>['limite=$limite'];
+    if (estudianteRut != null && estudianteRut.isNotEmpty) {
+      params.add('estudianteRut=$estudianteRut');
+    }
+    if (mesCorrespondiente != null && mesCorrespondiente.isNotEmpty) {
+      params.add('mesCorrespondiente=$mesCorrespondiente');
+    }
+    return ApiService.get('/comprobantes-pago?${params.join('&')}');
   }
 }

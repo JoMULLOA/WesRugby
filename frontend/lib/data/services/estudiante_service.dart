@@ -244,6 +244,10 @@ class EstudianteService extends ChangeNotifier {
         backendEstudiante['pagos'] is Map
             ? Map<String, dynamic>.from(backendEstudiante['pagos'])
             : <String, dynamic>{};
+    final pagosPorAnio =
+        backendEstudiante['pagosPorAnio'] is Map
+            ? Map<String, dynamic>.from(backendEstudiante['pagosPorAnio'])
+            : <String, dynamic>{};
     final equipamiento =
         backendEstudiante['equipamiento'] is Map
             ? Map<String, dynamic>.from(backendEstudiante['equipamiento'])
@@ -304,6 +308,7 @@ class EstudianteService extends ChangeNotifier {
       'alumnoNuevo': backendEstudiante['alumnoNuevo'] ?? '',
       'asistencia': backendEstudiante['asistencia'] ?? '',
       'pagos': pagos,
+      'pagosPorAnio': pagosPorAnio,
       'equipamiento': equipamiento,
       'estado': backendEstudiante['estado'] ?? '',
       'observaciones': backendEstudiante['observaciones'] ?? '',

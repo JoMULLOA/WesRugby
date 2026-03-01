@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:wesrugby/core/config/colors.dart';
+import 'package:wesrugby/data/services/background_service.dart';
 
 const double kWessexMaxContentWidth = 1180;
 
 /// Widget de background común para toda la aplicación Wessex Rugby
-/// Mantiene consistencia visual con imagen de fondo y overlay
+/// Mantiene consistencia visual con imagen de fondo y overlay.
+/// Escucha [BackgroundService] para reflejar cambios en tiempo real.
 class WessexBackground extends StatelessWidget {
   final Widget child;
   final double opacity;
@@ -21,53 +23,62 @@ class WessexBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget content = child;
+    return ValueListenableBuilder<String?>(
+      valueListenable: BackgroundService.instance.backgroundUrl,
+      builder: (context, customUrl, _) {
+        Widget content = child;
+        if (maxContentWidth != null) {
+          content = Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxContentWidth!),
+              child: SizedBox(width: double.infinity, child: child),
+            ),
+          );
+        }
 
-    if (maxContentWidth != null) {
-      content = Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: maxContentWidth!,
-          ),
-          child: SizedBox(
-            width: double.infinity,
-            child: child,
-          ),
-        ),
-      );
-    }
+        Widget bgImage;
+        if (customUrl != null && customUrl.isNotEmpty) {
+          bgImage = Image.network(
+            customUrl,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => _defaultGradient(),
+          );
+        } else {
+          bgImage = Image.asset(
+            'assets/icon/background.png',
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => _defaultGradient(),
+          );
+        }
 
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        // Background image
-        Image.asset(
-          'assets/icon/background.png',
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            return Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    WessexColors.midnightNavy,
-                    WessexColors.deepRoyalBlue,
-                    WessexColors.midnightNavy.withOpacity(0.8),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  stops: const [0.0, 0.5, 1.0],
-                ),
-              ),
-            );
-          },
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            bgImage,
+            if (showOverlay)
+              Container(color: WessexColors.darkGrape.withOpacity(opacity)),
+            content,
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _defaultGradient() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            WessexColors.midnightNavy,
+            WessexColors.deepRoyalBlue,
+            WessexColors.midnightNavy.withOpacity(0.8),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          stops: const [0.0, 0.5, 1.0],
         ),
-        // Dark overlay for better readability
-        if (showOverlay)
-          Container(color: WessexColors.darkGrape.withOpacity(opacity)),
-        // Content
-        content,
-      ],
+      ),
     );
   }
 }
