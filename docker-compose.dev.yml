@@ -49,7 +49,7 @@ services:
       - "9229:9229"  # Puerto para debugging de Node.js
     networks:
       - wesrugby-dev-network
-    command: npm run dev  # Usar nodemon para hot-reload
+    command: node --watch src/index.js  # Hot-reload nativo de Node 20 (sin nodemon)
 
   # Adminer - Herramienta de administración de base de datos
   adminer:
